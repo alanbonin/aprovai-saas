@@ -1,46 +1,42 @@
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/prisma";
+import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { MentorChat } from "@/components/mentor/mentor-chat";
-import { AREAS, BANCAS } from "@/lib/agents";
+import { CATEGORIAS, BANCAS } from "@/lib/agents";
 
 export default async function MentorPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseId: user.id },
-    include: { subscription: { include: { plan: true } } },
-  });
+  const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
 
-  const agents = await prisma.agent.findMany({
-    where: { active: true },
-    orderBy: [{ area: "asc" }, { banca: "asc" }],
-  });
+  const [{ data: agents }, { data: userAgents }] = await Promise.all([
+    db.from("Agent").select("*").eq("active", true).order("categoria"),
+    db.from("UserAgent").select("agentId").eq("userId", dbUser.id),
+  ]);
 
   const weekStart = new Date();
   weekStart.setHours(0, 0, 0, 0);
   weekStart.setDate(weekStart.getDate() - weekStart.getDay());
 
-  const totalUsed = await prisma.aiUsage.aggregate({
-    where: { userId: dbUser.id, weekStart },
-    _sum: { count: true },
-  });
-
-  const weeklyLimit = dbUser.subscription?.plan.aiCreditsPerWeek ?? 5;
-  const usedCount = totalUsed._sum.count ?? 0;
+  const weeklyLimit = dbUser.subscription?.plan?.aiCreditsPerWeek ?? 5;
+  const usedCount = await getWeeklyAiUsage(dbUser.id, weekStart.toISOString());
   const remaining = Math.max(0, weeklyLimit - usedCount);
+  const maxAgents = dbUser.subscription?.plan?.maxAgents ?? 1;
+  const activeAgentIds = (userAgents ?? []).map((ua: { agentId: string }) => ua.agentId);
 
   return (
     <MentorChat
-      agents={agents}
-      areas={AREAS}
+      agents={agents ?? []}
+      categorias={CATEGORIAS}
       bancas={BANCAS}
       aiCreditsLeft={remaining}
       aiCreditsTotal={weeklyLimit}
       userId={dbUser.id}
+      maxAgents={maxAgents}
+      activeAgentIds={activeAgentIds}
     />
   );
 }

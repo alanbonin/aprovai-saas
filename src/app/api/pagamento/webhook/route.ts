@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 import MercadoPago, { Payment } from "mercadopago";
 
 const mp = new MercadoPago({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
@@ -17,29 +17,32 @@ export async function POST(req: Request) {
   const [userId, planId] = (paymentData.external_reference ?? "").split("|");
   if (!userId || !planId) return NextResponse.json({ ok: true });
 
-  const plan = await prisma.plan.findUnique({ where: { id: planId } });
+  const { data: plan } = await db.from("Plan").select("intervalDays").eq("id", planId).single();
   if (!plan) return NextResponse.json({ ok: true });
 
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + plan.intervalDays);
 
-  await prisma.subscription.upsert({
-    where: { userId },
-    create: {
+  const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).single();
+
+  if (existing) {
+    await db.from("Subscription").update({
+      planId,
+      status: "ACTIVE",
+      startDate: new Date().toISOString(),
+      endDate: endDate.toISOString(),
+      mpPaymentId: String(paymentData.id),
+      updatedAt: new Date().toISOString(),
+    }).eq("id", existing.id);
+  } else {
+    await db.from("Subscription").insert({
       userId,
       planId,
       status: "ACTIVE",
-      endDate,
+      endDate: endDate.toISOString(),
       mpPaymentId: String(paymentData.id),
-    },
-    update: {
-      planId,
-      status: "ACTIVE",
-      startDate: new Date(),
-      endDate,
-      mpPaymentId: String(paymentData.id),
-    },
-  });
+    });
+  }
 
   return NextResponse.json({ ok: true });
 }

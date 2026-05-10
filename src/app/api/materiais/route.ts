@@ -7,21 +7,24 @@ export async function GET(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
+  const dbUser = await getUserWithPlan(user.id);
+  if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
   const { searchParams } = new URL(req.url);
+  const type = searchParams.get("type");
   const banca = searchParams.get("banca");
-  const level = searchParams.get("level");
-  const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
 
-  let query = db.from("Question").select("*").limit(limit);
-  if (banca) query = query.ilike("banca", banca);
-  if (level) query = query.eq("level", level);
+  let query = db.from("Material").select("*").eq("active", true).order("createdAt", { ascending: false });
+  if (type) query = query.eq("type", type);
+  if (banca) query = query.eq("banca", banca);
 
-  const { data: questions, error } = await query.order("id", { ascending: false });
+  // Gratuito só vê não-premium; pagante vê tudo
+  const isPaid = !!dbUser.subscription;
+  if (!isPaid) query = query.eq("isPremium", false);
+
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  // shuffle so it feels random
-  const shuffled = (questions ?? []).sort(() => Math.random() - 0.5);
-  return NextResponse.json({ questions: shuffled });
+  return NextResponse.json({ materials: data ?? [] });
 }
 
 export async function POST(req: Request) {
@@ -35,7 +38,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { data, error } = await db.from("Question").insert(body).select().single();
+  const { data, error } = await db.from("Material").insert(body).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
 }

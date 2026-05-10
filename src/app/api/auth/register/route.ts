@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/lib/db";
 
 export async function POST(req: Request) {
   const { name, email, supabaseId } = await req.json();
-
   if (!name || !email || !supabaseId) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
   }
 
-  const user = await prisma.user.upsert({
-    where: { supabaseId },
-    create: { supabaseId, name, email, role: "STUDENT" },
-    update: { name, email },
-  });
+  const { data, error } = await db.from("User").upsert(
+    { supabaseId, name, email, role: "STUDENT", updatedAt: new Date().toISOString() },
+    { onConflict: "supabaseId" }
+  ).select().single();
 
-  return NextResponse.json({ ok: true, userId: user.id });
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true, userId: data.id });
 }

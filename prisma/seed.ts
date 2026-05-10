@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { buildAgentSystemPrompt, AREAS, BANCAS } from "../src/lib/agents";
+import { buildAgentSystemPrompt, CATEGORIAS, BANCAS } from "../src/lib/agents";
 
 const prisma = new PrismaClient();
 
@@ -57,7 +57,7 @@ async function main() {
   console.log("✅ Planos criados");
 
   // Agentes por área
-  for (const [i, area] of AREAS.entries()) {
+  for (const [i, area] of CATEGORIAS.entries()) {
     await prisma.agent.upsert({
       where: { slug: `area-${area.id}` },
       create: {
