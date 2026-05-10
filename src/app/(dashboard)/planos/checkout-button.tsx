@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export function CheckoutButton({ planId, planName, isPopular }: { planId: string; planName: string; isPopular: boolean }) {
   const [loading, setLoading] = useState(false);
@@ -18,13 +19,18 @@ export function CheckoutButton({ planId, planName, isPopular }: { planId: string
   }
 
   return (
-    <Button
+    <button
       onClick={handleCheckout}
       disabled={loading}
-      variant={isPopular ? "default" : "outline"}
-      className="w-full"
+      className={cn(
+        "w-full py-2.5 rounded-xl text-sm font-medium transition-all flex items-center justify-center gap-2 disabled:opacity-60",
+        isPopular
+          ? "bg-orange-500 hover:bg-orange-400 text-white"
+          : "bg-indigo-600 hover:bg-indigo-500 text-white"
+      )}
     >
-      {loading ? "Redirecionando..." : `Assinar ${planName}`}
-    </Button>
+      {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+      {loading ? "Redirecionando..." : "Começar agora"}
+    </button>
   );
 }
