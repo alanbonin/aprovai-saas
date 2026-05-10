@@ -1,0 +1,206 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── Planos ────────────────────────────────────────────────
+model Plan {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  price           Float
+  intervalDays    Int      @default(30)
+  aiCreditsPerWeek Int     @default(10)  // perguntas de mentor por semana
+  features        String[] @default([])
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  subscriptions   Subscription[]
+}
+
+// ─── Usuários ──────────────────────────────────────────────
+model User {
+  id              String   @id @default(cuid())
+  supabaseId      String   @unique
+  name            String
+  email           String   @unique
+  role            Role     @default(STUDENT)
+  avatarUrl       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  subscription    Subscription?
+  progress        Progress[]
+  simulados       SimuladoHistory[]
+  aiUsage         AiUsage[]
+  notes           Note[]
+  flashcardSets   FlashcardSet[]
+}
+
+enum Role {
+  ADMIN
+  STUDENT
+}
+
+// ─── Assinaturas ───────────────────────────────────────────
+model Subscription {
+  id              String             @id @default(cuid())
+  userId          String             @unique
+  planId          String
+  status          SubscriptionStatus @default(ACTIVE)
+  startDate       DateTime           @default(now())
+  endDate         DateTime
+  mpPaymentId     String?
+  mpSubscriptionId String?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  user            User               @relation(fields: [userId], references: [id])
+  plan            Plan               @relation(fields: [planId], references: [id])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  PENDING
+}
+
+// ─── Agentes / Mentores ────────────────────────────────────
+model Agent {
+  id              String    @id @default(cuid())
+  name            String
+  slug            String    @unique
+  description     String
+  area            String?   // ex: "penal", "tributario", "fiscal"
+  banca           String?   // ex: "cespe", "fgv", "vunesp"
+  systemPrompt    String    @db.Text
+  avatar          String?
+  color           String    @default("#6366f1")
+  active          Boolean   @default(true)
+  isPremium       Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+
+  aiUsage         AiUsage[]
+}
+
+// ─── Uso de IA (controle de cotas) ────────────────────────
+model AiUsage {
+  id              String   @id @default(cuid())
+  userId          String
+  agentId         String
+  weekStart       DateTime // início da semana (domingo)
+  count           Int      @default(0)
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+  agent           Agent    @relation(fields: [agentId], references: [id])
+
+  @@unique([userId, agentId, weekStart])
+}
+
+// ─── Questões ──────────────────────────────────────────────
+model Question {
+  id              Int      @id @default(autoincrement())
+  subjectId       String
+  banca           String?
+  year            Int?
+  level           String   @default("medio")
+  statement       String   @db.Text
+  optionA         String?  @db.Text
+  optionB         String?  @db.Text
+  optionC         String?  @db.Text
+  optionD         String?  @db.Text
+  optionE         String?  @db.Text
+  answer          String
+  explanation     String?  @db.Text
+  source          String   @default("ia")
+  analysis        String?  @db.Text
+  createdAt       DateTime @default(now())
+
+  progress        Progress[]
+}
+
+// ─── Progresso por questão ─────────────────────────────────
+model Progress {
+  id              String   @id @default(cuid())
+  userId          String
+  questionId      Int
+  correct         Boolean
+  reviewedAt      DateTime?
+  nextReview      DateTime?
+  interval        Int      @default(1)
+  easeFactor      Float    @default(2.5)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+  question        Question @relation(fields: [questionId], references: [id])
+
+  @@unique([userId, questionId])
+}
+
+// ─── Histórico de Simulados ────────────────────────────────
+model SimuladoHistory {
+  id              Int      @id @default(autoincrement())
+  userId          String
+  total           Int
+  correct         Int
+  timeSecs        Int
+  subjectIds      String[]
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// ─── Notas pessoais ────────────────────────────────────────
+model Note {
+  id              String   @id @default(cuid())
+  userId          String
+  subjectId       String
+  content         String   @db.Text
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// ─── Flashcard Sets ────────────────────────────────────────
+model FlashcardSet {
+  id              String      @id @default(cuid())
+  userId          String
+  subjectId       String
+  name            String
+  cards           Json        @default("[]")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  user            User        @relation(fields: [userId], references: [id])
+}
+
+// ─── Materiais de Estudo ───────────────────────────────────
+model Material {
+  id              String        @id @default(cuid())
+  title           String
+  description     String?
+  type            MaterialType
+  subjectId       String?
+  banca           String?
+  fileUrl         String?
+  fileSize        Int?
+  isPremium       Boolean       @default(false)
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+enum MaterialType {
+  PDF
+  VIDEO
+  LINK
+  TEXTO
+}
