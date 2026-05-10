@@ -2,15 +2,16 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import Link from "next/link";
-import { LayoutDashboard, Users, Brain, BookOpen, FileText, Trophy, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Users, Brain, BookOpen, FileText, Trophy, ArrowLeft, Layers } from "lucide-react";
 
 const adminNav = [
-  { href: "/admin", label: "Visão geral", icon: LayoutDashboard, exact: true },
-  { href: "/admin/alunos", label: "Alunos", icon: Users },
-  { href: "/admin/agentes", label: "Agentes", icon: Brain },
-  { href: "/admin/questoes", label: "Questões", icon: BookOpen },
-  { href: "/admin/materiais", label: "Materiais", icon: FileText },
-  { href: "/admin/planos", label: "Planos", icon: Trophy },
+  { href: "/admin",           label: "Visão geral",  icon: LayoutDashboard },
+  { href: "/admin/alunos",    label: "Alunos",        icon: Users },
+  { href: "/admin/agentes",   label: "Agentes",       icon: Brain },
+  { href: "/admin/materias",  label: "Matérias",      icon: Layers },
+  { href: "/admin/questoes",  label: "Questões",      icon: BookOpen },
+  { href: "/admin/materiais", label: "Materiais",     icon: FileText },
+  { href: "/admin/planos",    label: "Planos",        icon: Trophy },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
