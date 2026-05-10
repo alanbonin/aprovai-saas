@@ -4,16 +4,14 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Brain, BookOpen, FileText, CreditCard,
-  Users, Settings, LogOut, Trophy, Target
+  Users, Settings, LogOut, Trophy, Target, Layers
 } from "lucide-react";
 
 const navItems = [
-  { href: "/dashboard",  label: "Dashboard",  icon: LayoutDashboard },
-  { href: "/mentor",     label: "Mentores IA", icon: Brain },
-  { href: "/questoes",   label: "Questões",   icon: Target },
-  { href: "/simulado",   label: "Simulado",   icon: Trophy },
-  { href: "/materiais",  label: "Materiais",  icon: FileText },
-  { href: "/planos",     label: "Planos",     icon: CreditCard },
+  { href: "/dashboard",  label: "Dashboard",    icon: LayoutDashboard },
+  { href: "/workspace",  label: "Meu Espaço",   icon: Brain },
+  { href: "/mentor",     label: "Escolher Mentores", icon: Users },
+  { href: "/planos",     label: "Planos",       icon: CreditCard },
 ];
 
 const adminItems = [
