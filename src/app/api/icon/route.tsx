@@ -3,13 +3,16 @@ import { NextRequest } from "next/server";
 
 export const runtime = "edge";
 
-// ── Gera ícones PWA da Aprovai em qualquer tamanho ─────────────────────────
+// ── Gera ícones PWA da AprovAI360 em qualquer tamanho ───────────────────────
 // Uso: /api/icon?size=192  ou  /api/icon?size=512
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const size = Math.max(64, Math.min(1024, parseInt(searchParams.get("size") ?? "192", 10)));
-  const pad  = size * 0.18;
   const r    = size * 0.22;   // border-radius
+
+  const teal   = "#0ab5bd";
+  const navy   = "#0d1b2a";
+  const tealDk = "#066d73";
 
   return new ImageResponse(
     (
@@ -20,49 +23,62 @@ export async function GET(req: NextRequest) {
           display:         "flex",
           alignItems:      "center",
           justifyContent:  "center",
-          background:      "linear-gradient(135deg, #0f0c29 0%, #1a1042 50%, #0d0a1e 100%)",
+          background:      navy,
           borderRadius:    r,
           position:        "relative",
           overflow:        "hidden",
         }}
       >
-        {/* glow ring */}
+        {/* teal glow halo */}
         <div
           style={{
             position:     "absolute",
-            width:        size * 0.75,
-            height:       size * 0.75,
+            width:        size * 0.80,
+            height:       size * 0.80,
             borderRadius: "50%",
-            background:   "radial-gradient(circle, rgba(249,115,22,0.25) 0%, transparent 70%)",
+            background:   `radial-gradient(circle, rgba(10,181,189,0.18) 0%, transparent 70%)`,
           }}
         />
 
-        {/* central content */}
+        {/* wordmark: Aprov in white, AI in teal, 360 in white */}
         <div
           style={{
             display:        "flex",
             flexDirection:  "column",
             alignItems:     "center",
             justifyContent: "center",
-            gap:            size * 0.04,
-            paddingBottom:  pad * 0.2,
             position:       "relative",
+            gap:            size * 0.02,
           }}
         >
-          {/* graduation cap emoji */}
-          <div style={{ fontSize: size * 0.38, lineHeight: 1 }}>🎓</div>
+          {/* A icon circle */}
+          <div
+            style={{
+              width:        size * 0.44,
+              height:       size * 0.44,
+              borderRadius: "50%",
+              border:       `${size * 0.022}px solid ${teal}`,
+              display:      "flex",
+              alignItems:   "center",
+              justifyContent: "center",
+              background:   `radial-gradient(circle at 38% 32%, #6de8ee 0%, ${teal} 45%, ${tealDk} 100%)`,
+              marginBottom: size * 0.04,
+            }}
+          />
 
           {/* wordmark */}
           <div
             style={{
-              fontSize:    size * 0.155,
-              fontWeight:  900,
-              letterSpacing: "-0.02em",
-              color:       "#f97316",
-              lineHeight:  1,
+              display:       "flex",
+              fontSize:      size * 0.165,
+              fontWeight:    900,
+              letterSpacing: "-0.03em",
+              lineHeight:    1,
             }}
           >
-            APROVAI
+            <span style={{ color: "white" }}>Aprov</span>
+            <span style={{ color: teal }}>AI</span>
+            <span style={{ color: "white" }}>360</span>
           </div>
         </div>
       </div>

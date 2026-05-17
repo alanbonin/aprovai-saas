@@ -5,7 +5,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const viewport: Viewport = {
-  themeColor: "#f97316",
+  themeColor: "#0ab5bd",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -17,8 +17,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.app";
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "Aprovai — Sua Aprovação em Concursos Públicos",
-    template: "%s | Aprovai",
+    default: "AprovAI360 — Sua Aprovação em Concursos Públicos",
+    template: "%s | AprovAI360",
   },
   description:
     "Plataforma de estudos para concursos públicos com mentores IA especializados por área e banca. Questões adaptativas, simulados, flashcards e cronograma personalizado.",
@@ -28,20 +28,20 @@ export const metadata: Metadata = {
     "CESPE", "FGV", "VUNESP", "Polícia Federal", "TJ", "TRF",
     "direito administrativo", "direito constitucional", "raciocínio lógico",
   ],
-  authors: [{ name: "Aprovai" }],
-  creator: "Aprovai",
+  authors: [{ name: "AprovAI360" }],
+  creator: "AprovAI360",
   openGraph: {
     type: "website",
     locale: "pt_BR",
     url: APP_URL,
-    siteName: "Aprovai",
-    title: "Aprovai — Sua Aprovação em Concursos Públicos",
+    siteName: "AprovAI360",
+    title: "AprovAI360 — Sua Aprovação em Concursos Públicos",
     description: "Mentores IA especializados por área e banca. Questões adaptativas, simulados, flashcards e cronograma personalizado.",
-    images: [{ url: `${APP_URL}/api/icon?size=512`, width: 512, height: 512, alt: "Aprovai" }],
+    images: [{ url: `${APP_URL}/api/icon?size=512`, width: 512, height: 512, alt: "AprovAI360" }],
   },
   twitter: {
     card: "summary",
-    title: "Aprovai — Sua Aprovação em Concursos Públicos",
+    title: "AprovAI360 — Sua Aprovação em Concursos Públicos",
     description: "Plataforma de estudos para concursos públicos com IA.",
     images: [`${APP_URL}/api/icon?size=512`],
   },
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Aprovai",
+    title: "AprovAI360",
   },
   icons: {
     icon: [

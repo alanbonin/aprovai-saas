@@ -302,14 +302,14 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
       {/* ── Logo + Briefing do Dia ──────────────────────────────── */}
       <div className="px-4 py-4 border-b border-white/[0.06] flex-shrink-0 space-y-2">
         <div className="flex items-center gap-3">
-          <div className={cn(
-            "w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0",
-            isAdmin ? "bg-orange-600" : "bg-indigo-600"
-          )}>
-            <span className="text-white font-black text-sm">{isAdmin ? "⚙️" : "A"}</span>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="AprovAI360" className="w-9 h-9 flex-shrink-0" />
           <div className="min-w-0">
-            <p className="font-bold text-sm text-white">Aprovai</p>
+            <p className="font-bold text-sm">
+              <span className="text-white">Aprov</span>
+              <span style={{ color: "#0ab5bd" }}>AI</span>
+              <span className="text-white">360</span>
+            </p>
             <p className="text-[10px] truncate" style={{ color: isAdmin ? "#fb923c" : "#6b7280" }}>
               {isAdmin ? "Painel Admin" : (planName ?? "Gratuito")}
             </p>

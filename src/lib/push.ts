@@ -77,6 +77,6 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
 
   // Remove subscriptions expiradas
   if (expiredIds.length > 0) {
-    await db.from("Note").delete().in("id", expiredIds).catch(() => {});
+    void db.from("Note").delete().in("id", expiredIds);
   }
 }

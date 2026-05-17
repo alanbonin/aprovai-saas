@@ -142,7 +142,7 @@ export async function POST(req: Request) {
     })
   );
 
-  if (expired.length) await db.from("Note").delete().in("id", expired).catch(() => {});
+  if (expired.length) { void db.from("Note").delete().in("id", expired); }
 
   return NextResponse.json({ ok: true, sent, failed, total: subscriptions?.length ?? 0 });
 }

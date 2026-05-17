@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <!-- Sphere gradient: bright top-left highlight -->
+    <radialGradient id="sphereGrad" cx="38%" cy="32%" r="65%">
+      <stop offset="0%"   stop-color="#6de8ee"/>
+      <stop offset="45%"  stop-color="#0ab5bd"/>
+      <stop offset="100%" stop-color="#066d73"/>
+    </radialGradient>
+    <!-- Subtle glow behind sphere -->
+    <radialGradient id="glowGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#0ab5bd" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0ab5bd" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── Outer ring ─────────────────────────────────── -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#0ab5bd" stroke-width="2.2" opacity="0.85"/>
+
+  <!-- ── Node dots on ring (8 positions) ───────────────
+       r=88 from center (100,100)
+       0°=top: (100,12)  45°: (162,38)  90°: (188,100)  135°: (162,162)
+       180°: (100,188)  225°: (38,162)  270°: (12,100)  315°: (38,38)
+  -->
+
+  <!-- Teal nodes -->
+  <circle cx="100" cy="12"  r="4.5" fill="#0ab5bd"/>
+  <circle cx="162" cy="38"  r="4.5" fill="#0ab5bd"/>
+  <circle cx="188" cy="100" r="4.5" fill="#0ab5bd"/>
+  <circle cx="162" cy="162" r="4.5" fill="#0ab5bd"/>
+  <circle cx="100" cy="188" r="4.5" fill="#0ab5bd"/>
+  <circle cx="38"  cy="162" r="4.5" fill="#0ab5bd"/>
+  <circle cx="12"  cy="100" r="4.5" fill="#0ab5bd"/>
+  <circle cx="38"  cy="38"  r="4.5" fill="#0ab5bd"/>
+
+  <!-- ── Connection lines (nodes → center) ─────────────── -->
+  <g stroke="#0ab5bd" stroke-width="1.4" opacity="0.55">
+    <line x1="100" y1="12"  x2="100" y2="100"/>
+    <line x1="162" y1="38"  x2="100" y2="100"/>
+    <line x1="188" y1="100" x2="100" y2="100"/>
+    <line x1="162" y1="162" x2="100" y2="100"/>
+    <line x1="100" y1="188" x2="100" y2="100"/>
+    <line x1="38"  y1="162" x2="100" y2="100"/>
+    <line x1="12"  y1="100" x2="100" y2="100"/>
+    <line x1="38"  y1="38"  x2="100" y2="100"/>
+  </g>
+
+  <!-- ── Cross connections between adjacent nodes ───── -->
+  <g stroke="#0ab5bd" stroke-width="1" opacity="0.30">
+    <line x1="100" y1="12"  x2="162" y2="38"/>
+    <line x1="162" y1="38"  x2="188" y2="100"/>
+    <line x1="188" y1="100" x2="162" y2="162"/>
+    <line x1="162" y1="162" x2="100" y2="188"/>
+    <line x1="100" y1="188" x2="38"  y2="162"/>
+    <line x1="38"  y1="162" x2="12"  y2="100"/>
+    <line x1="12"  y1="100" x2="38"  y2="38"/>
+    <line x1="38"  y1="38"  x2="100" y2="12"/>
+  </g>
+
+  <!-- ── Skip connections (dark navy wing shapes) ──────
+       Diagonal cross connectors that form the "wing" look -->
+  <g fill="none" stroke="#1a3a4a" stroke-width="2.2" stroke-linecap="round" opacity="0.80">
+    <!-- Top-right wing: 0°→135° with curve through 45° -->
+    <path d="M100,12 Q155,55 162,162"/>
+    <!-- Bottom-left wing: 180°→315° -->
+    <path d="M100,188 Q45,145 38,38"/>
+    <!-- Right-bottom wing: 90°→225° -->
+    <path d="M188,100 Q145,155 38,162"/>
+    <!-- Left-top wing: 270°→45° -->
+    <path d="M12,100 Q55,45 162,38"/>
+  </g>
+
+  <!-- ── Mid-ring helper nodes (along the wing paths) ── -->
+  <g fill="#1a3a4a">
+    <circle cx="148" cy="68"  r="3.2"/>
+    <circle cx="52"  cy="132" r="3.2"/>
+    <circle cx="148" cy="132" r="3.2"/>
+    <circle cx="52"  cy="68"  r="3.2"/>
+  </g>
+
+  <!-- ── Glow halo behind sphere ──────────────────────── -->
+  <circle cx="100" cy="100" r="38" fill="url(#glowGrad)"/>
+
+  <!-- ── Central sphere ───────────────────────────────── -->
+  <circle cx="100" cy="100" r="22" fill="url(#sphereGrad)" opacity="0.95"/>
+  <!-- Specular highlight -->
+  <ellipse cx="93" cy="92" rx="7" ry="5" fill="white" opacity="0.20"/>
+</svg>

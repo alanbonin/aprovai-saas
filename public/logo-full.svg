@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 140">
+  <defs>
+    <radialGradient id="sg" cx="38%" cy="32%" r="65%">
+      <stop offset="0%"   stop-color="#6de8ee"/>
+      <stop offset="45%"  stop-color="#0ab5bd"/>
+      <stop offset="100%" stop-color="#066d73"/>
+    </radialGradient>
+    <radialGradient id="gg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%"   stop-color="#0ab5bd" stop-opacity="0.25"/>
+      <stop offset="100%" stop-color="#0ab5bd" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- ── Icon (scaled to 120×120, offset 10,10) ── -->
+  <g transform="translate(10,10) scale(0.6)">
+    <circle cx="100" cy="100" r="88" fill="none" stroke="#0ab5bd" stroke-width="2.2" opacity="0.85"/>
+    <circle cx="100" cy="12"  r="4.5" fill="#0ab5bd"/>
+    <circle cx="162" cy="38"  r="4.5" fill="#0ab5bd"/>
+    <circle cx="188" cy="100" r="4.5" fill="#0ab5bd"/>
+    <circle cx="162" cy="162" r="4.5" fill="#0ab5bd"/>
+    <circle cx="100" cy="188" r="4.5" fill="#0ab5bd"/>
+    <circle cx="38"  cy="162" r="4.5" fill="#0ab5bd"/>
+    <circle cx="12"  cy="100" r="4.5" fill="#0ab5bd"/>
+    <circle cx="38"  cy="38"  r="4.5" fill="#0ab5bd"/>
+    <g stroke="#0ab5bd" stroke-width="1.4" opacity="0.55">
+      <line x1="100" y1="12"  x2="100" y2="100"/>
+      <line x1="162" y1="38"  x2="100" y2="100"/>
+      <line x1="188" y1="100" x2="100" y2="100"/>
+      <line x1="162" y1="162" x2="100" y2="100"/>
+      <line x1="100" y1="188" x2="100" y2="100"/>
+      <line x1="38"  y1="162" x2="100" y2="100"/>
+      <line x1="12"  y1="100" x2="100" y2="100"/>
+      <line x1="38"  y1="38"  x2="100" y2="100"/>
+    </g>
+    <g fill="none" stroke="#1a3a4a" stroke-width="2.2" stroke-linecap="round" opacity="0.80">
+      <path d="M100,12 Q155,55 162,162"/>
+      <path d="M100,188 Q45,145 38,38"/>
+      <path d="M188,100 Q145,155 38,162"/>
+      <path d="M12,100 Q55,45 162,38"/>
+    </g>
+    <g fill="#1a3a4a">
+      <circle cx="148" cy="68"  r="3.2"/>
+      <circle cx="52"  cy="132" r="3.2"/>
+      <circle cx="148" cy="132" r="3.2"/>
+      <circle cx="52"  cy="68"  r="3.2"/>
+    </g>
+    <circle cx="100" cy="100" r="38" fill="url(#gg)"/>
+    <circle cx="100" cy="100" r="22" fill="url(#sg)"/>
+    <ellipse cx="93" cy="92" rx="7" ry="5" fill="white" opacity="0.20"/>
+  </g>
+
+  <!-- ── Wordmark ── -->
+  <!-- "Aprov" dark navy -->
+  <text x="136" y="72" font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+        font-weight="800" font-size="44" fill="#0d1b2a" letter-spacing="-1">Aprov</text>
+  <!-- "AI" teal -->
+  <text x="305" y="72" font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+        font-weight="800" font-size="44" fill="#0ab5bd" letter-spacing="-1">AI</text>
+  <!-- "360" dark navy -->
+  <text x="360" y="72" font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+        font-weight="800" font-size="44" fill="#0d1b2a" letter-spacing="-1">360</text>
+
+  <!-- ── Tagline ── -->
+  <text x="136" y="100" font-family="'Inter','Helvetica Neue',Arial,sans-serif"
+        font-weight="400" font-size="13.5" fill="#6b7280" letter-spacing="0.2">
+    Estude inteligente. Preparação completa. Resultados Reais.
+  </text>
+</svg>

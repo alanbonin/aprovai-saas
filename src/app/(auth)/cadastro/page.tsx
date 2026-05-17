@@ -53,11 +53,9 @@ export default function CadastroPage() {
     return (
       <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
         <div className="w-full max-w-sm text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-white font-bold text-2xl">Aprovai</span>
+          <div className="flex items-center justify-center mb-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-full.svg" alt="AprovAI360" className="h-12 w-auto" />
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
             <div className="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
@@ -84,11 +82,9 @@ export default function CadastroPage() {
   return (
     <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-white font-bold text-2xl">Aprovai</span>
+        <div className="flex items-center justify-center mb-8">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-full.svg" alt="AprovAI360" className="h-12 w-auto" />
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">

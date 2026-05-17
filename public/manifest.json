@@ -1,11 +1,11 @@
 {
-  "name": "Aprovai — Concursos Públicos",
-  "short_name": "Aprovai",
+  "name": "AprovAI360 — Concursos Públicos",
+  "short_name": "AprovAI360",
   "description": "Prepare-se para concursos públicos com mentores IA por área e banca.",
   "start_url": "/dashboard",
   "display": "standalone",
   "background_color": "#080c18",
-  "theme_color": "#f97316",
+  "theme_color": "#0ab5bd",
   "orientation": "portrait-primary",
   "icons": [
     {
