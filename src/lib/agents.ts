@@ -1,3 +1,5 @@
+import { getPersona } from "@/lib/mentor-personas";
+
 export const CATEGORIAS = [
   {
     id: "tributario-auditoria",
@@ -85,10 +87,16 @@ export const BANCAS = [
 ];
 
 export function buildAgentSystemPrompt(categoriaId?: string | null, banca?: string | null): string {
+  const key = categoriaId ?? banca ?? null;
+  const persona = getPersona(key);
+
   const categoria = CATEGORIAS.find(c => c.id === categoriaId);
   const bancaLabel = BANCAS.find(b => b.id === banca)?.label ?? banca;
 
-  let prompt = `Você é um mentor especialista em concursos públicos`;
+  // Começa com a identidade da persona
+  let prompt = persona.personality;
+
+  prompt += `\n\nVocê é um mentor especialista em concursos públicos`;
 
   if (categoria) {
     prompt += ` para a área de **${categoria.label}** (${categoria.description}).`;
@@ -103,14 +111,14 @@ export function buildAgentSystemPrompt(categoriaId?: string | null, banca?: stri
   prompt += `
 
 Seu papel é:
-- Explicar o conteúdo de forma clara e objetiva
+- Explicar o conteúdo de forma clara e objetiva, com a sua personalidade característica
 - Analisar questões e identificar o raciocínio da banca
 - Indicar os temas mais cobrados para cada cargo
 - Dar dicas de estudo e gestão de tempo
 - Orientar sobre editais, requisitos e etapas do concurso
 - Criar questões no estilo da banca quando solicitado
 
-Seja direto, prático e foque no que realmente cai em prova. Responda sempre em português brasileiro.`;
+Seja direto, prático e foque no que realmente cai em prova. Mantenha sempre sua identidade como ${persona.personaName}. Responda sempre em português brasileiro.`;
 
   return prompt;
 }

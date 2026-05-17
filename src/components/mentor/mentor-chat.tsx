@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Brain, Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2 } from "lucide-react";
+import { Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { MentorAvatar, getPersonaName, getPersonaGreeting } from "@/components/mentor/mentor-avatar";
 
 interface Agent {
   id: string; name: string; description: string;
@@ -13,8 +14,8 @@ interface Agent {
 interface Message {
   role: "user" | "assistant";
   content: string;
-  agentId?: string;   // quem respondeu (modo individual)
-  combined?: boolean; // foi no modo combinado
+  agentId?: string;
+  combined?: boolean;
 }
 
 interface Props {
@@ -28,45 +29,42 @@ interface Props {
   activeAgentIds: string[];
 }
 
-// Modo de chat: "idle" | "single:<agentId>" | "combined"
 type ChatMode = "idle" | `single:${string}` | "combined";
 
 export function MentorChat({
   agents, categorias, bancas, aiCreditsLeft, aiCreditsTotal, maxAgents,
   activeAgentIds: initialActiveIds,
 }: Props) {
-  const [activeIds, setActiveIds] = useState<string[]>(initialActiveIds);
-  const [chatMode, setChatMode] = useState<ChatMode>("idle");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [credits, setCredits] = useState(aiCreditsLeft);
-  const [error, setError] = useState("");
-  const [filterArea, setFilterArea] = useState("");
+  const [activeIds, setActiveIds]     = useState<string[]>(initialActiveIds);
+  const [chatMode, setChatMode]       = useState<ChatMode>("idle");
+  const [messages, setMessages]       = useState<Message[]>([]);
+  const [input, setInput]             = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [credits, setCredits]         = useState(aiCreditsLeft);
+  const [error, setError]             = useState("");
+  const [filterArea, setFilterArea]   = useState("");
   const [filterBanca, setFilterBanca] = useState("");
   const [showSelector, setShowSelector] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]           = useState(false);
   const [savingMemory, setSavingMemory] = useState(false);
   const [memorySaved, setMemorySaved] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
 
-  // Permite sempre pelo menos 2 (para combinar área + banca)
-  const effectiveMax = Math.max(maxAgents, 2);
-  const isUnlimited = maxAgents >= 999;
-  const activeAgents = agents.filter(a => activeIds.includes(a.id));
-  const filtered = agents.filter(a =>
-    (!filterArea || a.area === filterArea || a.categoria === filterArea) &&
+  const effectiveMax   = Math.max(maxAgents, 2);
+  const isUnlimited    = maxAgents >= 999;
+  const activeAgents   = agents.filter(a => activeIds.includes(a.id));
+  const filtered       = agents.filter(a =>
+    (!filterArea  || a.area === filterArea  || a.categoria === filterArea) &&
     (!filterBanca || a.banca === filterBanca)
   );
 
-  // Agente ativo no modo individual
   const singleAgent = chatMode.startsWith("single:")
     ? agents.find(a => a.id === chatMode.slice(7)) ?? null
     : null;
   const isCombined = chatMode === "combined";
-  const isIdle = chatMode === "idle";
+  const isIdle     = chatMode === "idle";
 
   function openSingle(agent: Agent) {
     if (chatMode !== `single:${agent.id}`) {
@@ -88,8 +86,8 @@ export function MentorChat({
 
   async function saveMemory() {
     if (messages.length < 4 || savingMemory) return;
-    const agentId = singleAgent?.id ?? (isCombined ? activeIds[0] : null);
-    const agentName = singleAgent?.name ?? (isCombined ? activeAgents.map(a => a.name).join(" + ") : "Mentor");
+    const agentId   = singleAgent?.id ?? (isCombined ? activeIds[0] : null);
+    const agentName = singleAgent ? getPersonaName(singleAgent) : (isCombined ? activeAgents.map(a => getPersonaName(a)).join(" + ") : "Mentor");
     if (!agentId) return;
     setSavingMemory(true);
     try {
@@ -103,11 +101,11 @@ export function MentorChat({
     finally { setSavingMemory(false); }
   }
 
-  // Auto-salva memória após 10+ mensagens
   useEffect(() => {
     if (messages.length === 10 && !memorySaved && !savingMemory) {
       saveMemory();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [messages.length]);
 
   async function toggleAgent(agent: Agent) {
@@ -124,24 +122,15 @@ export function MentorChat({
     });
 
     setActiveIds(newIds);
-    // Se remover o agente ativo no chat individual, volta para idle
-    if (isActive && chatMode === `single:${agent.id}`) {
-      setChatMode("idle");
-      setMessages([]);
-    }
-    // Se sair do modo combinado por ter só 1 agente
-    if (chatMode === "combined" && newIds.length < 2) {
-      setChatMode("idle");
-      setMessages([]);
-    }
+    if (isActive && chatMode === `single:${agent.id}`) { setChatMode("idle"); setMessages([]); }
+    if (chatMode === "combined" && newIds.length < 2)  { setChatMode("idle"); setMessages([]); }
     setSaving(false);
   }
 
   async function sendMessage(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || loading || credits <= 0) return;
-    if (isIdle) return;
+    if (!text || loading || credits <= 0 || isIdle) return;
 
     setMessages(prev => [...prev, { role: "user", content: text }]);
     setInput("");
@@ -152,26 +141,16 @@ export function MentorChat({
       let res: Response;
 
       if (isCombined) {
-        // Usa /api/workspace/chat com todos os agentes ativos
         res = await fetch("/api/workspace/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text,
-            agentIds: activeIds,
-            history: messages.slice(-10),
-          }),
+          body: JSON.stringify({ message: text, agentIds: activeIds, history: messages.slice(-10) }),
         });
       } else {
-        // Usa /api/mentor com agente individual
         res = await fetch("/api/mentor", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            message: text,
-            agentId: singleAgent!.id,
-            history: messages.slice(-10),
-          }),
+          body: JSON.stringify({ message: text, agentId: singleAgent!.id, history: messages.slice(-10) }),
         });
       }
 
@@ -186,11 +165,9 @@ export function MentorChat({
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let assistantText = "";
+
       setMessages(prev => [...prev, {
-        role: "assistant",
-        content: "",
-        combined: isCombined,
-        agentId: singleAgent?.id,
+        role: "assistant", content: "", combined: isCombined, agentId: singleAgent?.id,
       }]);
 
       while (true) {
@@ -210,108 +187,109 @@ export function MentorChat({
     }
   }
 
-  /* ── Chat placeholder ── */
+  /* ── Placeholder ── */
   function ChatPlaceholder() {
     if (activeAgents.length === 0) {
       return (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <Brain className="w-16 h-16 text-indigo-500/30 mx-auto mb-4" />
-            <p className="text-gray-400 text-lg font-medium">Adicione um mentor para começar</p>
-            <p className="text-gray-600 text-sm mt-1">Clique em "+" para escolher seu especialista</p>
+          <div className="text-center px-6">
+            <div className="flex justify-center mb-5">
+              <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center">
+                <Sparkles className="w-8 h-8 text-indigo-400" />
+              </div>
+            </div>
+            <p className="text-white font-semibold text-lg mb-1">Escolha seu mentor</p>
+            <p className="text-gray-500 text-sm mb-4">Cada mentor tem nome, personalidade e especialidade própria</p>
             <button onClick={() => setShowSelector(true)}
-              className="mt-4 px-4 py-2 bg-indigo-600 rounded-lg text-sm hover:bg-indigo-700 transition-colors">
-              Escolher mentor
+              className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-500 rounded-xl text-sm font-medium transition-colors">
+              Conhecer os mentores
             </button>
           </div>
         </div>
       );
     }
+
     return (
       <div className="flex-1 flex items-center justify-center">
-        <div className="text-center max-w-xs">
-          <Brain className="w-12 h-12 text-indigo-500/30 mx-auto mb-3" />
-          <p className="text-gray-400 font-medium mb-1">Selecione um mentor</p>
+        <div className="text-center max-w-xs px-6">
+          <div className="flex justify-center -space-x-2 mb-4">
+            {activeAgents.slice(0, 3).map(a => (
+              <MentorAvatar key={a.id} agent={a} size={44} showRing />
+            ))}
+          </div>
+          <p className="text-gray-300 font-medium mb-1">
+            {activeAgents.length === 1
+              ? `${getPersonaName(activeAgents[0])} está pronto(a)`
+              : `${activeAgents.length} mentores disponíveis`}
+          </p>
           <p className="text-gray-600 text-sm">
-            Clique em um mentor à esquerda para conversar individualmente
-            {activeAgents.length >= 2 && <span> ou clique em <strong className="text-indigo-400">Conversar com os 2</strong> para uma resposta combinada</span>}
+            Clique em um mentor ao lado para conversar
+            {activeAgents.length >= 2 && <span> ou em <strong className="text-indigo-400">Modo combinado</strong></span>}
           </p>
         </div>
       </div>
     );
   }
 
-  /* ── Header do chat ativo ── */
+  /* ── Header do chat ── */
   function ChatHeader() {
     if (isCombined) {
       return (
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5 bg-[#0d1117]">
-          <div className="flex -space-x-2">
-            {activeAgents.map(a => (
-              <div key={a.id} className="w-9 h-9 rounded-full border-2 border-[#0d1117] flex items-center justify-center text-xs font-bold"
-                style={{ backgroundColor: a.color + "33", color: a.color }}>
-                {a.name.charAt(0)}
-              </div>
-            ))}
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/5 bg-[#0d1117]">
+          <div className="flex -space-x-2.5">
+            {activeAgents.map(a => <MentorAvatar key={a.id} agent={a} size={36} showRing />)}
           </div>
-          <div>
-            <p className="font-semibold text-sm">
-              {activeAgents.map(a => a.name).join(" + ")}
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold text-sm leading-tight">
+              {activeAgents.map(a => getPersonaName(a)).join(" + ")}
             </p>
-            <p className="text-xs text-indigo-400">● Modo combinado — respondendo juntos</p>
+            <p className="text-xs text-indigo-400 mt-0.5">● Modo combinado — respondendo juntos</p>
           </div>
-          <div className="ml-auto flex items-center gap-2">
-            {messages.length >= 4 && (
-              <button onClick={saveMemory} disabled={savingMemory || memorySaved}
-                className={cn("flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors",
-                  memorySaved
-                    ? "bg-green-500/10 border-green-500/20 text-green-400"
-                    : "bg-white/5 border-white/10 text-gray-500 hover:text-white hover:border-white/20"
-                )} title="Salvar esta conversa na memória do mentor">
-                {savingMemory ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookMarked className="w-3 h-3" />}
-                {memorySaved ? "Salvo" : "Salvar"}
-              </button>
-            )}
-            <span className="text-xs text-gray-600 font-mono">{credits}/{aiCreditsTotal} msgs</span>
-          </div>
+          <HeaderActions />
         </div>
       );
     }
     if (singleAgent) {
+      const name = getPersonaName(singleAgent);
       return (
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-white/5 bg-[#0d1117]">
-          <div className="w-9 h-9 rounded-full flex items-center justify-center font-bold"
-            style={{ backgroundColor: singleAgent.color + "33", color: singleAgent.color }}>
-            {singleAgent.name.charAt(0)}
+        <div className="flex items-center gap-3 px-5 py-3.5 border-b border-white/5 bg-[#0d1117]">
+          <MentorAvatar agent={singleAgent} size={40} showRing />
+          <div className="min-w-0 flex-1">
+            <p className="font-semibold leading-tight">{name}</p>
+            <p className="text-xs text-gray-500 mt-0.5 truncate">{singleAgent.description}</p>
           </div>
-          <div>
-            <p className="font-semibold">{singleAgent.name}</p>
-            <p className="text-xs text-gray-500">{singleAgent.description}</p>
-          </div>
-          <div className="ml-auto flex items-center gap-2">
-            {messages.length >= 4 && (
-              <button onClick={saveMemory} disabled={savingMemory || memorySaved}
-                className={cn("flex items-center gap-1 text-xs px-2 py-1 rounded-lg border transition-colors",
-                  memorySaved
-                    ? "bg-green-500/10 border-green-500/20 text-green-400"
-                    : "bg-white/5 border-white/10 text-gray-500 hover:text-white hover:border-white/20"
-                )} title="Salvar esta conversa na memória do mentor">
-                {savingMemory ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookMarked className="w-3 h-3" />}
-                {memorySaved ? "Salvo" : "Salvar"}
-              </button>
-            )}
-            <span className="text-xs text-gray-600 font-mono">{credits}/{aiCreditsTotal} msgs</span>
-          </div>
+          <HeaderActions />
         </div>
       );
     }
     return null;
   }
 
-  const chatPlaceholderText = isCombined
-    ? `Pergunte para ${activeAgents.map(a => a.name).join(" e ")}...`
+  function HeaderActions() {
+    return (
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {messages.length >= 4 && (
+          <button onClick={saveMemory} disabled={savingMemory || memorySaved}
+            className={cn("flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border transition-colors",
+              memorySaved
+                ? "bg-green-500/10 border-green-500/20 text-green-400"
+                : "bg-white/5 border-white/10 text-gray-500 hover:text-white hover:border-white/20"
+            )}>
+            {savingMemory ? <Loader2 className="w-3 h-3 animate-spin" /> : <BookMarked className="w-3 h-3" />}
+            {memorySaved ? "Salvo" : "Salvar"}
+          </button>
+        )}
+        {!isUnlimited && (
+          <span className="text-xs text-gray-600 font-mono">{credits}/{aiCreditsTotal}</span>
+        )}
+      </div>
+    );
+  }
+
+  const placeholderText = isCombined
+    ? `Pergunte para ${activeAgents.map(a => getPersonaName(a)).join(" e ")}...`
     : singleAgent
-      ? `Pergunte para ${singleAgent.name}...`
+      ? `Pergunte para ${getPersonaName(singleAgent)}...`
       : "";
 
   return (
@@ -319,7 +297,7 @@ export function MentorChat({
 
       {/* ── Sidebar ── */}
       <div className="w-72 border-r border-white/5 flex flex-col bg-[#0d1117] flex-shrink-0">
-        {/* Header */}
+        {/* Header sidebar */}
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-1">
             <h2 className="font-semibold text-sm text-gray-300">Meus Mentores</h2>
@@ -337,24 +315,24 @@ export function MentorChat({
           )}
         </div>
 
-        {/* Lista de mentores ativos */}
+        {/* Lista de mentores */}
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
           {activeAgents.length === 0 && (
             <div className="text-center py-8 px-4">
-              <Brain className="w-8 h-8 text-gray-600 mx-auto mb-2" />
+              <Sparkles className="w-8 h-8 text-gray-600 mx-auto mb-2" />
               <p className="text-gray-500 text-sm">Nenhum mentor selecionado</p>
               <button onClick={() => setShowSelector(true)} className="text-indigo-400 text-xs mt-1 hover:underline">
-                Escolher mentor →
+                Conhecer mentores →
               </button>
             </div>
           )}
 
-          {/* Botão "Conversar com os 2" — aparece quando há 2+ mentores */}
+          {/* Modo combinado */}
           {activeAgents.length >= 2 && (
             <button
               onClick={openCombined}
               className={cn(
-                "w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all mb-1",
+                "w-full flex items-center gap-2 px-3 py-2.5 rounded-xl border text-sm font-medium transition-all mb-2",
                 isCombined
                   ? "bg-indigo-600/20 border-indigo-500/40 text-indigo-300"
                   : "border-indigo-500/20 bg-indigo-600/5 text-indigo-400 hover:bg-indigo-600/10 hover:border-indigo-500/30"
@@ -362,90 +340,97 @@ export function MentorChat({
             >
               <div className="flex -space-x-1.5 flex-shrink-0">
                 {activeAgents.slice(0, 3).map(a => (
-                  <div key={a.id} className="w-5 h-5 rounded-full border border-[#0d1117] flex items-center justify-center text-[9px] font-bold"
-                    style={{ backgroundColor: a.color + "44", color: a.color }}>
-                    {a.name.charAt(0)}
-                  </div>
+                  <MentorAvatar key={a.id} agent={a} size={20} />
                 ))}
               </div>
-              <span className="flex-1 text-left text-xs">Conversar com os {activeAgents.length}</span>
+              <span className="flex-1 text-left text-xs">Modo combinado ({activeAgents.length})</span>
               <Users className="w-3.5 h-3.5 flex-shrink-0 opacity-60" />
             </button>
           )}
 
-          {/* Cards de cada mentor */}
-          {activeAgents.map(agent => (
-            <div
-              key={agent.id}
-              role="button"
-              tabIndex={0}
-              onClick={() => openSingle(agent)}
-              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") openSingle(agent); }}
-              className={cn(
-                "w-full text-left px-3 py-3 rounded-lg transition-colors group cursor-pointer",
-                chatMode === `single:${agent.id}`
-                  ? "bg-indigo-600/20 border border-indigo-500/30"
-                  : "hover:bg-white/5 border border-transparent"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                  style={{ backgroundColor: agent.color + "33", color: agent.color }}>
-                  {agent.name.charAt(0)}
+          {/* Cards individuais */}
+          {activeAgents.map(agent => {
+            const name = getPersonaName(agent);
+            const isActive = chatMode === `single:${agent.id}`;
+            return (
+              <div
+                key={agent.id}
+                role="button" tabIndex={0}
+                onClick={() => openSingle(agent)}
+                onKeyDown={e => { if (e.key === "Enter" || e.key === " ") openSingle(agent); }}
+                className={cn(
+                  "w-full text-left px-3 py-3 rounded-xl transition-all group cursor-pointer border",
+                  isActive
+                    ? "border-white/10 bg-white/[0.06]"
+                    : "border-transparent hover:bg-white/[0.04] hover:border-white/5"
+                )}
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="relative flex-shrink-0">
+                    <MentorAvatar agent={agent} size={36} />
+                    {isActive && (
+                      <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-400 rounded-full border-2 border-[#0d1117]" />
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium truncate leading-tight" style={{ color: isActive ? agent.color : "white" }}>
+                      {name}
+                    </p>
+                    <p className="text-[11px] text-gray-500 truncate mt-0.5">{agent.description}</p>
+                  </div>
+                  <button
+                    onClick={e => { e.stopPropagation(); toggleAgent(agent); }}
+                    disabled={saving}
+                    className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-1"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{agent.name}</p>
-                  <p className="text-xs text-gray-500 truncate">{agent.description}</p>
-                </div>
-                <button
-                  onClick={e => { e.stopPropagation(); toggleAgent(agent); }}
-                  disabled={saving}
-                  className="opacity-0 group-hover:opacity-100 text-gray-600 hover:text-red-400 transition-all p-1"
-                  title="Remover mentor"
-                >
-                  <X className="w-3 h-3" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
-        {/* Quota de mensagens */}
-        <div className="px-4 py-3 mx-3 mb-3 rounded-lg bg-white/5 border border-white/5">
-          <div className="flex justify-between text-xs text-gray-400 mb-1">
-            <span>Mensagens esta semana</span>
-            <span>{isUnlimited ? "∞" : `${credits}/${aiCreditsTotal}`}</span>
-          </div>
-          {!isUnlimited && (
-            <div className="h-1.5 rounded-full bg-white/10">
-              <div className="h-full rounded-full bg-indigo-500 transition-all"
-                style={{ width: `${Math.min(100, (credits / aiCreditsTotal) * 100)}%` }} />
+        {/* Quota */}
+        <div className="px-3 pb-3">
+          <div className="px-3 py-2.5 rounded-lg bg-white/[0.04] border border-white/5">
+            <div className="flex justify-between text-xs text-gray-400 mb-1.5">
+              <span>Mensagens esta semana</span>
+              <span className="font-mono">{isUnlimited ? "∞" : `${credits}/${aiCreditsTotal}`}</span>
             </div>
-          )}
+            {!isUnlimited && (
+              <div className="h-1 rounded-full bg-white/10">
+                <div className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${Math.min(100, (credits / aiCreditsTotal) * 100)}%`,
+                    background: credits < 5 ? "#ef4444" : credits < 15 ? "#f59e0b" : "#6366f1",
+                  }} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* ── Modal seletor ── */}
       {showSelector && (
-        <div className="absolute inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+        <div className="absolute inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
           onClick={() => setShowSelector(false)}>
-          <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col"
+          <div className="bg-[#0d1117] border border-white/10 rounded-2xl w-full max-w-2xl max-h-[85vh] flex flex-col"
             onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-white/5">
+            <div className="flex items-center justify-between p-5 border-b border-white/5">
               <div>
-                <h3 className="font-semibold">Escolher Mentores</h3>
+                <h3 className="font-bold text-lg">Escolher Mentores</h3>
                 <p className="text-xs text-gray-500 mt-0.5">
                   {isUnlimited
                     ? "Agentes ilimitados no seu plano"
-                    : `Selecione até ${effectiveMax} mentores — combine área + banca para melhor resultado`}
+                    : `Selecione até ${effectiveMax} — combine área + banca para melhor resultado`}
                 </p>
               </div>
-              <button onClick={() => setShowSelector(false)} className="text-gray-500 hover:text-white">
+              <button onClick={() => setShowSelector(false)} className="text-gray-500 hover:text-white p-1 rounded-lg hover:bg-white/5">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Filtros */}
             <div className="flex gap-2 p-4 border-b border-white/5">
               <select value={filterArea} onChange={e => setFilterArea(e.target.value)}
                 className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none">
@@ -459,11 +444,10 @@ export function MentorChat({
               </select>
             </div>
 
-            {/* Dica de combinação */}
             {activeIds.length === 1 && (
               <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-xs text-indigo-300 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                Adicione mais 1 mentor para habilitar o chat combinado — ideal: 1 de área + 1 de banca
+                Adicione mais 1 para habilitar o modo combinado — ideal: 1 área + 1 banca
               </div>
             )}
 
@@ -471,39 +455,42 @@ export function MentorChat({
               {filtered.map(agent => {
                 const isActive = activeIds.includes(agent.id);
                 const canAdd = isUnlimited || activeIds.length < effectiveMax;
+                const name = getPersonaName(agent);
                 return (
                   <button
                     key={agent.id}
                     onClick={() => toggleAgent(agent)}
                     disabled={!isActive && !canAdd}
                     className={cn(
-                      "text-left p-3 rounded-xl border transition-all",
+                      "text-left p-3.5 rounded-xl border transition-all",
                       isActive
-                        ? "border-indigo-500/50 bg-indigo-600/10"
+                        ? "border-white/20 bg-white/[0.06]"
                         : canAdd
-                          ? "border-white/5 bg-white/3 hover:bg-white/5"
-                          : "border-white/5 bg-white/3 opacity-40 cursor-not-allowed"
+                          ? "border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/10"
+                          : "border-white/5 bg-white/[0.02] opacity-40 cursor-not-allowed"
                     )}
                   >
-                    <div className="flex items-start gap-2">
-                      <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
-                        style={{ backgroundColor: agent.color + "33", color: agent.color }}>
-                        {agent.name.charAt(0)}
-                      </div>
+                    <div className="flex items-start gap-3">
+                      <MentorAvatar agent={agent} size={44} />
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1">
-                          <p className="text-sm font-medium truncate">{agent.name}</p>
-                          {isActive && <Check className="w-3 h-3 text-indigo-400 flex-shrink-0" />}
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <p className="text-sm font-semibold truncate"
+                            style={{ color: isActive ? agent.color : "white" }}>
+                            {name}
+                          </p>
+                          {isActive && <Check className="w-3.5 h-3.5 text-green-400 flex-shrink-0" />}
                           {!isActive && !canAdd && <Lock className="w-3 h-3 text-gray-600 flex-shrink-0" />}
                         </div>
                         <p className="text-xs text-gray-500 truncate">{agent.description}</p>
-                        {/* Badge área ou banca */}
-                        <div className="flex gap-1 mt-1 flex-wrap">
+                        <div className="flex gap-1 mt-1.5 flex-wrap">
                           {agent.categoria && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-indigo-600/20 text-indigo-400">área</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-indigo-600/20 text-indigo-400 font-medium">área</span>
                           )}
                           {agent.banca && (
-                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-600/20 text-amber-400">banca</span>
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-600/20 text-amber-400 font-medium">banca</span>
+                          )}
+                          {agent.isPremium && (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-600/20 text-purple-400 font-medium">premium</span>
                           )}
                         </div>
                       </div>
@@ -516,7 +503,7 @@ export function MentorChat({
         </div>
       )}
 
-      {/* ── Área de chat ── */}
+      {/* ── Área do chat ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {isIdle ? (
           <ChatPlaceholder />
@@ -525,105 +512,152 @@ export function MentorChat({
             <ChatHeader />
 
             {/* Mensagens */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-4">
-              {messages.length === 0 && (
-                <div className="text-center py-12">
-                  {isCombined ? (
-                    <div>
-                      <div className="flex justify-center -space-x-3 mb-3">
-                        {activeAgents.map(a => (
-                          <div key={a.id} className="w-10 h-10 rounded-full border-2 border-[#080c18] flex items-center justify-center text-sm font-bold"
-                            style={{ backgroundColor: a.color + "33", color: a.color }}>
-                            {a.name.charAt(0)}
-                          </div>
-                        ))}
-                      </div>
-                      <p className="text-gray-400 font-medium mb-1">
-                        {activeAgents.map(a => a.name).join(" + ")} prontos para responder
-                      </p>
-                      <p className="text-gray-600 text-sm">
-                        Faça sua pergunta e os {activeAgents.length} mentores responderão juntos com perspectivas complementares
-                      </p>
+            <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
+
+              {/* Mensagem de boas-vindas */}
+              {messages.length === 0 && singleAgent && (
+                <div className="flex items-end gap-2.5">
+                  <MentorAvatar agent={singleAgent} size={36} className="mb-1" />
+                  <div className="max-w-lg">
+                    <p className="text-xs text-gray-500 mb-1 ml-1">{getPersonaName(singleAgent)}</p>
+                    <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/[0.07] text-sm text-gray-200 leading-relaxed">
+                      {getPersonaGreeting(singleAgent)}
                     </div>
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      Olá! Como posso te ajudar? Sou o <strong>{singleAgent?.name}</strong>
-                    </p>
-                  )}
+                  </div>
                 </div>
               )}
 
+              {messages.length === 0 && isCombined && (
+                <div className="flex items-end gap-2.5">
+                  <div className="flex -space-x-2 mb-1">
+                    {activeAgents.slice(0, 2).map(a => <MentorAvatar key={a.id} agent={a} size={28} />)}
+                  </div>
+                  <div className="max-w-lg">
+                    <p className="text-xs text-gray-500 mb-1 ml-1">
+                      {activeAgents.map(a => getPersonaName(a)).join(" + ")}
+                    </p>
+                    <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/[0.07] text-sm text-gray-200 leading-relaxed">
+                      Olá! Estamos juntos para te ajudar com perspectivas complementares. O que quer estudar hoje?
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Mensagens da conversa */}
               {messages.map((msg, i) => {
                 const respAgent = msg.combined
                   ? null
                   : agents.find(a => a.id === (msg.agentId ?? singleAgent?.id));
+
+                if (msg.role === "user") {
+                  return (
+                    <div key={i} className="flex justify-end">
+                      <div className="max-w-2xl px-4 py-3 rounded-2xl rounded-br-sm bg-indigo-600 text-white text-sm leading-relaxed">
+                        {msg.content}
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Mensagem do assistente
+                const isLast = i === messages.length - 1;
+                const isTyping = isLast && loading && !msg.content;
+
                 return (
-                  <div key={i} className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}>
-                    {msg.role === "assistant" && (
-                      <div className="flex-shrink-0 mr-2 mt-0.5">
-                        {msg.combined ? (
-                          <div className="flex -space-x-1.5">
-                            {activeAgents.slice(0, 2).map(a => (
-                              <div key={a.id} className="w-6 h-6 rounded-full border border-[#080c18] flex items-center justify-center text-[9px] font-bold"
-                                style={{ backgroundColor: a.color + "44", color: a.color }}>
-                                {a.name.charAt(0)}
-                              </div>
-                            ))}
-                          </div>
+                  <div key={i} className="flex items-end gap-2.5">
+                    {/* Avatar */}
+                    <div className="flex-shrink-0 mb-1">
+                      {msg.combined ? (
+                        <div className="flex -space-x-2">
+                          {activeAgents.slice(0, 2).map(a => <MentorAvatar key={a.id} agent={a} size={28} />)}
+                        </div>
+                      ) : (
+                        respAgent
+                          ? <MentorAvatar agent={respAgent} size={36} />
+                          : <div className="w-9 h-9 rounded-full bg-indigo-600/20 flex items-center justify-center">
+                              <Sparkles className="w-4 h-4 text-indigo-400" />
+                            </div>
+                      )}
+                    </div>
+
+                    {/* Balão */}
+                    <div className="max-w-2xl flex-1 min-w-0">
+                      <p className="text-xs text-gray-500 mb-1 ml-1">
+                        {msg.combined
+                          ? activeAgents.map(a => getPersonaName(a)).join(" + ")
+                          : respAgent ? getPersonaName(respAgent) : "Mentor"}
+                      </p>
+                      <div className={cn(
+                        "px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-wrap",
+                        "bg-white/[0.06] border border-white/[0.07] text-gray-200",
+                      )}>
+                        {isTyping ? (
+                          <span className="flex items-center gap-1 text-gray-500">
+                            <span className="flex gap-0.5">
+                              {[0, 1, 2].map(j => (
+                                <span key={j} className="w-1.5 h-1.5 rounded-full bg-gray-500 animate-bounce"
+                                  style={{ animationDelay: `${j * 150}ms` }} />
+                              ))}
+                            </span>
+                            digitando...
+                          </span>
                         ) : (
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold"
-                            style={{
-                              backgroundColor: (respAgent?.color ?? "#6366f1") + "33",
-                              color: respAgent?.color ?? "#6366f1",
-                            }}>
-                            {respAgent?.name.charAt(0) ?? "A"}
-                          </div>
+                          msg.content || <span className="text-gray-600">...</span>
                         )}
                       </div>
-                    )}
-                    <div className={cn(
-                      "max-w-2xl px-4 py-3 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
-                      msg.role === "user"
-                        ? "bg-indigo-600 text-white rounded-br-sm"
-                        : "bg-white/5 border border-white/5 text-gray-200 rounded-bl-sm"
-                    )}>
-                      {msg.content || <span className="animate-pulse text-gray-500">Pensando...</span>}
                     </div>
                   </div>
                 );
               })}
+
               <div ref={bottomRef} />
             </div>
 
             {error && (
-              <div className="mx-6 mb-2 flex items-center gap-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+              <div className="mx-5 mb-2 flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 {error}
               </div>
             )}
 
-            <form onSubmit={sendMessage} className="flex gap-3 p-4 border-t border-white/5">
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                disabled={loading || credits <= 0}
-                placeholder={
-                  credits <= 0
-                    ? "Limite semanal atingido. Faça upgrade!"
-                    : chatPlaceholderText
-                }
-                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors text-sm disabled:opacity-50"
-                onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(e as React.KeyboardEvent<HTMLInputElement> & React.FormEvent); } }}
-              />
-              <Button
-                type="submit"
-                disabled={loading || !input.trim() || credits <= 0}
-                size="icon"
-                className="w-12 h-12 rounded-xl flex-shrink-0"
-              >
-                <Send className="w-4 h-4" />
-              </Button>
-            </form>
+            {/* Input */}
+            <div className="p-4 border-t border-white/5">
+              <form onSubmit={sendMessage} className="flex gap-2.5">
+                {/* Mini avatar do mentor ativo */}
+                {singleAgent && !isCombined && (
+                  <div className="flex-shrink-0 self-end mb-0.5">
+                    <MentorAvatar agent={singleAgent} size={32} />
+                  </div>
+                )}
+                <input
+                  value={input}
+                  onChange={e => setInput(e.target.value)}
+                  disabled={loading || credits <= 0}
+                  placeholder={
+                    credits <= 0
+                      ? "Limite semanal atingido. Faça upgrade!"
+                      : placeholderText
+                  }
+                  className="flex-1 bg-white/[0.05] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50 transition-colors text-sm disabled:opacity-50"
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage(e as React.KeyboardEvent<HTMLInputElement> & React.FormEvent);
+                    }
+                  }}
+                />
+                <Button
+                  type="submit"
+                  disabled={loading || !input.trim() || credits <= 0}
+                  size="icon"
+                  className="w-11 h-11 rounded-xl flex-shrink-0 self-end"
+                >
+                  {loading
+                    ? <Loader2 className="w-4 h-4 animate-spin" />
+                    : <Send className="w-4 h-4" />}
+                </Button>
+              </form>
+            </div>
           </>
         )}
       </div>
