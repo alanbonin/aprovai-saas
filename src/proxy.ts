@@ -1,17 +1,57 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function proxy(request: NextRequest) {
-  const pathname = request.nextUrl.pathname;
+// ── Rotas públicas (sem auth) ────────────────────────────────────────────────
+const PUBLIC_PATHS = new Set([
+  "/",
+  "/login",
+  "/cadastro",
+  "/reset-senha",
+  "/api/auth/callback",
+  "/api/auth/register",
+  "/api/auth/logout",
+  "/api/pagamento/webhook",
+  "/api/icon",
+  "/manifest.json",
+  "/robots.txt",
+  "/sitemap.xml",
+]);
 
-  // Injeta o pathname nos headers do request para server components lerem via headers()
+function isPublicPath(pathname: string): boolean {
+  return (
+    PUBLIC_PATHS.has(pathname) ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/api/auth") ||
+    /\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js)$/.test(pathname)
+  );
+}
+
+export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // ── Injeta pathname nos headers para server components ───────────────────
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
 
-  let supabaseResponse = NextResponse.next({
-    request: { headers: requestHeaders },
-  });
+  let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
+  // ── Security headers globais ─────────────────────────────────────────────
+  supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
+  supabaseResponse.headers.set("X-Frame-Options", "DENY");
+  supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
+  supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  if (process.env.NODE_ENV === "production") {
+    supabaseResponse.headers.set(
+      "Strict-Transport-Security",
+      "max-age=63072000; includeSubDomains; preload"
+    );
+  }
+
+  // ── Rotas públicas → passa direto ────────────────────────────────────────
+  if (isPublicPath(pathname)) return supabaseResponse;
+
+  // ── Supabase SSR — lê/atualiza cookies da sessão ─────────────────────────
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -20,9 +60,13 @@ export async function proxy(request: NextRequest) {
         getAll() { return request.cookies.getAll(); },
         setAll(cookiesToSet) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-          supabaseResponse = NextResponse.next({
-            request: { headers: requestHeaders },
-          });
+          supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
+          // Re-aplica security headers após recriar a response
+          supabaseResponse.headers.set("X-Content-Type-Options", "nosniff");
+          supabaseResponse.headers.set("X-Frame-Options", "DENY");
+          supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
+          supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+          supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
@@ -33,17 +77,26 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  const isAuthPage = pathname.startsWith("/login") || pathname.startsWith("/cadastro");
-  const isPublicPage = pathname === "/" || isAuthPage || pathname.startsWith("/reset-senha");
+  const isAuthPage =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/cadastro") ||
+    pathname.startsWith("/reset-senha");
 
-  if (!user && !isPublicPage) {
-    return NextResponse.redirect(new URL("/login", request.url));
+  // Não autenticado → redirect para login
+  if (!user && !isAuthPage) {
+    const loginUrl = request.nextUrl.clone();
+    loginUrl.pathname = "/login";
+    loginUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(loginUrl);
   }
 
+  // Autenticado em página de auth → vai para workspace
   if (user && isAuthPage) {
-    // /workspace → admin é redirecionado p/ /admin; aluno vai p/ workspace/onboarding
     return NextResponse.redirect(new URL("/workspace", request.url));
   }
+
+  // Nota: verificação de role ADMIN é feita no layout do grupo (admin)/
+  // pois a role está no banco (User.role), não no Supabase user_metadata.
 
   return supabaseResponse;
 }
