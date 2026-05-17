@@ -125,6 +125,8 @@ model Question {
   explanation     String?  @db.Text
   source          String   @default("ia")
   analysis        String?  @db.Text
+  // TODO: adicionar via SQL editor do Supabase:
+  // ALTER TABLE "Question" ADD COLUMN IF NOT EXISTS aprovado BOOLEAN NOT NULL DEFAULT true;
   createdAt       DateTime @default(now())
 
   progress        Progress[]

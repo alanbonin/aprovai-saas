@@ -8,61 +8,83 @@ export async function GET(req: Request) {
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
-  const banca = searchParams.get("banca");
-  const level = searchParams.get("level");
-  const subjectId = searchParams.get("subjectId");
-  const year = searchParams.get("year") ? parseInt(searchParams.get("year")!) : null;
-  const onlyFavs = searchParams.get("favoritos") === "1";
-  const onlyErros = searchParams.get("erros") === "1";
-  const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
+  const banca      = searchParams.get("banca");
+  const level      = searchParams.get("level");
+  const subjectId  = searchParams.get("subjectId");
+  const year       = searchParams.get("year") ? parseInt(searchParams.get("year")!) : null;
+  const onlyFavs   = searchParams.get("favoritos") === "1";
+  const onlyErros  = searchParams.get("erros") === "1";
+  const limit      = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
+
+  // IDs já respondidos (evita repetição)
+  const seenParam = searchParams.get("seen"); // CSV de IDs já vistos
+  const seenIds   = seenParam ? seenParam.split(",").map(Number).filter(Boolean) : [];
 
   const dbUser = await getUserWithPlan(user.id);
 
-  // Favoritos filter — resolve IDs first
+  // ── Filtro por Favoritos ────────────────────────────────────────────────────
   let favIds: number[] | null = null;
   if (onlyFavs) {
     if (dbUser) {
       const { data: note } = await db.from("Note").select("content")
         .eq("userId", dbUser.id).eq("subjectId", "__FAV_Q__").single();
-      favIds = note?.content ? JSON.parse(note.content) : [];
+      favIds = note?.content ? (JSON.parse(note.content) as number[]) : [];
     }
-    if (!favIds || favIds.length === 0) return NextResponse.json({ questions: [] });
+    if (!favIds?.length) return NextResponse.json({ questions: [] });
   }
 
-  // Erros filter — questions the student last answered incorrectly
+  // ── Filtro por Erros ────────────────────────────────────────────────────────
   let erroIds: number[] | null = null;
   if (onlyErros && dbUser) {
     const { data: wrongProgress } = await db
-      .from("Progress")
-      .select("questionId")
-      .eq("userId", dbUser.id)
-      .eq("correct", false);
-    // Exclude questions that were later answered correctly
+      .from("Progress").select("questionId")
+      .eq("userId", dbUser.id).eq("correct", false);
     const { data: rightProgress } = await db
-      .from("Progress")
-      .select("questionId")
-      .eq("userId", dbUser.id)
-      .eq("correct", true);
-    const rightIds = new Set((rightProgress ?? []).map(p => p.questionId));
+      .from("Progress").select("questionId")
+      .eq("userId", dbUser.id).eq("correct", true);
+
+    const rightIds = new Set((rightProgress ?? []).map(p => p.questionId as number));
     erroIds = (wrongProgress ?? [])
-      .map(p => p.questionId)
+      .map(p => p.questionId as number)
       .filter(id => !rightIds.has(id));
-    if (erroIds.length === 0) return NextResponse.json({ questions: [] });
+    if (!erroIds.length) return NextResponse.json({ questions: [] });
   }
 
-  let query = db.from("Question").select("*").limit(limit);
-  if (banca) query = query.ilike("banca", banca);
-  if (level) query = query.eq("level", level);
-  if (subjectId) query = query.eq("subjectId", subjectId);
-  if (year) query = query.eq("year", year);
-  if (favIds && favIds.length > 0) query = query.in("id", favIds);
-  if (erroIds && erroIds.length > 0) query = query.in("id", erroIds);
+  // ── Query principal — sempre do banco, NUNCA gera na hora ──────────────────
+  // Busca um pool maior e randomiza no servidor para variedade
+  const poolSize = Math.min(200, limit * 5);
 
-  const { data: questions, error } = await query.order("id", { ascending: false });
+  let query = db.from("Question")
+    .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+    .limit(poolSize);
+
+  if (banca)     query = query.ilike("banca", `%${banca}%`);
+  if (level)     query = query.eq("level", level);
+  if (subjectId) query = query.eq("subjectId", subjectId);
+  if (year)      query = query.eq("year", year);
+  if (favIds?.length)  query = query.in("id", favIds);
+  if (erroIds?.length) query = query.in("id", erroIds);
+
+  // Exclui questões já vistas nesta sessão
+  if (seenIds.length > 0 && !onlyFavs && !onlyErros) {
+    query = query.not("id", "in", `(${seenIds.slice(-100).join(",")})`);
+  }
+
+  const { data: questions, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // shuffle so it feels random
-  const shuffled = (questions ?? []).sort(() => Math.random() - 0.5);
+  if (!questions?.length) {
+    // Se esgotou questões não-vistas, retorna sem filtro de seen
+    const { data: fallback } = await db
+      .from("Question")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+      .limit(limit);
+    const shuffled = (fallback ?? []).sort(() => Math.random() - 0.5).slice(0, limit);
+    return NextResponse.json({ questions: shuffled, exhausted: true });
+  }
+
+  // Randomiza e retorna o limite solicitado
+  const shuffled = questions.sort(() => Math.random() - 0.5).slice(0, limit);
   return NextResponse.json({ questions: shuffled });
 }
 
