@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import MercadoPago, { Preference } from "mercadopago";
+import { checkoutLimiter } from "@/lib/rate-limit";
 
 function getMp() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -14,6 +15,10 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    // Rate limit por usuário — evita abuso de criação de preferências MP
+    const rl = await checkoutLimiter.check(`checkout:${user.id}`);
+    if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
     const dbUser = await getUserWithPlan(user.id);
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });

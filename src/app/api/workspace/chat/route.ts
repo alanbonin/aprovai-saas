@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const totalUsed = await getWeeklyAiUsage(dbUser.id, weekStart);
 
       // Burst protection: 20 msgs/min
-    const rl = chatLimiter.check(dbUser.id);
+    const rl = await chatLimiter.check(dbUser.id);
     if (!rl.ok) return NextResponse.json({ error: "cota_excedida", message: rl.error }, { status: 429 });
 
     if (totalUsed >= weeklyLimit) {

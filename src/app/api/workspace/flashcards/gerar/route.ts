@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   // Rate limit: mesma fila que o chat IA
-  const rl = defaultAiLimiter.check(dbUser.id);
+  const rl = await defaultAiLimiter.check(dbUser.id);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const body = await req.json() as { subjectId?: string; subjectName?: string; qty?: number; topico?: string };

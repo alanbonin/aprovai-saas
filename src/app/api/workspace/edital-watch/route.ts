@@ -94,7 +94,7 @@ export async function POST(req: Request) {
     }
 
         if (body.action === "verificar") {
-      const rl = editalLimiter.check(dbUser.id);
+      const rl = await editalLimiter.check(dbUser.id);
       if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
       const list = await getWatchlist(dbUser.id);
       if (list.length === 0) {

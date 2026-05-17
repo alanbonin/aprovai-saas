@@ -1,100 +1,116 @@
 /**
- * Rate limiter em memória — burst protection por IP/userId.
+ * Rate limiter distribuído via Upstash Redis.
  *
- * Adequado para MVP em instância única (Vercel Serverless Function = stateless,
- * mas cada cold start/warm instance tem seu próprio estado).
- * Para produção multi-instância, substituir por Upstash Redis.
- *
- * Uso:
- *   const rl = rateLimit({ windowMs: 60_000, max: 5 });
- *   const result = rl.check(userId);
- *   if (!result.ok) return NextResponse.json({ error: result.error }, { status: 429 });
+ * Funciona corretamente em serverless (Vercel) — estado compartilhado entre
+ * todas as instâncias. Fallback para in-memory se UPSTASH não configurado
+ * (apenas para desenvolvimento local).
  */
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+// ── Upstash Redis client ─────────────────────────────────────────────────────
+function makeRedis(): Redis | null {
+  const url   = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!url || !token) return null;
+  return new Redis({ url, token });
 }
 
-interface RateLimitOptions {
-  /** Janela em ms (default: 60_000 = 1 min) */
-  windowMs?: number;
-  /** Máximo de requests na janela (default: 10) */
-  max?: number;
+const redis = makeRedis();
+
+// ── Fábrica de limiters ──────────────────────────────────────────────────────
+interface LimiterConfig {
+  max: number;
+  window: `${number} ${"s" | "m" | "h" | "d"}`;
+  prefix: string;
 }
 
-interface RateLimitResult {
+interface CheckResult {
   ok: boolean;
   remaining: number;
   resetAt: number;
   error?: string;
 }
 
-class RateLimiter {
-  private store = new Map<string, RateLimitEntry>();
-  private windowMs: number;
-  private max: number;
-
-  constructor(opts: RateLimitOptions = {}) {
-    this.windowMs = opts.windowMs ?? 60_000;
-    this.max = opts.max ?? 10;
-  }
-
-  check(key: string): RateLimitResult {
-    const now = Date.now();
-    let entry = this.store.get(key);
-
-    if (!entry || now >= entry.resetAt) {
-      entry = { count: 0, resetAt: now + this.windowMs };
-      this.store.set(key, entry);
-    }
-
-    entry.count++;
-
-    if (entry.count > this.max) {
-      const secsLeft = Math.ceil((entry.resetAt - now) / 1000);
-      return {
-        ok: false,
-        remaining: 0,
-        resetAt: entry.resetAt,
-        error: `Muitas requisições. Tente novamente em ${secsLeft}s.`,
-      };
-    }
+export function createLimiter(cfg: LimiterConfig) {
+  // ── Redis distribuído (produção) ────────────────────────────────────────────
+  if (redis) {
+    const rl = new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(cfg.max, cfg.window),
+      prefix: `aprovai:rl:${cfg.prefix}`,
+    });
 
     return {
-      ok: true,
-      remaining: this.max - entry.count,
-      resetAt: entry.resetAt,
+      async check(key: string): Promise<CheckResult> {
+        const result = await rl.limit(key);
+        if (result.success) {
+          return { ok: true, remaining: result.remaining, resetAt: result.reset };
+        }
+        const secsLeft = Math.ceil((result.reset - Date.now()) / 1000);
+        return {
+          ok: false,
+          remaining: 0,
+          resetAt: result.reset,
+          error: `Muitas requisições. Tente novamente em ${secsLeft}s.`,
+        };
+      },
     };
   }
 
-  /** Limpa entradas expiradas (chamar periodicamente se necessário) */
-  cleanup() {
-    const now = Date.now();
-    for (const [key, entry] of this.store.entries()) {
-      if (now >= entry.resetAt) this.store.delete(key);
-    }
-  }
+  // ── In-memory fallback (dev local sem Upstash) ────────────────────────────
+  const store = new Map<string, { count: number; resetAt: number }>();
+  const [amt, unit] = cfg.window.split(" ");
+  const multipliers: Record<string, number> = { s: 1000, m: 60_000, h: 3_600_000, d: 86_400_000 };
+  const windowMs = parseInt(amt) * (multipliers[unit] ?? 60_000);
+
+  return {
+    async check(key: string): Promise<CheckResult> {
+      const now = Date.now();
+      let entry = store.get(key);
+      if (!entry || now >= entry.resetAt) {
+        entry = { count: 0, resetAt: now + windowMs };
+        store.set(key, entry);
+      }
+      entry.count++;
+      if (entry.count > cfg.max) {
+        const secsLeft = Math.ceil((entry.resetAt - now) / 1000);
+        return {
+          ok: false, remaining: 0, resetAt: entry.resetAt,
+          error: `Muitas requisições. Tente novamente em ${secsLeft}s.`,
+        };
+      }
+      return { ok: true, remaining: cfg.max - entry.count, resetAt: entry.resetAt };
+    },
+  };
 }
 
-// ── Instâncias pré-configuradas por contexto ─────────────────────────────────
+// ── Limiters pré-configurados ────────────────────────────────────────────────
 
-/** Chat e mentor: 20 msgs/min por usuário */
-export const chatLimiter = new RateLimiter({ windowMs: 60_000, max: 20 });
+/** Chat com mentor — 20 msgs/min por usuário */
+export const chatLimiter = createLimiter({ max: 20, window: "1 m", prefix: "chat" });
 
-/** Geração de simulados: 3 gerações/min por usuário */
-export const simuladoLimiter = new RateLimiter({ windowMs: 60_000, max: 3 });
+/** Geração de simulado — 3/min */
+export const simuladoLimiter = createLimiter({ max: 3, window: "1 m", prefix: "simulado" });
 
-/** Geração de questões admin: 5 gerações/min */
-export const questoesGerarLimiter = new RateLimiter({ windowMs: 60_000, max: 5 });
+/** Geração de questões admin — 5/min */
+export const questoesGerarLimiter = createLimiter({ max: 5, window: "1 m", prefix: "questoes-gerar" });
 
-/** Edital Watch verificar: 2/min (chamada cara de IA) */
-export const editalLimiter = new RateLimiter({ windowMs: 60_000, max: 2 });
+/** Edital watch — 2/min */
+export const editalLimiter = createLimiter({ max: 2, window: "1 m", prefix: "edital" });
 
-/** Genérico para rotas IA não classificadas: 10/min */
-export const defaultAiLimiter = new RateLimiter({ windowMs: 60_000, max: 10 });
+/** Genérico IA — 10/min */
+export const defaultAiLimiter = createLimiter({ max: 10, window: "1 m", prefix: "ai-default" });
 
-/** Factory para criar limiter customizado */
-export function rateLimit(opts: RateLimitOptions) {
-  return new RateLimiter(opts);
-}
+/** Cadastro — 5 tentativas/5min por IP */
+export const signupLimiter = createLimiter({ max: 5, window: "5 m", prefix: "signup" });
+
+/** Login — 10 tentativas/5min por IP */
+export const loginLimiter = createLimiter({ max: 10, window: "5 m", prefix: "login" });
+
+/** Checkout — 10/hora por usuário */
+export const checkoutLimiter = createLimiter({ max: 10, window: "1 h", prefix: "checkout" });
+
+/** Reset de senha — 3/hora por IP */
+export const resetPasswordLimiter = createLimiter({ max: 3, window: "1 h", prefix: "reset-pw" });

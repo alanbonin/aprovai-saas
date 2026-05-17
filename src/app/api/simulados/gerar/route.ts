@@ -111,7 +111,7 @@ export async function POST(req: Request) {
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
     // Burst protection: 3 simulados/min por usuário
-    const rl = simuladoLimiter.check(dbUser.id);
+    const rl = await simuladoLimiter.check(dbUser.id);
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
     const body = await req.json() as {

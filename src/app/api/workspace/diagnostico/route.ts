@@ -63,7 +63,7 @@ export async function POST() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const rl = defaultAiLimiter.check(dbUser.id);
+  const rl = await defaultAiLimiter.check(dbUser.id);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { start, end } = getWeekBounds();

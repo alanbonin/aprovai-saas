@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { signupLimiter } from "@/lib/rate-limit";
 
 async function sendBoasVindas(userId: string, email: string, name: string) {
   try {
@@ -41,6 +42,11 @@ async function notifyAdminNewUser(name: string, email: string) {
 }
 
 export async function POST(req: Request) {
+  // Rate limit por IP — protege contra cadastro em massa
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = await signupLimiter.check(`signup:${ip}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const { name, email, supabaseId } = await req.json();
   if (!name || !email || !supabaseId) {
     return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });

@@ -8,7 +8,11 @@ const mp = new MercadoPago({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! 
 // ── Verificação de assinatura HMAC ────────────────────────────────────────────
 function verifySignature(req: Request, rawBody: string): boolean {
   const secret = process.env.MERCADOPAGO_WEBHOOK_SECRET;
-  if (!secret) return true; // sem secret configurado, aceita (dev)
+  // Em produção, secret é obrigatório — rejeita se não configurado
+  if (!secret) {
+    if (process.env.NODE_ENV === "production") return false;
+    return true; // dev local sem secret configurado
+  }
 
   const xSignature = req.headers.get("x-signature") ?? "";
   const xRequestId = req.headers.get("x-request-id") ?? "";
