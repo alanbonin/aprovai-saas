@@ -22,13 +22,20 @@ export async function GET() {
 export async function POST(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const body = await req.json();
-  const adminUser = await db.from("User").select("id").eq("role", "ADMIN").limit(1).single();
+
+  // Resolve o userId do admin logado
+  const { createClient: createSupabaseClient } = await import("@/lib/supabase/server");
+  const supabase = await createSupabaseClient();
+  const { data: { user: authUser } } = await supabase.auth.getUser();
+  const { data: adminRecord } = await db.from("User").select("id").eq("supabaseId", authUser!.id).maybeSingle();
+  if (!adminRecord?.id) return NextResponse.json({ error: "Admin não encontrado" }, { status: 500 });
+
   const { data, error } = await db.from("FlashcardSet").insert({
     id: crypto.randomUUID(),
     name: body.name,
     subjectId: body.subjectId,
     cards: body.cards ?? [],
-    userId: adminUser.data?.id ?? "admin",
+    userId: adminRecord.id,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }).select().single();

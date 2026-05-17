@@ -51,12 +51,12 @@ export async function GET(
     db.from("Progress").select("correct").eq("userId", userId).gte("createdAt", sevenDaysAgo),
     db.from("SimuladoHistory").select("total, correct, createdAt").eq("userId", userId).order("createdAt", { ascending: false }).limit(10),
     db.from("FlashcardSet").select("cards, updatedAt").eq("userId", userId),
-    db.from("StudentProfile").select("streak, dataProva, cargo, xp").eq("userId", userId).single(),
+    db.from("StudentProfile").select("dataProva, cargo").eq("userId", userId).maybeSingle(),
     db.from("Subscription")
       .select("status, startDate, endDate, planId, Plan:planId(name, price, aiCreditsPerWeek)")
       .eq("userId", userId)
       .eq("status", "ACTIVE")
-      .single(),
+      .maybeSingle(),
     // Uso de IA esta semana
     db.from("AiUsage").select("count").eq("userId", userId).gte("weekStart", weekStart.toISOString()),
     // Uso de IA últimos 30 dias
@@ -161,8 +161,6 @@ export async function GET(
     q30,
     acc30,
     q7,
-    streak: profile.data?.streak ?? 0,
-    xp: profile.data?.xp ?? 0,
     cargo: profile.data?.cargo ?? null,
     dataProva: profile.data?.dataProva ?? null,
     totalFlashcards,

@@ -55,14 +55,14 @@ export async function GET(req: Request) {
 
   const userIds = users.map(u => u.id as string);
 
-  // Fetch profiles (streak, xp)
+  // Fetch profiles (cargo, dataProva)
   const { data: profiles } = await db
     .from("StudentProfile")
-    .select("userId, streak, xp, lastStudyDate")
+    .select("userId, cargo, dataProva")
     .in("userId", userIds);
-  const profileMap: Record<string, { streak: number; xp: number; lastStudy: string | null }> = {};
+  const profileMap: Record<string, { cargo: string | null; dataProva: string | null }> = {};
   for (const p of profiles ?? []) {
-    profileMap[p.userId as string] = { streak: p.streak as number, xp: p.xp as number, lastStudy: p.lastStudyDate as string | null };
+    profileMap[p.userId as string] = { cargo: p.cargo as string | null, dataProva: p.dataProva as string | null };
   }
 
   // Fetch progress aggregated per user
@@ -102,20 +102,20 @@ export async function GET(req: Request) {
       createdAt: u.createdAt as string,
       questoes: prog.total,
       acerto: accuracy,
-      streak: profileMap[uid]?.streak ?? 0,
-      xp: profileMap[uid]?.xp ?? 0,
-      lastStudy: profileMap[uid]?.lastStudy ?? null,
+      cargo: profileMap[uid]?.cargo ?? null,
+      dataProva: profileMap[uid]?.dataProva ?? null,
       planName: subsMap[uid]?.planName ?? "Gratuito",
     };
   });
 
   if (format === "csv") {
     const rows = [
-      ["ID", "Nome", "Email", "Plano", "Questões", "Acerto (%)", "Streak", "XP", "Último estudo", "Cadastro"],
+      ["ID", "Nome", "Email", "Plano", "Questões", "Acerto (%)", "Cargo", "Data da Prova", "Cadastro"],
       ...enriched.map(u => [
         u.id, u.name, u.email, u.planName,
-        u.questoes, u.acerto, u.streak, u.xp,
-        u.lastStudy?.slice(0, 10) ?? "",
+        u.questoes, u.acerto,
+        u.cargo ?? "",
+        u.dataProva ?? "",
         (u.createdAt as string)?.slice(0, 10) ?? "",
       ].map(escapeCsv)),
     ];

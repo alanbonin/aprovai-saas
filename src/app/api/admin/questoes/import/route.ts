@@ -198,7 +198,11 @@ export async function POST(req: Request) {
       year: result.year,
       level: result.level,
       statement: result.statement,
-      alternatives: result.alternatives,
+      optionA: result.alternatives[0] ?? null,
+      optionB: result.alternatives[1] ?? null,
+      optionC: result.alternatives[2] ?? null,
+      optionD: result.alternatives[3] ?? null,
+      optionE: result.alternatives[4] ?? null,
       answer: result.answer,
       explanation: result.explanation,
     });

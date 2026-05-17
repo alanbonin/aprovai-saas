@@ -101,7 +101,7 @@ export async function DELETE(req: Request) {
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
 
-  const { data: u } = await db.from("User").select("supabaseId").eq("id", userId).single();
+  const { data: u } = await db.from("User").select("supabaseId").eq("id", userId).maybeSingle();
   if (!u?.supabaseId) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
   await db.from("Subscription").delete().eq("userId", userId);

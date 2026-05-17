@@ -17,8 +17,9 @@ export async function GET(
 ) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const { id } = await params;
-  const { data, error } = await db.from("Question").select("*").eq("id", parseInt(id, 10)).single();
+  const { data, error } = await db.from("Question").select("*").eq("id", parseInt(id, 10)).maybeSingle();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "Questão não encontrada" }, { status: 404 });
   return NextResponse.json(data);
 }
 
@@ -34,7 +35,7 @@ export async function PATCH(
 
   const { data, error } = await db
     .from("Question")
-    .update({ ...body, updatedAt: new Date().toISOString() })
+    .update(body)
     .eq("id", parseInt(id, 10))
     .select()
     .single();

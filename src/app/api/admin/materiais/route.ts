@@ -51,7 +51,7 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const { id } = await req.json();
-  const { data: mat } = await db.from("Material").select("fileUrl").eq("id", id).single();
+  const { data: mat } = await db.from("Material").select("fileUrl").eq("id", id).maybeSingle();
 
   // Remove arquivo do storage se existir
   if (mat?.fileUrl) {

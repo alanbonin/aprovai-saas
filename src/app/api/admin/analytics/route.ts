@@ -18,13 +18,13 @@ async function getAdminUser(): Promise<boolean> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
-  const { data } = await db.from("User").select("role").eq("id", user.id).single();
+  const { data } = await db.from("User").select("role").eq("supabaseId", user.id).single();
   return data?.role === "ADMIN";
 }
 
 export async function GET() {
   const isAdmin = await getAdminUser();
-  if (!isAdmin) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  if (!isAdmin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();

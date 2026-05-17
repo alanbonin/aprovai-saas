@@ -9,7 +9,7 @@ export const db = createClient(
 // Busca usuário completo com plano
 // Verifica endDate em tempo real para não depender do cron de expiração
 export async function getUserWithPlan(supabaseId: string) {
-  const { data: user } = await db.from("User").select("*").eq("supabaseId", supabaseId).single();
+  const { data: user } = await db.from("User").select("*").eq("supabaseId", supabaseId).maybeSingle();
   if (!user) return null;
 
   const { data: subscription } = await db
@@ -17,7 +17,7 @@ export async function getUserWithPlan(supabaseId: string) {
     .select("*")
     .eq("userId", user.id)
     .eq("status", "ACTIVE")
-    .single();
+    .maybeSingle();
 
   // Verifica expiração real-time (o cron marca como EXPIRED às 6h, pode haver lag)
   const isExpired = subscription
@@ -25,7 +25,7 @@ export async function getUserWithPlan(supabaseId: string) {
     : true;
 
   const plan = subscription && !isExpired
-    ? (await db.from("Plan").select("*").eq("id", subscription.planId).single()).data
+    ? (await db.from("Plan").select("*").eq("id", subscription.planId).maybeSingle()).data
     : null;
 
   return {

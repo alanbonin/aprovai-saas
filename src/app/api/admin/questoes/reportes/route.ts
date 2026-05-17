@@ -55,7 +55,7 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "noteId e status válido são obrigatórios" }, { status: 400 });
   }
 
-  const { data: note } = await db.from("Note").select("content").eq("id", noteId).single();
+  const { data: note } = await db.from("Note").select("content").eq("id", noteId).maybeSingle();
   if (!note) return NextResponse.json({ error: "Reporte não encontrado" }, { status: 404 });
 
   let content: Record<string, unknown>;

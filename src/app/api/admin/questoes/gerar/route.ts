@@ -161,8 +161,6 @@ export async function POST(req: Request) {
               optionA, optionB, optionC, optionD, optionE,
               answer,
               explanation: q.justificativa ?? null,
-              artigo: q.artigo ?? null,
-              dicaBanca: q.dicaBanca ?? null,
               source: "ia",
             };
           });
@@ -249,8 +247,6 @@ export async function POST(req: Request) {
       optionA, optionB, optionC, optionD, optionE,
       answer,
       explanation: q.justificativa ?? null,
-      artigo: q.artigo ?? null,
-      dicaBanca: q.dicaBanca ?? null,
       source: "ia",
     };
   });
