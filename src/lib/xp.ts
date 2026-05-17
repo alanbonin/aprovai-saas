@@ -1,0 +1,97 @@
+import { db } from "@/lib/db";
+
+/**
+ * XP por ação:
+ * - Questão correta: +2 XP
+ * - Questão errada: +0 XP (sem punição)
+ * - Flashcard revisado ("lembrei"): +1 XP
+ * - Flashcard difícil: +0 XP
+ * - Simulado concluído (por questão correta): +3 XP
+ * - Bônus de streak (múltiplos de 7d): +20 XP
+ */
+export const XP_CORRECT_QUESTION   = 2;
+export const XP_FLASHCARD_LEMBREI  = 1;
+export const XP_SIMULADO_PER_ACERTO = 3;
+export const XP_STREAK_BONUS        = 20; // a cada 7 dias de streak
+
+export interface XPResult {
+  xpGained: number;
+  newXP: number;
+  streakBefore: number;
+  streakAfter: number;
+  streakBonus: boolean;
+}
+
+/**
+ * Atualiza XP e streak do aluno no StudentProfile.
+ * Cria o registro se não existir.
+ *
+ * @param userId  - ID do User no banco
+ * @param xpDelta - XP a adicionar (pode ser 0)
+ */
+export async function updateXP(userId: string, xpDelta: number): Promise<XPResult> {
+  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Busca perfil atual
+  const { data: profile } = await db
+    .from("StudentProfile")
+    .select("id, xp, streak, lastStudyDate")
+    .eq("userId", userId)
+    .single();
+
+  const currentXP     = profile?.xp ?? 0;
+  const currentStreak = profile?.streak ?? 0;
+  const lastStudy     = profile?.lastStudyDate as string | null | undefined;
+
+  // Calcula novo streak
+  let newStreak = currentStreak;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+  if (lastStudy === today) {
+    // Já estudou hoje — streak não muda
+    newStreak = currentStreak;
+  } else if (lastStudy === yesterdayStr) {
+    // Estudou ontem — incrementa streak
+    newStreak = currentStreak + 1;
+  } else if (!lastStudy) {
+    // Primeira vez
+    newStreak = 1;
+  } else {
+    // Pulou um ou mais dias — reseta
+    newStreak = 1;
+  }
+
+  // Bônus de streak a cada 7 dias
+  const streakBonus = newStreak > 0 && newStreak % 7 === 0 && lastStudy !== today;
+  const totalXPDelta = xpDelta + (streakBonus ? XP_STREAK_BONUS : 0);
+  const newXP = currentXP + totalXPDelta;
+
+  if (profile?.id) {
+    await db.from("StudentProfile").update({
+      xp: newXP,
+      streak: newStreak,
+      lastStudyDate: today,
+    }).eq("id", profile.id);
+  } else {
+    // Cria perfil se não existir
+    await db.from("StudentProfile").insert({
+      id: crypto.randomUUID(),
+      userId,
+      xp: newXP,
+      streak: newStreak,
+      lastStudyDate: today,
+      onboardingDone: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  return {
+    xpGained: totalXPDelta,
+    newXP,
+    streakBefore: currentStreak,
+    streakAfter: newStreak,
+    streakBonus,
+  };
+}

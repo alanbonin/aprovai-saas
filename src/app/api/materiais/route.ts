@@ -13,10 +13,12 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
   const type = searchParams.get("type");
   const banca = searchParams.get("banca");
+  const subjectId = searchParams.get("subjectId");
 
   let query = db.from("Material").select("*").eq("active", true).order("createdAt", { ascending: false });
   if (type) query = query.eq("type", type);
   if (banca) query = query.eq("banca", banca);
+  if (subjectId) query = query.eq("subjectId", subjectId);
 
   // Gratuito só vê não-premium; pagante vê tudo
   const isPaid = !!dbUser.subscription;

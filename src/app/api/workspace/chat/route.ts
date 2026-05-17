@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
-import Anthropic from "@anthropic-ai/sdk";
+import { streamWithCache, MODELS } from "@/lib/anthropic";
+import { chatLimiter } from "@/lib/rate-limit";
 import { getWeekStart } from "@/lib/utils";
 import { buildAgentSystemPrompt } from "@/lib/agents";
-
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -19,7 +18,11 @@ export async function POST(req: Request) {
   const weeklyLimit = dbUser.subscription?.plan?.aiCreditsPerWeek ?? 5;
   const totalUsed = await getWeeklyAiUsage(dbUser.id, weekStart);
 
-  if (totalUsed >= weeklyLimit) {
+      // Burst protection: 20 msgs/min
+    const rl = chatLimiter.check(dbUser.id);
+    if (!rl.ok) return NextResponse.json({ error: "cota_excedida", message: rl.error }, { status: 429 });
+
+    if (totalUsed >= weeklyLimit) {
     return NextResponse.json({
       error: "cota_excedida",
       message: `Você atingiu o limite de ${weeklyLimit} perguntas por semana do seu plano.`,
@@ -28,29 +31,57 @@ export async function POST(req: Request) {
 
   const { message, agentIds, subjectId, history, profileContext } = await req.json();
 
-  // Buscar agentes e contexto
   const { data: agents } = await db.from("Agent").select("*").in("id", agentIds);
   const { data: subject } = subjectId
     ? await db.from("Subject").select("name, description").eq("id", subjectId).single()
     : { data: null };
 
-  // Montar system prompt combinando os agentes
-  const agentContexts = (agents ?? []).map((a: { name: string; categoria: string | null; banca: string | null; systemPrompt: string }) => {
-    const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
-    return `=== ${a.name} ===\n${base}`;
-  }).join("\n\n");
+  const agentList = (agents ?? []) as { name: string; categoria: string | null; banca: string | null; systemPrompt: string; description: string }[];
 
-  const systemPrompt = `Você é uma equipe de mentores especializados trabalhando juntos para ajudar o aluno.
+  // Contexto do aluno (anexado ao system prompt de qualquer configuração)
+  const alunoCtx = [
+    profileContext?.cargo  ? `- Cargo alvo: ${profileContext.cargo}`  : "",
+    profileContext?.orgao  ? `- Órgão: ${profileContext.orgao}`        : "",
+    profileContext?.dataProva ? `- Data da prova: ${profileContext.dataProva}` : "",
+  ].filter(Boolean).join("\n");
+
+  const materiaCtx = subject
+    ? `\nMATÉRIA EM ESTUDO: ${subject.name}${subject.description ? ` — ${subject.description}` : ""}`
+    : "";
+
+  let systemPrompt: string;
+
+  if (agentList.length === 1) {
+    // Agente único: usa o systemPrompt configurado direto — sem diluição
+    const a = agentList[0];
+    const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
+    systemPrompt = `${base}
+
+CONTEXTO DO ALUNO:
+${alunoCtx}${materiaCtx}
+${subject ? "Sempre relacione sua resposta a essa matéria quando pertinente." : ""}
+
+Responda sempre em português brasileiro. Seja direto, prático e focado no que cai em prova.`;
+  } else {
+    // Múltiplos agentes: cada um mantém sua especialidade configurada
+    const agentContexts = agentList.map(a => {
+      const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
+      return `--- ${a.name} ---\n${base}`;
+    }).join("\n\n");
+
+    systemPrompt = `Você representa uma equipe de mentores especializados. Cada mentor tem seu domínio próprio — responda SOMENTE dentro da especialidade de cada um, conforme configurado abaixo.
 
 ${agentContexts}
 
 CONTEXTO DO ALUNO:
-${profileContext?.cargo ? `- Cargo alvo: ${profileContext.cargo}` : ""}
-${profileContext?.orgao ? `- Órgão: ${profileContext.orgao}` : ""}
-${profileContext?.dataProva ? `- Data da prova: ${profileContext.dataProva}` : ""}
-${subject ? `\nMATÉRIA ATUAL: ${subject.name}${subject.description ? ` — ${subject.description}` : ""}` : ""}
+${alunoCtx}${materiaCtx}
 
-Responda como uma equipe coesa, referenciando sua especialidade quando relevante. Seja direto, prático e foque no que cai em prova. Sempre em português brasileiro.`;
+REGRAS:
+- Cada mentor responde apenas dentro da sua especialidade configurada acima
+- Quando relevante, identifique qual mentor está falando (ex: "Como especialista em CESPE...")
+- Não extrapole para áreas fora da especialidade de cada agente
+- Sempre em português brasileiro. Direto ao ponto. Foque no que cai em prova.`;
+  }
 
   // Registrar uso
   const mainAgentId = agentIds[0];
@@ -58,17 +89,26 @@ Responda como uma equipe coesa, referenciando sua especialidade quando relevante
   if (existing) {
     await db.from("AiUsage").update({ count: existing.count + 1, updatedAt: new Date().toISOString() }).eq("id", existing.id);
   } else {
-    await db.from("AiUsage").insert({ userId: dbUser.id, agentId: mainAgentId, weekStart, count: 1, updatedAt: new Date().toISOString() });
+    await db.from("AiUsage").insert({ id: crypto.randomUUID(), userId: dbUser.id, agentId: mainAgentId, weekStart, count: 1, updatedAt: new Date().toISOString() });
   }
 
-  const stream = await anthropic.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: systemPrompt,
+  // Anthropic exige que a primeira mensagem seja "user" — remove assistants iniciais
+  const rawHistory = history.map((m: { role: string; content: string }) => ({
+    role: m.role as "user" | "assistant",
+    content: m.content,
+  }));
+  const firstUserIdx = rawHistory.findIndex((m: { role: string }) => m.role === "user");
+  const filteredHistory = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : [];
+
+  const stream = streamWithCache({
+    model: MODELS.sonnet,
+    maxTokens: 2048,
+    systemPrompt,
     messages: [
-      ...history.map((m: { role: string; content: string }) => ({ role: m.role as "user" | "assistant", content: m.content })),
+      ...filteredHistory,
       { role: "user", content: message },
     ],
+    cacheSystem: true, // system prompt cacheado por 5 min → ~80% economia em tokens
   });
 
   const encoder = new TextEncoder();

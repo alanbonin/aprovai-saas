@@ -1,11 +1,25 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
-import Anthropic from "@anthropic-ai/sdk";
 import { getWeekStart } from "@/lib/utils";
 import { buildAgentSystemPrompt } from "@/lib/agents";
+import { streamWithCache, MODELS } from "@/lib/anthropic";
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MEMORY_PREFIX = "__MENTOR_MEMORY__";
+
+async function fetchMentorMemory(userId: string, agentId: string): Promise<string | null> {
+  const { data: note } = await db
+    .from("Note")
+    .select("content")
+    .eq("userId", userId)
+    .like("content", `${MEMORY_PREFIX}:${agentId}:%`)
+    .order("updatedAt", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!note) return null;
+  return note.content.replace(`${MEMORY_PREFIX}:${agentId}:`, "").trim();
+}
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -33,23 +47,32 @@ export async function POST(req: Request) {
   }
 
   // Incrementa uso
-  const { data: existing } = await db.from("AiUsage").select("id, count").eq("userId", dbUser.id).eq("agentId", agentId).eq("weekStart", weekStart).single();
+  const { data: existing } = await db
+    .from("AiUsage").select("id, count")
+    .eq("userId", dbUser.id).eq("agentId", agentId).eq("weekStart", weekStart).single();
   if (existing) {
     await db.from("AiUsage").update({ count: existing.count + 1, updatedAt: new Date().toISOString() }).eq("id", existing.id);
   } else {
-    await db.from("AiUsage").insert({ userId: dbUser.id, agentId, weekStart, count: 1, updatedAt: new Date().toISOString() });
+    await db.from("AiUsage").insert({ id: crypto.randomUUID(), userId: dbUser.id, agentId, weekStart, count: 1, updatedAt: new Date().toISOString() });
   }
 
-  const systemPrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria, agent.banca);
+  // ── Memória do mentor ────────────────────────────────────────────────────────
+  const memory = await fetchMentorMemory(dbUser.id, agentId);
 
-  const stream = await anthropic.messages.stream({
-    model: "claude-sonnet-4-6",
-    max_tokens: 1024,
-    system: systemPrompt,
+  let systemPrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria, agent.banca);
+  if (memory) {
+    systemPrompt += `\n\n## MEMÓRIA DAS SESSÕES ANTERIORES COM ESTE ALUNO\n${memory}\n\nUse estas informações para personalizar suas respostas. Lembre-se dos pontos fortes e fracos do aluno sem mencioná-los explicitamente — apenas adapte sua abordagem.`;
+  }
+
+  const stream = streamWithCache({
+    model: MODELS.sonnet,
+    maxTokens: 1024,
+    systemPrompt,
     messages: [
       ...history.map((m: { role: string; content: string }) => ({ role: m.role as "user" | "assistant", content: m.content })),
       { role: "user", content: message },
     ],
+    cacheSystem: true,
   });
 
   const encoder = new TextEncoder();

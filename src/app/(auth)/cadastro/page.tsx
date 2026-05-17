@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -11,7 +10,7 @@ export default function CadastroPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [confirmEmail, setConfirmEmail] = useState(false);
   const supabase = createClient();
 
   async function handleCadastro(e: React.FormEvent) {
@@ -39,7 +38,47 @@ export default function CadastroPage() {
       return;
     }
 
-    router.push("/dashboard");
+    // Se há sessão ativa (email auto-confirmado no Supabase), vai para o Briefing do Dia
+    if (data.session) {
+      window.location.href = "/hoje";
+      return;
+    }
+
+    // Email precisa de confirmação manual
+    setConfirmEmail(true);
+    setLoading(false);
+  }
+
+  if (confirmEmail) {
+    return (
+      <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm text-center">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
+              <Trophy className="w-5 h-5 text-white" />
+            </div>
+            <span className="text-white font-bold text-2xl">Aprovai</span>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
+            <div className="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
+              <span className="text-3xl">✉️</span>
+            </div>
+            <h2 className="text-white font-bold text-xl mb-2">Confirme seu e-mail</h2>
+            <p className="text-gray-400 text-sm mb-6">
+              Enviamos um link de confirmação para{" "}
+              <strong className="text-white">{email}</strong>.{" "}
+              Após confirmar, clique em entrar.
+            </p>
+            <a
+              href="/login"
+              className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium text-white text-center transition-colors"
+            >
+              Ir para o login
+            </a>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (

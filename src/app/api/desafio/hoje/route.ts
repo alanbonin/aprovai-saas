@@ -1,0 +1,103 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getUserWithPlan, db } from "@/lib/db";
+
+/**
+ * GET /api/desafio/hoje
+ * Retorna o desafio diário do aluno:
+ * - 10 questões selecionadas deterministicamente pelo dia + userId
+ * - Verifica se o aluno já completou o desafio hoje
+ * - Indica pontuação já obtida (se concluído)
+ *
+ * O desafio reseta à meia-noite (UTC-3, horário de Brasília).
+ */
+export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const dbUser = await getUserWithPlan(user.id);
+  if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  // Today in BRT (UTC-3)
+  const now = new Date();
+  const brtOffset = 3 * 60; // 3 hours in minutes
+  const brtNow = new Date(now.getTime() - brtOffset * 60000);
+  const todayKey = brtNow.toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Check if already completed today — stored in Note with prefix __DESAFIO__
+  const { data: desafioNote } = await db
+    .from("Note")
+    .select("content")
+    .eq("userId", dbUser.id)
+    .eq("subjectId", "__DESAFIO__")
+    .single();
+
+  interface DesafioRecord {
+    date: string;
+    score: number;
+    total: number;
+    timeSecs: number;
+    xpEarned: number;
+  }
+
+  let completedToday: DesafioRecord | null = null;
+  try {
+    const record = desafioNote?.content ? JSON.parse(desafioNote.content) as DesafioRecord : null;
+    if (record?.date === todayKey) completedToday = record;
+  } catch { /* ignore */ }
+
+  // Get student subjects for filtering
+  const { data: studentSubs } = await db
+    .from("StudentSubject")
+    .select("subjectId")
+    .eq("userId", dbUser.id);
+  const subjectIds = (studentSubs ?? []).map(s => s.subjectId as string);
+
+  // Count available questions
+  let countQuery = db.from("Question").select("id", { count: "exact", head: true });
+  if (subjectIds.length > 0) countQuery = countQuery.in("subjectId", subjectIds);
+  const { count } = await countQuery;
+  const total = count ?? 0;
+
+  if (total < 10) {
+    return NextResponse.json({ error: "Questões insuficientes", questions: [] });
+  }
+
+  // Deterministic seed: dayOfYear * 31 + userId hash
+  const dayOfYear = Math.floor(
+    (brtNow.getTime() - new Date(brtNow.getFullYear(), 0, 0).getTime()) / 86400000
+  );
+  const userHash = dbUser.id.split("").reduce((a: number, c: string) => (a * 31 + c.charCodeAt(0)) & 0xffff, 0);
+  const seed = (dayOfYear * 31 + userHash) % total;
+
+  // Pick 10 questions starting from seed (wrap around)
+  const indices: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    indices.push((seed + i * Math.ceil(total / 10)) % total);
+  }
+  const uniqueIndices = [...new Set(indices)];
+
+  const questionFetches = uniqueIndices.map(offset => {
+    let q = db.from("Question")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
+      .order("id")
+      .range(offset, offset);
+    if (subjectIds.length > 0) q = q.in("subjectId", subjectIds);
+    return q;
+  });
+
+  const results = await Promise.all(questionFetches);
+  const questions = results
+    .flatMap(r => r.data ?? [])
+    .filter((q, i, arr) => arr.findIndex(x => x.id === q.id) === i) // deduplicate
+    .slice(0, 10);
+
+  return NextResponse.json({
+    questions,
+    todayKey,
+    completedToday,
+    timeLimit: 600, // 10 minutes in seconds
+    xpBonus: 20,    // bonus XP for completing the challenge
+  });
+}

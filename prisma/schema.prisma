@@ -14,6 +14,7 @@ model Plan {
   price           Float
   intervalDays    Int      @default(30)
   aiCreditsPerWeek Int     @default(10)  // perguntas de mentor por semana
+  maxAgents       Int      @default(1)   // mentores simultâneos permitidos
   features        String[] @default([])
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -38,6 +39,9 @@ model User {
   aiUsage         AiUsage[]
   notes           Note[]
   flashcardSets   FlashcardSet[]
+  profile         StudentProfile?
+  studentSubjects StudentSubject[]
+  userAgents      UserAgent[]
 }
 
 enum Role {
@@ -75,6 +79,7 @@ model Agent {
   name            String
   slug            String    @unique
   description     String
+  categoria       String?   // ex: "Direito Penal", "Administração"
   area            String?   // ex: "penal", "tributario", "fiscal"
   banca           String?   // ex: "cespe", "fgv", "vunesp"
   systemPrompt    String    @db.Text
@@ -85,6 +90,7 @@ model Agent {
   createdAt       DateTime  @default(now())
 
   aiUsage         AiUsage[]
+  userAgents      UserAgent[]
 }
 
 // ─── Uso de IA (controle de cotas) ────────────────────────
@@ -201,4 +207,58 @@ enum MaterialType {
   VIDEO
   LINK
   TEXTO
+  APOSTILA
+}
+
+// ─── Matérias / Disciplinas ─────────────────────────────────
+model Subject {
+  id              String   @id @default(cuid())
+  name            String
+  slug            String   @unique
+  description     String?
+  categoria       String?
+  ordem           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// ─── Perfil de Estudo do Aluno ──────────────────────────────
+model StudentProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  cargo           String?
+  orgao           String?
+  dataProva       String?
+  dificuldades    String?
+  onboardingDone  Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user            User     @relation(fields: [userId], references: [id])
+}
+
+// ─── Matérias Escolhidas pelo Aluno ─────────────────────────
+model StudentSubject {
+  id              String   @id @default(cuid())
+  userId          String
+  subjectId       String
+  fromEdital      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, subjectId])
+}
+
+// ─── Agentes selecionados pelo Aluno ────────────────────────
+model UserAgent {
+  id              String   @id @default(cuid())
+  userId          String
+  agentId         String
+  createdAt       DateTime @default(now())
+
+  user            User     @relation(fields: [userId], references: [id])
+  agent           Agent    @relation(fields: [agentId], references: [id])
+
+  @@unique([userId, agentId])
 }

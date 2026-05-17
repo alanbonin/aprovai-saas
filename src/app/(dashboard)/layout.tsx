@@ -11,24 +11,33 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
 
-  const weekStart = new Date();
-  weekStart.setHours(0, 0, 0, 0);
-  weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+  // Admin vai direto para o painel admin
+  if (dbUser.role === "ADMIN") redirect("/admin");
 
-  const usedCount = await getWeeklyAiUsage(dbUser.id, weekStart.toISOString());
-  const weeklyLimit = dbUser.subscription?.plan?.aiCreditsPerWeek ?? 5;
-  const remaining = Math.max(0, weeklyLimit - usedCount);
+  // Busca créditos de IA da semana
+  const aiCreditsTotal = 10;
+  let aiCreditsLeft = aiCreditsTotal;
+  try {
+    const d = new Date();
+    d.setDate(d.getDate() - d.getDay());
+    const weekStart = d.toISOString().slice(0, 10);
+    const used = await getWeeklyAiUsage(dbUser.id as string, weekStart);
+    aiCreditsLeft = Math.max(0, aiCreditsTotal - used);
+  } catch { /* silent */ }
+
+  // Busca nome do plano
+  const planName = (dbUser as { subscription?: { plan?: { name?: string } } })
+    ?.subscription?.plan?.name ?? "Gratuito";
 
   return (
     <div className="flex min-h-screen bg-[#080c18]">
       <Sidebar
-        isAdmin={dbUser.role === "ADMIN"}
-        userName={dbUser.name}
-        planName={dbUser.subscription?.plan?.name}
-        aiCreditsLeft={remaining}
-        aiCreditsTotal={weeklyLimit}
+        userName={dbUser.name ?? undefined}
+        planName={planName}
+        aiCreditsLeft={aiCreditsLeft}
+        aiCreditsTotal={aiCreditsTotal}
       />
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto">
         {children}
       </main>
     </div>

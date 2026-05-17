@@ -46,8 +46,15 @@ export async function POST(req: Request) {
   await db.from("StudentSubject").delete().eq("userId", dbUser.id);
 
   if (subjectIds && subjectIds.length > 0) {
+    const now = new Date().toISOString();
     await db.from("StudentSubject").insert(
-      subjectIds.map((id: string) => ({ userId: dbUser.id, subjectId: id, fromEdital: false }))
+      subjectIds.map((id: string) => ({
+        id: crypto.randomUUID(),
+        userId: dbUser.id,
+        subjectId: id,
+        fromEdital: false,
+        createdAt: now,
+      }))
     );
   }
 

@@ -12,7 +12,10 @@ interface Material {
   fileUrl: string | null;
   fileSize: number | null;
   isPremium: boolean;
+  subjectId: string | null;
 }
+
+interface Subject { id: string; name: string; }
 
 const TYPE_CONFIG: Record<string, { icon: typeof FileText; label: string; color: string }> = {
   PDF: { icon: FileText, label: "PDF", color: "text-red-400" },
@@ -31,24 +34,34 @@ function formatSize(bytes: number | null) {
 
 export default function MateriaisPage() {
   const [materials, setMaterials] = useState<Material[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [filterType, setFilterType] = useState("");
-  const [filterBanca, setFilterBanca] = useState("");
-  const [search, setSearch] = useState("");
+  const [subjects, setSubjects]   = useState<Subject[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [filterType, setFilterType]       = useState("");
+  const [filterBanca, setFilterBanca]     = useState("");
+  const [filterSubject, setFilterSubject] = useState("");
+  const [search, setSearch]               = useState("");
+
+  useEffect(() => {
+    fetch("/api/workspace/materias")
+      .then(r => r.json())
+      .then(d => setSubjects(d.subjects ?? []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
       const params = new URLSearchParams();
-      if (filterType) params.set("type", filterType);
-      if (filterBanca) params.set("banca", filterBanca);
+      if (filterType)    params.set("type", filterType);
+      if (filterBanca)   params.set("banca", filterBanca);
+      if (filterSubject) params.set("subjectId", filterSubject);
       const res = await fetch(`/api/materiais?${params}`);
       const data = await res.json();
       setMaterials(data.materials ?? []);
       setLoading(false);
     }
     load();
-  }, [filterType, filterBanca]);
+  }, [filterType, filterBanca, filterSubject]);
 
   const filtered = materials.filter(m =>
     !search || m.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -81,6 +94,14 @@ export default function MateriaisPage() {
         >
           <option value="">Todos os tipos</option>
           {TYPES.map(t => <option key={t} value={t}>{TYPE_CONFIG[t].label}</option>)}
+        </select>
+        <select
+          value={filterSubject}
+          onChange={e => setFilterSubject(e.target.value)}
+          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
+        >
+          <option value="">Todas as matérias</option>
+          {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
         <select
           value={filterBanca}

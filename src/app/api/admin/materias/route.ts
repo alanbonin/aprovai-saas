@@ -14,10 +14,13 @@ export async function POST(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const body = await req.json();
   const { data, error } = await db.from("Subject").insert({
+    id: crypto.randomUUID(),
     name: body.name, slug: body.slug,
     categoria: body.categoria ?? null,
     description: body.description ?? null,
     ordem: body.ordem ?? 0,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
   }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });

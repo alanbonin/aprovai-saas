@@ -15,6 +15,7 @@ export async function POST(req: Request) {
 
   const body = await req.json();
   const { data, error } = await db.from("Agent").insert({
+    id: crypto.randomUUID(),
     name: body.name,
     slug: body.slug,
     description: body.description ?? "",
@@ -24,6 +25,7 @@ export async function POST(req: Request) {
     active: body.active ?? true,
     isPremium: body.isPremium ?? false,
     systemPrompt: body.systemPrompt ?? "",
+    createdAt: new Date().toISOString(),
   }).select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

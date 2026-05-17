@@ -15,7 +15,7 @@ export default async function PlanosPage() {
     .from("Plan")
     .select("*")
     .eq("active", true)
-    .order("priceMonthly");
+    .order("price");
 
   return (
     <PlanosClient

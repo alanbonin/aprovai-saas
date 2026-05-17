@@ -7,16 +7,33 @@ export const db = createClient(
 );
 
 // Busca usuário completo com plano
+// Verifica endDate em tempo real para não depender do cron de expiração
 export async function getUserWithPlan(supabaseId: string) {
   const { data: user } = await db.from("User").select("*").eq("supabaseId", supabaseId).single();
   if (!user) return null;
 
-  const { data: subscription } = await db.from("Subscription").select("*").eq("userId", user.id).eq("status", "ACTIVE").single();
-  const plan = subscription
+  const { data: subscription } = await db
+    .from("Subscription")
+    .select("*")
+    .eq("userId", user.id)
+    .eq("status", "ACTIVE")
+    .single();
+
+  // Verifica expiração real-time (o cron marca como EXPIRED às 6h, pode haver lag)
+  const isExpired = subscription
+    ? new Date(subscription.endDate) < new Date()
+    : true;
+
+  const plan = subscription && !isExpired
     ? (await db.from("Plan").select("*").eq("id", subscription.planId).single()).data
     : null;
 
-  return { ...user, subscription: subscription ? { ...subscription, plan } : null };
+  return {
+    ...user,
+    subscription: subscription && !isExpired
+      ? { ...subscription, plan }
+      : null,
+  };
 }
 
 // Soma uso de IA na semana

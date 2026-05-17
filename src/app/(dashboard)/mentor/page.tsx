@@ -13,7 +13,7 @@ export default async function MentorPage() {
   if (!dbUser) redirect("/login");
 
   const [{ data: agents }, { data: userAgents }] = await Promise.all([
-    db.from("Agent").select("*").eq("active", true).order("categoria"),
+    db.from("Agent").select("*").eq("active", true).order("name"),
     db.from("UserAgent").select("agentId").eq("userId", dbUser.id),
   ]);
 

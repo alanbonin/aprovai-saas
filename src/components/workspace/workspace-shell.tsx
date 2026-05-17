@@ -6,8 +6,8 @@ import { WorkspaceMain } from "./workspace-main";
 
 interface Agent {
   id: string; name: string; description: string;
-  categoria: string | null; banca: string | null;
-  color: string; systemPrompt: string;
+  area?: string | null; categoria: string | null; banca: string | null;
+  color: string; systemPrompt: string; isPremium?: boolean; avatar?: string | null;
 }
 
 interface Profile {
@@ -22,13 +22,23 @@ interface Subject {
 
 interface Props {
   agents: Agent[];
+  allAgents: Agent[];
+  activeAgentIds: string[];
+  maxAgents: number;
   profile: Profile | null;
   subjects: Subject[];
   userId: string;
   aiCreditsTotal: number;
+  subscriptionEndDate?: string | null;
+  isPremium?: boolean;
+  isExpired?: boolean;
 }
 
-export function WorkspaceShell({ agents, profile: initialProfile, subjects: initialSubjects, userId, aiCreditsTotal }: Props) {
+export function WorkspaceShell({
+  agents, allAgents, activeAgentIds, maxAgents,
+  profile: initialProfile, subjects: initialSubjects,
+  userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired,
+}: Props) {
   const [profile, setProfile] = useState(initialProfile);
   const [subjects, setSubjects] = useState(initialSubjects);
   const [step, setStep] = useState<"onboarding" | "subject-select" | "workspace">(
@@ -39,11 +49,8 @@ export function WorkspaceShell({ agents, profile: initialProfile, subjects: init
 
   function onOnboardingComplete(newProfile: Profile, suggestedSubjects: Subject[]) {
     setProfile(newProfile);
-    if (suggestedSubjects.length > 0) {
-      setStep("subject-select");
-    } else {
-      setStep("workspace");
-    }
+    void suggestedSubjects;
+    setStep("subject-select");
   }
 
   function onSubjectsConfirmed(confirmedSubjects: Subject[]) {
@@ -75,10 +82,16 @@ export function WorkspaceShell({ agents, profile: initialProfile, subjects: init
   return (
     <WorkspaceMain
       agents={agents}
+      allAgents={allAgents}
+      activeAgentIds={activeAgentIds}
+      maxAgents={maxAgents}
       subjects={subjects}
       profile={profile!}
       userId={userId}
       aiCreditsTotal={aiCreditsTotal}
+      subscriptionEndDate={subscriptionEndDate}
+      isPremium={isPremium ?? false}
+      isExpired={isExpired ?? false}
     />
   );
 }

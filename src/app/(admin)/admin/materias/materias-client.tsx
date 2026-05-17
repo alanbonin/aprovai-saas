@@ -7,14 +7,21 @@ interface Subject {
   id: string; name: string; slug: string; categoria: string | null;
   description: string | null; ordem: number;
 }
+interface SubjectStats {
+  totalQuestoes: number; totalRespostas: number; totalAcertos: number;
+  accuracy: number; totalAlunos: number;
+}
+
 interface Props {
   subjects: Subject[];
   categorias: { id: string; label: string }[];
+  questoesPorMateria?: Record<string, number>;
+  statsMap?: Record<string, SubjectStats>;
 }
 
 const empty = { name: "", slug: "", categoria: "", description: "", ordem: 0 };
 
-export function MateriasAdmin({ subjects: initial, categorias }: Props) {
+export function MateriasAdmin({ subjects: initial, categorias, questoesPorMateria = {}, statsMap = {} }: Props) {
   const [subjects, setSubjects] = useState(initial);
   const [editing, setEditing] = useState<Partial<Subject> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -104,6 +111,33 @@ export function MateriasAdmin({ subjects: initial, categorias }: Props) {
                     <p className="text-sm font-medium">{s.name}</p>
                     {s.description && <p className="text-xs text-gray-500 truncate">{s.description}</p>}
                   </div>
+                  {/* Questões count */}
+                  <span className={cn(
+                    "text-xs px-2 py-0.5 rounded-full tabular-nums",
+                    (questoesPorMateria[s.id] ?? 0) > 0
+                      ? "bg-indigo-500/10 text-indigo-400"
+                      : "bg-white/5 text-gray-700"
+                  )}>
+                    {(questoesPorMateria[s.id] ?? 0)} questões
+                  </span>
+                  {/* Desempenho stats */}
+                  {statsMap[s.id] && statsMap[s.id].totalRespostas > 0 && (
+                    <>
+                      <span className="text-xs text-gray-600 tabular-nums hidden sm:inline">
+                        {statsMap[s.id].totalRespostas} resp.
+                      </span>
+                      <span className={cn(
+                        "text-xs px-2 py-0.5 rounded-full font-medium tabular-nums hidden sm:inline",
+                        statsMap[s.id].accuracy >= 70 ? "bg-green-500/10 text-green-400" :
+                        statsMap[s.id].accuracy >= 50 ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400"
+                      )}>
+                        {statsMap[s.id].accuracy}%
+                      </span>
+                      <span className="text-xs text-gray-600 tabular-nums hidden sm:inline">
+                        {statsMap[s.id].totalAlunos} alunos
+                      </span>
+                    </>
+                  )}
                   <span className="text-xs text-gray-700">#{s.ordem}</span>
                   <button onClick={() => setEditing({ ...s })} className="text-gray-600 hover:text-indigo-400 transition-colors ml-1">
                     <Edit2 className="w-3.5 h-3.5" />

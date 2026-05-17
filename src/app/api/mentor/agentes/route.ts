@@ -18,7 +18,10 @@ export async function POST(req: Request) {
     if ((count ?? 0) >= maxAgents && maxAgents < 999) {
       return NextResponse.json({ error: `Seu plano permite no máximo ${maxAgents} mentor${maxAgents > 1 ? "es" : ""}` }, { status: 403 });
     }
-    await db.from("UserAgent").upsert({ userId: dbUser.id, agentId }, { onConflict: "userId,agentId" });
+    await db.from("UserAgent").upsert(
+      { id: crypto.randomUUID(), userId: dbUser.id, agentId, createdAt: new Date().toISOString() },
+      { onConflict: "userId,agentId", ignoreDuplicates: true }
+    );
   } else {
     await db.from("UserAgent").delete().eq("userId", dbUser.id).eq("agentId", agentId);
   }

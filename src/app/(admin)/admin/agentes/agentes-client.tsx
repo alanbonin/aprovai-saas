@@ -14,6 +14,8 @@ interface Props {
   agents: Agent[];
   categorias: { id: string; label: string }[];
   bancas: { id: string; label: string }[];
+  usageTotalMap?: Record<string, number>;
+  usageWeekMap?: Record<string, number>;
 }
 
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#06b6d4"];
@@ -23,7 +25,7 @@ const empty: Omit<Agent, "id"> = {
   color: "#6366f1", active: true, isPremium: false, systemPrompt: "",
 };
 
-export function AgentesAdmin({ agents: initial, categorias, bancas }: Props) {
+export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMap = {}, usageWeekMap = {} }: Props) {
   const [agents, setAgents] = useState(initial);
   const [editing, setEditing] = useState<Partial<Agent> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -91,8 +93,10 @@ export function AgentesAdmin({ agents: initial, categorias, bancas }: Props) {
           <thead>
             <tr className="border-b border-white/5 bg-white/3">
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Agente</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Categoria</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Banca</th>
+              <th className="text-left px-4 py-3 text-gray-500 font-medium hidden sm:table-cell">Categoria</th>
+              <th className="text-left px-4 py-3 text-gray-500 font-medium hidden sm:table-cell">Banca</th>
+              <th className="text-right px-4 py-3 text-gray-500 font-medium hidden md:table-cell">Semana</th>
+              <th className="text-right px-4 py-3 text-gray-500 font-medium hidden md:table-cell">Total msgs</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
               <th className="px-4 py-3" />
             </tr>
@@ -101,6 +105,8 @@ export function AgentesAdmin({ agents: initial, categorias, bancas }: Props) {
             {agents.map(agent => {
               const cat = categorias.find(c => c.id === agent.categoria);
               const ban = bancas.find(b => b.id === agent.banca);
+              const weekMsgs = usageWeekMap[agent.id] ?? 0;
+              const totalMsgs = usageTotalMap[agent.id] ?? 0;
               return (
                 <tr key={agent.id} className="hover:bg-white/3 transition-colors">
                   <td className="px-4 py-3">
@@ -115,8 +121,20 @@ export function AgentesAdmin({ agents: initial, categorias, bancas }: Props) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{cat?.label ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{ban?.label ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs hidden sm:table-cell">{cat?.label ?? "—"}</td>
+                  <td className="px-4 py-3 text-gray-400 text-xs hidden sm:table-cell">{ban?.label ?? "—"}</td>
+                  <td className="px-4 py-3 text-right hidden md:table-cell">
+                    {weekMsgs > 0
+                      ? <span className="text-xs font-semibold text-indigo-400">{weekMsgs}</span>
+                      : <span className="text-xs text-gray-700">—</span>
+                    }
+                  </td>
+                  <td className="px-4 py-3 text-right hidden md:table-cell">
+                    {totalMsgs > 0
+                      ? <span className="text-xs text-gray-400 tabular-nums">{totalMsgs}</span>
+                      : <span className="text-xs text-gray-700">—</span>
+                    }
+                  </td>
                   <td className="px-4 py-3">
                     <button onClick={() => toggleActive(agent)}>
                       {agent.active

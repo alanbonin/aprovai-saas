@@ -1,0 +1,89 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { getUserWithPlan, db } from "@/lib/db";
+
+const PREFIX = "__GRUPOS__";
+
+export interface GrupoSalvo {
+  id: string;
+  nome: string;
+  code: string;
+  criadoEm: string;
+  ultimaSessao: string | null;
+  membros: number;
+}
+
+async function getGrupos(userId: string): Promise<GrupoSalvo[]> {
+  const { data } = await db.from("Note")
+    .select("content").eq("userId", userId).eq("subjectId", PREFIX).single();
+  try { return data?.content ? JSON.parse(data.content) : []; }
+  catch { return []; }
+}
+
+async function saveGrupos(userId: string, grupos: GrupoSalvo[]) {
+  const content = JSON.stringify(grupos);
+  const { data: ex } = await db.from("Note")
+    .select("id").eq("userId", userId).eq("subjectId", PREFIX).single();
+  if (ex?.id) await db.from("Note").update({ content }).eq("id", ex.id);
+  else await db.from("Note").insert({ userId, subjectId: PREFIX, content });
+}
+
+export async function GET() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const dbUser = await getUserWithPlan(user.id);
+  if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+  return NextResponse.json({ grupos: await getGrupos(dbUser.id) });
+}
+
+export async function POST(req: Request) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  const dbUser = await getUserWithPlan(user.id);
+  if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  const body = await req.json() as {
+    action: "save" | "remove" | "touch";
+    id?: string;
+    nome?: string;
+    code?: string;
+  };
+
+  const grupos = await getGrupos(dbUser.id);
+
+  if (body.action === "save" && body.nome && body.code) {
+    const exists = grupos.find(g => g.code === body.code);
+    if (!exists) {
+      grupos.unshift({
+        id: crypto.randomUUID(),
+        nome: body.nome.slice(0, 40),
+        code: body.code,
+        criadoEm: new Date().toISOString(),
+        ultimaSessao: new Date().toISOString(),
+        membros: 1,
+      });
+      // Máximo 10 grupos salvos
+      if (grupos.length > 10) grupos.splice(10);
+    }
+    await saveGrupos(dbUser.id, grupos);
+    return NextResponse.json({ grupos });
+  }
+
+  if (body.action === "remove" && body.id) {
+    const updated = grupos.filter(g => g.id !== body.id);
+    await saveGrupos(dbUser.id, updated);
+    return NextResponse.json({ grupos: updated });
+  }
+
+  if (body.action === "touch" && body.code) {
+    const updated = grupos.map(g =>
+      g.code === body.code ? { ...g, ultimaSessao: new Date().toISOString() } : g
+    );
+    await saveGrupos(dbUser.id, updated);
+    return NextResponse.json({ grupos: updated });
+  }
+
+  return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+}
