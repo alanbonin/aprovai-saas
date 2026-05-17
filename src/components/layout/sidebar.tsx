@@ -137,8 +137,9 @@ const SECTIONS_ADMIN: NavSection[] = [
   {
     id: "admin-comunicacao", title: "Comunicação", color: "#06b6d4", defaultOpen: false,
     items: [
-      { href: "/admin/anuncio", label: "Anúncios", icon: "📢" },
-      { href: "/admin/push",    label: "Push",     icon: "📲" },
+      { href: "/admin/anuncio",        label: "Anúncios",      icon: "📢" },
+      { href: "/admin/push",           label: "Push",          icon: "📲" },
+      { href: "/admin/reengajamento",  label: "Reengajamento", icon: "🔄" },
     ],
   },
 ];

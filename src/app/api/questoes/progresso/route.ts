@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { updateXP, XP_CORRECT_QUESTION } from "@/lib/xp";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { checkAndAwardBadges } from "@/lib/badges";
 
 const AUTO_FC_PREFIX = "__AUTO_ERRO_FC__";
 const AUTO_FC_SYSTEM = `Especialista em flashcards para concursos públicos brasileiros.
@@ -139,6 +140,9 @@ export async function POST(req: Request) {
   if (!isCorrect) {
     void autoFlashcardOnError(dbUser.id, questionId).catch(() => {});
   }
+
+  // Verifica e concede badges desbloqueados (fire-and-forget)
+  void checkAndAwardBadges(dbUser.id).catch(() => {});
 
   return NextResponse.json({ ok: true, nextReview, interval, autoFlashcard: !isCorrect });
 }

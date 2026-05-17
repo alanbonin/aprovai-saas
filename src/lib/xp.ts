@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { sendPushToUser } from "@/lib/push";
 
 /**
  * XP por ação:
@@ -85,6 +86,20 @@ export async function updateXP(userId: string, xpDelta: number): Promise<XPResul
       onboardingDone: false,
       createdAt: new Date().toISOString(),
     });
+  }
+
+  // Push notification para milestones de streak
+  const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
+  if (
+    newStreak !== currentStreak &&
+    STREAK_MILESTONES.includes(newStreak) &&
+    lastStudy !== today
+  ) {
+    void sendPushToUser(userId, {
+      title: `🔥 ${newStreak} dias de sequência!`,
+      body: `Incrível! Continue estudando para manter seu ritmo. +${XP_STREAK_BONUS} XP bônus!`,
+      url: "/hoje",
+    }).catch(() => {});
   }
 
   return {
