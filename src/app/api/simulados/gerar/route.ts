@@ -198,6 +198,7 @@ Retorne APENAS o JSON (array), sem texto antes ou depois.`;
       total: questoes.length,
       correct: 0,
       timeSecs: 0,
+      subjectIds: materias,
       createdAt: new Date().toISOString(),
     }).select("id").single();
 

@@ -48,7 +48,7 @@ export async function POST(req: Request) {
     .from("Question")
     .select("id, statement")
     .eq("id", questionId)
-    .single();
+    .maybeSingle();
   if (!questao) return NextResponse.json({ error: "Questão não encontrada" }, { status: 404 });
 
   const reporte = {
@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     .from("Note")
     .select("id")
     .eq("subjectId", subjectId)
-    .single();
+    .maybeSingle();
 
   if (existing) {
     await db.from("Note").update({ content: JSON.stringify(reporte) }).eq("id", existing.id);

@@ -31,7 +31,7 @@ export async function GET() {
     .select("content")
     .eq("userId", dbUser.id)
     .eq("subjectId", "__DESAFIO__")
-    .single();
+    .maybeSingle();
 
   interface DesafioRecord {
     date: string;

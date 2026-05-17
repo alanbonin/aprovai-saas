@@ -51,7 +51,7 @@ export async function GET() {
   // Nome da matéria
   let subjectName: string | null = null;
   if (question.subjectId) {
-    const { data: subj } = await db.from("Subject").select("name").eq("id", question.subjectId).single();
+    const { data: subj } = await db.from("Subject").select("name").eq("id", question.subjectId).maybeSingle();
     subjectName = subj?.name ?? null;
   }
 
@@ -63,7 +63,7 @@ export async function GET() {
     .eq("userId", dbUser.id)
     .eq("questionId", question.id)
     .gte("createdAt", todayStart)
-    .single();
+    .maybeSingle();
 
   return NextResponse.json({
     question: { ...question, subjectName },

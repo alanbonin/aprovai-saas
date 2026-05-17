@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     .select("id, content")
     .eq("userId", dbUser.id)
     .eq("subjectId", "__DESAFIO__")
-    .single();
+    .maybeSingle();
 
   try {
     const prev = existing?.content ? JSON.parse(existing.content) as { date: string } : null;

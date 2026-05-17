@@ -6,14 +6,14 @@ const PREFIX = "__FAV_Q__";
 
 async function getFavs(userId: string): Promise<number[]> {
   const { data } = await db.from("Note").select("content")
-    .eq("userId", userId).eq("subjectId", PREFIX).single();
+    .eq("userId", userId).eq("subjectId", PREFIX).maybeSingle();
   try { return data?.content ? JSON.parse(data.content) : []; }
   catch { return []; }
 }
 
 async function saveFavs(userId: string, ids: number[]) {
   const content = JSON.stringify(ids);
-  const { data: ex } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).single();
+  const { data: ex } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).maybeSingle();
   if (ex?.id) await db.from("Note").update({ content }).eq("id", ex.id);
   else await db.from("Note").insert({ userId, subjectId: PREFIX, content });
 }

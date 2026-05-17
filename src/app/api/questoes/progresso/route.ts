@@ -12,7 +12,7 @@ Dado uma questão errada, crie 1 flashcard objetivo. Responda APENAS com JSON.`;
 async function autoFlashcardOnError(userId: string, questionId: number) {
   // Verifica se já existe flashcard desta questão
   const { data: note } = await db.from("Note").select("id, content")
-    .eq("userId", userId).eq("subjectId", AUTO_FC_PREFIX).single();
+    .eq("userId", userId).eq("subjectId", AUTO_FC_PREFIX).maybeSingle();
 
   interface StoredCard { id: string; front: string; back: string; questionId: number; createdAt: string }
   let cards: StoredCard[] = [];
@@ -23,7 +23,7 @@ async function autoFlashcardOnError(userId: string, questionId: number) {
   // Busca dados da questão
   const { data: q } = await db.from("Question")
     .select("statement, answer, optionA, optionB, optionC, optionD, optionE, explanation, Subject(name)")
-    .eq("id", questionId).single();
+    .eq("id", questionId).maybeSingle();
   if (!q) return;
 
   const subjectName = (Array.isArray(q.Subject) ? q.Subject[0] : q.Subject as { name?: string } | null)?.name ?? "Concursos";
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
+  const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).maybeSingle();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   const { questionId, correct, quality } = await req.json();
@@ -112,7 +112,7 @@ export async function POST(req: Request) {
     .select("id, interval, easeFactor")
     .eq("userId", dbUser.id)
     .eq("questionId", questionId)
-    .single();
+    .maybeSingle();
 
   const { interval, easeFactor, nextReview, correct: isCorrect } = calcNextReview(existing, q);
 
