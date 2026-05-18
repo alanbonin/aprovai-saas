@@ -12,6 +12,7 @@ const PUBLIC_PATHS = new Set([
   "/planos",
   "/planos/sucesso",
   "/planos/pendente",
+  "/offline",
   "/api/auth/callback",
   "/api/auth/register",
   "/api/auth/logout",
@@ -21,6 +22,7 @@ const PUBLIC_PATHS = new Set([
   "/manifest.json",
   "/robots.txt",
   "/sitemap.xml",
+  "/sw.js",
 ]);
 
 function isPublicPath(pathname: string): boolean {
