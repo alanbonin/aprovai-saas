@@ -1,6 +1,13 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
+import { z } from "zod";
+
+const RegisterSchema = z.object({
+  supabaseId: z.string().uuid(),
+  name: z.string().min(2).max(100).trim(),
+  email: z.string().email().max(255).toLowerCase(),
+});
 
 async function sendBoasVindas(userId: string, email: string, name: string) {
   try {
@@ -47,10 +54,12 @@ export async function POST(req: Request) {
   const rl = await signupLimiter.check(`signup:${ip}`);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
-  const { name, email, supabaseId } = await req.json();
-  if (!name || !email || !supabaseId) {
-    return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+  const body = await req.json();
+  const parseResult = RegisterSchema.safeParse(body);
+  if (!parseResult.success) {
+    return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
   }
+  const { supabaseId, name, email } = parseResult.data;
 
   const now = new Date().toISOString();
 

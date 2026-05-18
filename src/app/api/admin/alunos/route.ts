@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { createLimiter } from "@/lib/rate-limit";
+
+const adminAlunosLimiter = createLimiter({ max: 30, window: "1 m", prefix: "admin-alunos" });
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -12,7 +15,11 @@ async function requireAdmin() {
 
 // POST — cria novo aluno
 export async function POST(req: Request) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const rl = await adminAlunosLimiter.check(`admin:${user.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { name, email, password, planId } = await req.json();
   if (!name || !email || !password) return NextResponse.json({ error: "name, email e password são obrigatórios" }, { status: 400 });
@@ -40,9 +47,9 @@ export async function POST(req: Request) {
   }).select("id").single();
 
   if (dbErr) {
-    console.error("[alunos POST] dbErr:", JSON.stringify(dbErr));
+    console.error("[admin/alunos] erro:", typeof dbErr === 'object' ? dbErr?.message ?? 'unknown' : dbErr);
     await db.auth.admin.deleteUser(authUser.user.id);
-    return NextResponse.json({ error: dbErr.message, details: dbErr }, { status: 500 });
+    return NextResponse.json({ error: dbErr.message }, { status: 500 });
   }
 
   // Atribui plano se informado

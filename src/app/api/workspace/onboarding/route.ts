@@ -196,7 +196,7 @@ Responda SEMPRE em português brasileiro.`;
       savedProfile = (data ?? [])[0] ?? null;
     }
 
-    console.log("[onboarding] profile saved — onboardingDone:", savedProfile?.onboardingDone);
+    // [onboarding] profile saved
 
     // 2. Buscar agentes disponíveis e selecionar os ideais
     const { data: allAgents } = await db
@@ -224,7 +224,7 @@ Responda SEMPRE em português brasileiro.`;
       ? await db.from("Agent").select("id, name, description, categoria, banca, color, systemPrompt").in("id", selectedIds)
       : { data: [] };
 
-    console.log("[onboarding] done — userId:", dbUser.id, "| agents:", selectedIds, "| onboardingDone:", savedProfile?.onboardingDone);
+    // [onboarding] done
 
     return NextResponse.json({
       text: textPart,

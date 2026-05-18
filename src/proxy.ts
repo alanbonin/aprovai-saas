@@ -41,6 +41,10 @@ export async function proxy(request: NextRequest) {
   supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
   supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+  supabaseResponse.headers.set(
+    "Content-Security-Policy",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.mercadopago.com; frame-ancestors 'none';"
+  );
   if (process.env.NODE_ENV === "production") {
     supabaseResponse.headers.set(
       "Strict-Transport-Security",
@@ -67,6 +71,10 @@ export async function proxy(request: NextRequest) {
           supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
           supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
           supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+          supabaseResponse.headers.set(
+            "Content-Security-Policy",
+            "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.mercadopago.com; frame-ancestors 'none';"
+          );
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );

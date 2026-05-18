@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { z } from "zod";
+
+const ReportarSchema = z.object({
+  questionId: z.number().int(),
+  motivo: z.string().max(500).optional(),
+});
 
 const PREFIX = "__REPORTE_QUESTAO__";
 
@@ -30,7 +36,13 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const { questionId, motivo, descricao } = await req.json() as ReportePayload;
+  const rawBody = await req.json();
+  const parseResult = ReportarSchema.safeParse(rawBody);
+  if (!parseResult.success) {
+    return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
+  }
+  const { questionId } = parseResult.data;
+  const { motivo, descricao } = rawBody as ReportePayload;
   if (!questionId || !motivo) {
     return NextResponse.json({ error: "questionId e motivo são obrigatórios" }, { status: 400 });
   }
