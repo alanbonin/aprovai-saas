@@ -17,6 +17,7 @@ const PUBLIC_PATHS = new Set([
   "/api/auth/logout",
   "/api/pagamento/webhook",
   "/api/icon",
+  "/api/og",
   "/manifest.json",
   "/robots.txt",
   "/sitemap.xml",

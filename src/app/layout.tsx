@@ -38,13 +38,13 @@ export const metadata: Metadata = {
     siteName: "AprovAI360",
     title: "AprovAI360 — Sua Aprovação em Concursos Públicos",
     description: "Mentores IA especializados por área e banca. Questões adaptativas, simulados, flashcards e cronograma personalizado.",
-    images: [{ url: `${APP_URL}/api/icon?size=512`, width: 512, height: 512, alt: "AprovAI360" }],
+    images: [{ url: `${APP_URL}/api/og`, width: 1200, height: 630, alt: "AprovAI360" }],
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "AprovAI360 — Sua Aprovação em Concursos Públicos",
     description: "Plataforma de estudos para concursos públicos com IA.",
-    images: [`${APP_URL}/api/icon?size=512`],
+    images: [{ url: `${APP_URL}/api/og`, width: 1200, height: 630, alt: "AprovAI360" }],
   },
   manifest: "/manifest.json",
   appleWebApp: {
