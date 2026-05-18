@@ -1,31 +1,85 @@
 @import "tailwindcss";
 
+/* ── Variáveis de tema ────────────────────────────────────────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Dark theme (padrão) */
+  --bg-base:        #080c18;
+  --bg-surface:     #0a0d14;
+  --bg-card:        #0d1117;
+  --bg-hover:       #1a1f2e;
+  --text-primary:   #f1f5f9;
+  --text-secondary: #94a3b8;
+  --text-muted:     #64748b;
+  --border-color:   rgba(255,255,255,0.08);
+  --color-teal:     #0ab5bd;
+  --color-teal-dark:#066d73;
+  --background:     #080c18;
+  --foreground:     #f1f5f9;
+}
+
+html.light {
+  --bg-base:        #f8fafc;
+  --bg-surface:     #f1f5f9;
+  --bg-card:        #ffffff;
+  --bg-hover:       #e2e8f0;
+  --text-primary:   #0f172a;
+  --text-secondary: #475569;
+  --text-muted:     #94a3b8;
+  --border-color:   rgba(0,0,0,0.08);
+  --color-teal:     #0891b2;
+  --color-teal-dark:#0e7490;
+  --background:     #f8fafc;
+  --foreground:     #0f172a;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Base ─────────────────────────────────────────────────────────────────── */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: var(--bg-base);
+  color: var(--text-primary);
+  font-family: Inter, Arial, Helvetica, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-/* ── Animações globais (PCBA Elite style) ─────────────────────────────────── */
+/* ── Light mode — sobrescreve fundos hardcoded ────────────────────────────── */
+html.light [class*="bg-\[\#080c18\]"],
+html.light [class*="bg-\[\#0a0d14\]"],
+html.light [class*="bg-\[\#0d1117\]"],
+html.light [class*="bg-\[\#0f1117\]"],
+html.light [class*="bg-\[\#0a0a0a\]"] {
+  background-color: var(--bg-card) !important;
+}
+html.light [class*="bg-\[\#1a1f2e\]"],
+html.light [class*="bg-\[\#111827\]"],
+html.light [class*="bg-\[\#0f172a\]"] {
+  background-color: var(--bg-surface) !important;
+}
+
+/* ── Scrollbar estilizada ─────────────────────────────────────────────────── */
+::-webkit-scrollbar             { width: 5px; height: 5px; }
+::-webkit-scrollbar-track       { background: transparent; }
+::-webkit-scrollbar-thumb       { background: rgba(255,255,255,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+html.light ::-webkit-scrollbar-thumb       { background: rgba(0,0,0,0.15); }
+html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
+
+/* ── Seleção de texto ─────────────────────────────────────────────────────── */
+::selection { background: #0ab5bd35; color: inherit; }
+
+/* ── Scrollbar invisível nos bottom-tabs mobile ───────────────────────────── */
+.bottom-tabs-scroll {
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.bottom-tabs-scroll::-webkit-scrollbar { display: none; }
+
+/* ── Animações globais ────────────────────────────────────────────────────── */
 @keyframes confettiFall {
   to { transform: translateY(110vh) rotate(720deg); opacity: 0; }
 }
@@ -48,10 +102,3 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-
-/* Scrollbar invisível nos bottom-tabs mobile */
-.bottom-tabs-scroll {
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.bottom-tabs-scroll::-webkit-scrollbar { display: none; }

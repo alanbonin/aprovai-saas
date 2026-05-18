@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Sun, Moon } from "lucide-react";
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
 interface NavItem { href: string; label: string; icon: string; badge?: boolean }
@@ -229,6 +230,7 @@ interface SidebarProps {
 /* ── Componente principal ───────────────────────────────────────────────── */
 export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10 }: SidebarProps) {
   const pathname = usePathname();
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
@@ -402,6 +404,19 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               ⚙️ Painel Admin
             </span>
           </div>
+        )}
+
+        {/* Toggle dark/light */}
+        {mounted && (
+          <button
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-500 hover:text-gray-300 hover:bg-white/[0.05] transition-all"
+          >
+            {theme === "dark"
+              ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span>Modo Claro</span></>
+              : <><Moon className="w-3.5 h-3.5 text-indigo-400" /><span>Modo Escuro</span></>
+            }
+          </button>
         )}
 
         {/* User card */}
