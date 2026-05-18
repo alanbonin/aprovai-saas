@@ -37,7 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         aiCreditsLeft={aiCreditsLeft}
         aiCreditsTotal={aiCreditsTotal}
       />
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
     </div>

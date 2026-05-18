@@ -47,36 +47,73 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ── Light mode — sobrescreve fundos hardcoded com seletores corretos ─────── */
+/* ── Light mode — sobrescreve fundos escuros hardcoded ────────────────────── */
+
+/* Fundos muito escuros → branco */
 html.light .bg-\[\#080c18\],
 html.light .bg-\[\#0a0d14\],
 html.light .bg-\[\#0d1117\],
 html.light .bg-\[\#0f1117\],
-html.light .bg-\[\#0a0a0a\] {
+html.light .bg-\[\#0a0a0a\],
+html.light .bg-\[\#060914\],
+html.light .bg-\[\#07090f\] {
   background-color: var(--bg-card) !important;
 }
+/* Fundos levemente mais claros → cinza claro */
 html.light .bg-\[\#1a1f2e\],
 html.light .bg-\[\#111827\],
-html.light .bg-\[\#0f172a\] {
+html.light .bg-\[\#0f172a\],
+html.light .bg-\[\#1e2433\],
+html.light .bg-\[\#12161f\] {
   background-color: var(--bg-surface) !important;
 }
-/* textos claros → escuros no light */
-html.light .text-white        { color: var(--text-primary) !important; }
+
+/* Textos claros → escuros */
+html.light .text-white          { color: var(--text-primary)   !important; }
+html.light .text-gray-50,
 html.light .text-gray-100,
-html.light .text-slate-100    { color: var(--text-primary) !important; }
+html.light .text-slate-50,
+html.light .text-slate-100      { color: var(--text-primary)   !important; }
+html.light .text-gray-200,
 html.light .text-gray-300,
-html.light .text-slate-300    { color: var(--text-secondary) !important; }
+html.light .text-slate-200,
+html.light .text-slate-300      { color: var(--text-secondary) !important; }
 html.light .text-gray-400,
 html.light .text-slate-400,
 html.light .text-gray-500,
-html.light .text-slate-500    { color: var(--text-muted) !important; }
-/* bordas claras → tom light */
+html.light .text-slate-500,
+html.light .text-gray-600,
+html.light .text-slate-600      { color: var(--text-muted)     !important; }
+
+/* Bordas brancas/claras com opacidade → escuras */
+html.light .border-white\/\[0\.04\],
+html.light .border-white\/\[0\.05\],
 html.light .border-white\/\[0\.06\],
-html.light .border-white\/8   { border-color: var(--border-color) !important; }
-/* backgrounds com opacidade */
+html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.10\],
+html.light .border-white\/5,
+html.light .border-white\/8,
+html.light .border-white\/10    { border-color: var(--border-color) !important; }
+
+/* Backgrounds brancos/transparentes com baixa opacidade */
+html.light .bg-white\/\[0\.02\],
 html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.04\],
 html.light .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.03) !important; }
-html.light .bg-white\/10      { background-color: rgba(0,0,0,0.08) !important; }
+html.light .bg-white\/10        { background-color: rgba(0,0,0,0.06) !important; }
+html.light .bg-white\/20        { background-color: rgba(0,0,0,0.10) !important; }
+
+/* Input/textarea escuro → claro */
+html.light input[class*="bg-\[#"],
+html.light textarea[class*="bg-\[#"],
+html.light select[class*="bg-\[#"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
+/* Placeholder */
+html.light ::placeholder { color: var(--text-muted) !important; }
 
 /* ── Scrollbar estilizada ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar             { width: 5px; height: 5px; }

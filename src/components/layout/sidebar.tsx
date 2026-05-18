@@ -409,12 +409,13 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         {/* Toggle dark/light */}
         {mounted && (
           <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+            title={theme === "light" ? "Alternar para modo escuro" : "Alternar para modo claro"}
             className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-500 hover:text-gray-300 hover:bg-white/[0.05] transition-all"
           >
-            {theme === "dark"
-              ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span>Modo Claro</span></>
-              : <><Moon className="w-3.5 h-3.5 text-indigo-400" /><span>Modo Escuro</span></>
+            {theme === "light"
+              ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span className="text-amber-400/80">Modo Claro</span></>
+              : <><Moon className="w-3.5 h-3.5 text-indigo-400" /><span className="text-indigo-400/80">Modo Escuro</span></>
             }
           </button>
         )}
