@@ -79,11 +79,11 @@ html.light .text-gray-300,
 html.light .text-slate-200,
 html.light .text-slate-300      { color: var(--text-secondary) !important; }
 html.light .text-gray-400,
-html.light .text-slate-400,
+html.light .text-slate-400      { color: #374151               !important; } /* gray-700 equivalente */
 html.light .text-gray-500,
-html.light .text-slate-500,
+html.light .text-slate-500      { color: #4b5563               !important; } /* gray-600 */
 html.light .text-gray-600,
-html.light .text-slate-600      { color: var(--text-muted)     !important; }
+html.light .text-slate-600      { color: var(--text-secondary) !important; }
 
 /* Bordas brancas/claras com opacidade → escuras */
 html.light .border-white\/\[0\.04\],

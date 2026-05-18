@@ -167,12 +167,12 @@ function SidebarSection({
         onClick={onToggle}
         className={cn(
           "w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest transition-colors",
-          activeInSection ? "text-white" : "text-gray-600 hover:text-gray-400"
+          activeInSection ? "text-white" : "text-gray-400 hover:text-gray-200"
         )}
       >
         <span
           className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-          style={{ background: activeInSection ? section.color : "rgba(255,255,255,0.15)" }}
+          style={{ background: activeInSection ? section.color : "rgba(255,255,255,0.3)" }}
         />
         <span className="flex-1 text-left">{section.title}</span>
         <ChevronDown
@@ -197,7 +197,7 @@ function SidebarSection({
                     ? isAdmin
                       ? "bg-orange-600/20 text-orange-300 border-orange-500/25"
                       : "bg-indigo-600/20 text-indigo-300 border-indigo-500/25"
-                    : "text-gray-500 hover:text-white hover:bg-white/[0.05] border-transparent"
+                    : "text-gray-400 hover:text-white hover:bg-white/[0.05] border-transparent"
                 )}
               >
                 <span className="text-sm leading-none flex-shrink-0">{icon}</span>
@@ -362,7 +362,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
                   <span className="text-[11px] font-bold" style={{ color: stats.levelColor }}>
                     {stats.levelName}
                   </span>
-                  <span className="text-[10px] text-gray-600 font-mono">{stats.xp} XP</span>
+                  <span className="text-[10px] text-gray-400 font-mono">{stats.xp} XP</span>
                 </div>
                 <div className="h-1 rounded-full bg-white/10 overflow-hidden">
                   <div className="h-full rounded-full transition-all duration-500"
@@ -379,13 +379,13 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               ].map(s => (
                 <div key={s.label} className="text-center">
                   <div className="text-[11px] font-bold font-mono" style={{ color: s.color }}>{s.value}</div>
-                  <div className="text-[9px] text-gray-600">{s.label}</div>
+                  <div className="text-[9px] text-gray-400">{s.label}</div>
                 </div>
               ))}
             </div>
 
             <div className="rounded-lg bg-white/[0.03] border border-white/[0.05] px-2.5 py-2">
-              <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+              <div className="flex justify-between text-[10px] text-gray-400 mb-1">
                 <span>Mentoria IA / semana</span>
                 <span className="font-mono">{aiCreditsLeft}/{aiCreditsTotal}</span>
               </div>
@@ -436,8 +436,8 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             </p>
             {!isAdmin && (
               <div className="flex gap-2">
-                <Link href="/configuracoes" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Config.</Link>
-                <Link href="/planos" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Planos</Link>
+                <Link href="/configuracoes" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Config.</Link>
+                <Link href="/planos" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Planos</Link>
               </div>
             )}
           </div>
