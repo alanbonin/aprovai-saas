@@ -16,7 +16,7 @@ export async function GET(req: Request) {
 
   const [
     { data: materiais },
-    { data: questoes },
+    questoesResult,
     { data: progressList },
     { data: flashcardSets },
   ] = await Promise.all([
@@ -28,6 +28,7 @@ export async function GET(req: Request) {
     db.from("Question")
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
       .eq("subjectId", subjectId)
+      .eq("aprovado", true)
       .limit(80),
     db.from("Progress")
       .select("questionId, nextReview, interval, correct")
@@ -37,6 +38,16 @@ export async function GET(req: Request) {
       .eq("subjectId", subjectId)
       .order("createdAt"),
   ]);
+
+  // Fallback se coluna aprovado não existe ainda
+  let questoes = questoesResult.data;
+  if (questoesResult.error && (questoesResult.error as { code?: string }).code === "42703") {
+    const fallback = await db.from("Question")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
+      .eq("subjectId", subjectId)
+      .limit(80);
+    questoes = fallback.data;
+  }
 
   // Enriquece questões com progresso e ordena: vencidas/novas primeiro, futuras por último
   const progressMap = new Map((progressList ?? []).map((p: { questionId: number; nextReview: string | null; interval: number; correct: boolean }) => [p.questionId, p]));

@@ -55,9 +55,16 @@ export async function GET() {
   const subjectIds = (studentSubs ?? []).map(s => s.subjectId as string);
 
   // Count available questions
-  let countQuery = db.from("Question").select("id", { count: "exact", head: true });
+  let countQuery = db.from("Question").select("id", { count: "exact", head: true }).eq("aprovado", true);
   if (subjectIds.length > 0) countQuery = countQuery.in("subjectId", subjectIds);
-  const { count } = await countQuery;
+  let countResult = await countQuery;
+  // Fallback se coluna aprovado não existe ainda
+  if (countResult.error && (countResult.error as { code?: string }).code === "42703") {
+    let fallbackCQ = db.from("Question").select("id", { count: "exact", head: true });
+    if (subjectIds.length > 0) fallbackCQ = fallbackCQ.in("subjectId", subjectIds);
+    countResult = await fallbackCQ;
+  }
+  const { count } = countResult;
   const total = count ?? 0;
 
   if (total < 10) {
@@ -81,13 +88,29 @@ export async function GET() {
   const questionFetches = uniqueIndices.map(offset => {
     let q = db.from("Question")
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
+      .eq("aprovado", true)
       .order("id")
       .range(offset, offset);
     if (subjectIds.length > 0) q = q.in("subjectId", subjectIds);
     return q;
   });
 
-  const results = await Promise.all(questionFetches);
+  const rawResults = await Promise.all(questionFetches);
+  // Fallback se coluna aprovado não existe ainda (verifica o primeiro erro)
+  const hasAprovadoError = rawResults.some(r => r.error && (r.error as { code?: string }).code === "42703");
+  let results = rawResults;
+  if (hasAprovadoError) {
+    const fallbackFetches = uniqueIndices.map(offset => {
+      let q = db.from("Question")
+        .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
+        .order("id")
+        .range(offset, offset);
+      if (subjectIds.length > 0) q = q.in("subjectId", subjectIds);
+      return q;
+    });
+    results = await Promise.all(fallbackFetches);
+  }
+
   const questions = results
     .flatMap(r => r.data ?? [])
     .filter((q, i, arr) => arr.findIndex(x => x.id === q.id) === i) // deduplicate

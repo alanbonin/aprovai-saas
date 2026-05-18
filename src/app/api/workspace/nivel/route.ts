@@ -36,11 +36,12 @@ export async function GET() {
   // Fetch question levels in chunks
   const levelMap: Record<number, string> = {};
   for (let i = 0; i < qIds.length; i += 200) {
-    const { data: qs } = await db
-      .from("Question")
-      .select("id, level")
-      .in("id", qIds.slice(i, i + 200));
-    for (const q of qs ?? []) levelMap[q.id as number] = q.level as string;
+    const chunk = qIds.slice(i, i + 200);
+    let result = await db.from("Question").select("id, level").in("id", chunk).eq("aprovado", true);
+    if (result.error && (result.error as { code?: string }).code === "42703") {
+      result = await db.from("Question").select("id, level").in("id", chunk);
+    }
+    for (const q of result.data ?? []) levelMap[q.id as number] = q.level as string;
   }
 
   const LEVELS = ["facil", "medio", "dificil"];

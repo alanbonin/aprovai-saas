@@ -30,21 +30,38 @@ export async function GET() {
   const subjectIds = (studentSubjects ?? []).map(s => s.subjectId);
 
   // Conta questões (das matérias do aluno se disponíveis, senão todas)
-  let countQuery = db.from("Question").select("id", { count: "exact", head: true });
+  let countQuery = db.from("Question").select("id", { count: "exact", head: true }).eq("aprovado", true);
   if (subjectIds.length > 0) countQuery = countQuery.in("subjectId", subjectIds);
 
-  const { count } = await countQuery;
+  let countResult = await countQuery;
+  // Fallback se coluna não existe ainda (PostgREST error code 42703)
+  if (countResult.error && (countResult.error as { code?: string }).code === "42703") {
+    let fallbackCountQ = db.from("Question").select("id", { count: "exact", head: true });
+    if (subjectIds.length > 0) fallbackCountQ = fallbackCountQ.in("subjectId", subjectIds);
+    countResult = await fallbackCountQ;
+  }
+  const { count } = countResult;
   if (!count || count === 0) return NextResponse.json({ question: null });
 
   // Seleciona pelo offset determinístico
   const offset = dayOfYear % count;
   let rowQuery = db.from("Question")
     .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+    .eq("aprovado", true)
     .order("id")
     .range(offset, offset);
   if (subjectIds.length > 0) rowQuery = rowQuery.in("subjectId", subjectIds);
 
-  const { data: rows } = await rowQuery;
+  let rowResult = await rowQuery;
+  if (rowResult.error && (rowResult.error as { code?: string }).code === "42703") {
+    let fallbackRowQ = db.from("Question")
+      .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+      .order("id")
+      .range(offset, offset);
+    if (subjectIds.length > 0) fallbackRowQ = fallbackRowQ.in("subjectId", subjectIds);
+    rowResult = await fallbackRowQ;
+  }
+  const rows = rowResult.data;
   const question = rows?.[0] ?? null;
   if (!question) return NextResponse.json({ question: null });
 

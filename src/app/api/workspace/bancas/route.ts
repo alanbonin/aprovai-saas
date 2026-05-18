@@ -37,11 +37,12 @@ export async function GET() {
   // Fetch question banca + subject in chunks
   const questionMap: Record<number, { banca: string | null; subjectId: string | null }> = {};
   for (let i = 0; i < questionIds.length; i += 200) {
-    const { data: qs } = await db
-      .from("Question")
-      .select("id, banca, subjectId")
-      .in("id", questionIds.slice(i, i + 200));
-    for (const q of qs ?? []) {
+    const chunk = questionIds.slice(i, i + 200);
+    let result = await db.from("Question").select("id, banca, subjectId").in("id", chunk).eq("aprovado", true);
+    if (result.error && (result.error as { code?: string }).code === "42703") {
+      result = await db.from("Question").select("id, banca, subjectId").in("id", chunk);
+    }
+    for (const q of result.data ?? []) {
       questionMap[q.id as number] = { banca: q.banca as string | null, subjectId: q.subjectId as string | null };
     }
   }

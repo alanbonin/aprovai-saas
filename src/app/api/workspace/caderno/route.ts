@@ -71,11 +71,12 @@ export async function GET() {
     level: string; banca: string | null; year: number | null;
   }> = {};
   for (let i = 0; i < errorIds.length; i += 200) {
-    const { data: qs } = await db
-      .from("Question")
-      .select("id, subjectId, statement, answer, level, banca, year")
-      .in("id", errorIds.slice(i, i + 200));
-    for (const q of qs ?? []) questionsData[(q as { id: number }).id] = q as typeof questionsData[number];
+    const chunk = errorIds.slice(i, i + 200);
+    let result = await db.from("Question").select("id, subjectId, statement, answer, level, banca, year").in("id", chunk).eq("aprovado", true);
+    if (result.error && (result.error as { code?: string }).code === "42703") {
+      result = await db.from("Question").select("id, subjectId, statement, answer, level, banca, year").in("id", chunk);
+    }
+    for (const q of result.data ?? []) questionsData[(q as { id: number }).id] = q as typeof questionsData[number];
   }
 
   // Group by subject

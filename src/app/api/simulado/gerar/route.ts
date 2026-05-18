@@ -37,7 +37,8 @@ export async function POST(req: NextRequest) {
   let query = db
     .from("Question")
     .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
-    .in("subjectId", sIds);
+    .in("subjectId", sIds)
+    .eq("aprovado", true);
 
   if (banca)  query = query.eq("banca", banca);
   if (level)  query = query.eq("level", level);
@@ -46,17 +47,38 @@ export async function POST(req: NextRequest) {
     query = query.not("id", "in", `(${answeredIds.join(",")})`);
   }
 
-  const { data: questions } = await query.limit(total * 3);
+  let mainResult = await query.limit(total * 3);
+  // Fallback se coluna aprovado não existe ainda
+  if (mainResult.error && (mainResult.error as { code?: string }).code === "42703") {
+    let fallbackMain = db.from("Question")
+      .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+      .in("subjectId", sIds);
+    if (banca) fallbackMain = fallbackMain.eq("banca", banca);
+    if (level) fallbackMain = fallbackMain.eq("level", level);
+    if (answeredIds.length > 0) fallbackMain = fallbackMain.not("id", "in", `(${answeredIds.join(",")})`);
+    mainResult = await fallbackMain.limit(total * 3);
+  }
+  const questions = mainResult.data;
 
   if (!questions || questions.length === 0) {
     // Fallback: busca qualquer questão das matérias, ignorando histórico
     let fallbackQ = db
       .from("Question")
       .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
-      .in("subjectId", sIds);
+      .in("subjectId", sIds)
+      .eq("aprovado", true);
     if (banca) fallbackQ = fallbackQ.eq("banca", banca);
     if (level) fallbackQ = fallbackQ.eq("level", level);
-    const { data: allQs } = await fallbackQ.limit(total);
+    let fallbackResult = await fallbackQ.limit(total);
+    if (fallbackResult.error && (fallbackResult.error as { code?: string }).code === "42703") {
+      let fallbackQ2 = db.from("Question")
+        .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+        .in("subjectId", sIds);
+      if (banca) fallbackQ2 = fallbackQ2.eq("banca", banca);
+      if (level) fallbackQ2 = fallbackQ2.eq("level", level);
+      fallbackResult = await fallbackQ2.limit(total);
+    }
+    const allQs = fallbackResult.data;
 
     if (!allQs || allQs.length === 0) {
       return NextResponse.json({ error: "Nenhuma questão disponível" }, { status: 400 });

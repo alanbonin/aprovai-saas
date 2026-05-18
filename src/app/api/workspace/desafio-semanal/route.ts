@@ -53,17 +53,21 @@ export async function GET() {
     const weekNum = Math.floor(new Date(weekKey).getTime() / (7 * 86400000));
 
     // Fetch random hard questions (platform-wide, not personalized)
-    const { data: hardQs } = await db
-      .from("Question")
-      .select("id")
-      .eq("level", "dificil")
-      .limit(200);
+    let hardResult = await db.from("Question").select("id").eq("level", "dificil").eq("aprovado", true).limit(200);
+    if (hardResult.error && (hardResult.error as { code?: string }).code === "42703") {
+      hardResult = await db.from("Question").select("id").eq("level", "dificil").limit(200);
+    }
+    const hardQs = hardResult.data ? [...hardResult.data] : [];
 
     if (!hardQs || hardQs.length === 0) {
       // Fallback: any questions
-      const { data: anyQs } = await db.from("Question").select("id").limit(200);
+      let anyResult = await db.from("Question").select("id").eq("aprovado", true).limit(200);
+      if (anyResult.error && (anyResult.error as { code?: string }).code === "42703") {
+        anyResult = await db.from("Question").select("id").limit(200);
+      }
+      const anyQs = anyResult.data;
       if (!anyQs?.length) return NextResponse.json({ error: "Sem questões disponíveis" }, { status: 404 });
-      hardQs?.push(...(anyQs ?? []));
+      hardQs.push(...anyQs);
     }
 
     // Deterministic shuffle using weekNum seed
@@ -85,10 +89,16 @@ export async function GET() {
   }
 
   // Fetch full question data
-  const { data: qs } = await db
-    .from("Question")
+  let fullResult = await db.from("Question")
     .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, subjectId")
-    .in("id", save.questions);
+    .in("id", save.questions)
+    .eq("aprovado", true);
+  if (fullResult.error && (fullResult.error as { code?: string }).code === "42703") {
+    fullResult = await db.from("Question")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, subjectId")
+      .in("id", save.questions);
+  }
+  const qs = fullResult.data;
 
   const qMap: Record<number, unknown> = {};
   for (const q of qs ?? []) qMap[(q as { id: number }).id] = q;
@@ -166,10 +176,11 @@ export async function PATCH(req: Request) {
   const allAnswered = save.questions.every(id => save!.answers[id] !== undefined);
   if (allAnswered) {
     // Compute score
-    const { data: qs } = await db
-      .from("Question")
-      .select("id, answer")
-      .in("id", save.questions);
+    let scoreResult = await db.from("Question").select("id, answer").in("id", save.questions).eq("aprovado", true);
+    if (scoreResult.error && (scoreResult.error as { code?: string }).code === "42703") {
+      scoreResult = await db.from("Question").select("id, answer").in("id", save.questions);
+    }
+    const qs = scoreResult.data;
     const correctMap: Record<number, string> = {};
     for (const q of qs ?? []) correctMap[q.id as number] = q.answer as string;
     const correct = save.questions.filter(id => save!.answers[id] === correctMap[id]).length;

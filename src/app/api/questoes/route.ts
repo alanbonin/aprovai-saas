@@ -58,6 +58,9 @@ export async function GET(req: Request) {
     .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
     .limit(poolSize);
 
+  // Apenas questões aprovadas
+  query = query.eq("aprovado", true);
+
   if (banca)     query = query.ilike("banca", `%${banca}%`);
   if (level)     query = query.eq("level", level);
   if (subjectId) query = query.eq("subjectId", subjectId);
@@ -70,14 +73,25 @@ export async function GET(req: Request) {
     query = query.not("id", "in", `(${seenIds.slice(-100).join(",")})`);
   }
 
-  const { data: questions, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const result = await query;
+  let questions = result.data;
+  let queryError = result.error;
+  // Fallback sem filtro de aprovado se coluna não existe ainda (código PostgREST: 42703)
+  if (queryError && (queryError as { code?: string }).code === "42703") {
+    const fallbackResult = await db.from("Question")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+      .limit(poolSize);
+    questions = fallbackResult.data;
+    queryError = fallbackResult.error;
+  }
+  if (queryError) return NextResponse.json({ error: queryError.message }, { status: 500 });
 
   if (!questions?.length) {
     // Se esgotou questões não-vistas, retorna sem filtro de seen
     const { data: fallback } = await db
       .from("Question")
       .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+      .eq("aprovado", true)
       .limit(limit);
     const shuffled = (fallback ?? []).sort(() => Math.random() - 0.5).slice(0, limit);
     return NextResponse.json({ questions: shuffled, exhausted: true });
@@ -99,7 +113,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { data, error } = await db.from("Question").insert(body).select().single();
+  const { data, error } = await db.from("Question").insert({ ...body, aprovado: false }).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
 }

@@ -49,6 +49,7 @@ export async function GET(req: Request) {
   // 3. Busca questões disponíveis
   let questoesQuery = db.from("Question")
     .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+    .eq("aprovado", true)
     .limit(200);
 
   if (subjectId) {
@@ -57,7 +58,20 @@ export async function GET(req: Request) {
     questoesQuery = questoesQuery.in("subjectId", [...mySubjectIds]);
   }
 
-  const { data: allQuestions } = await questoesQuery;
+  let questoesResult = await questoesQuery;
+  // Fallback se coluna aprovado não existe ainda
+  if (questoesResult.error && (questoesResult.error as { code?: string }).code === "42703") {
+    let fallbackQ = db.from("Question")
+      .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+      .limit(200);
+    if (subjectId) {
+      fallbackQ = fallbackQ.eq("subjectId", subjectId);
+    } else if (mySubjectIds.size > 0) {
+      fallbackQ = fallbackQ.in("subjectId", [...mySubjectIds]);
+    }
+    questoesResult = await fallbackQ;
+  }
+  const allQuestions = questoesResult.data;
   if (!allQuestions?.length) return NextResponse.json({ questoes: [], modo: "sem_questoes" });
 
   // 4. Score de prioridade para cada questão

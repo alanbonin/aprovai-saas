@@ -28,11 +28,19 @@ export async function POST(req: Request) {
   if (!questionId) return NextResponse.json({ error: "questionId obrigatório" }, { status: 400 });
 
   // Busca dados da questão
-  const { data: q } = await db
-    .from("Question")
+  let qResult = await db.from("Question")
     .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, Subject(name)")
     .eq("id", questionId)
+    .eq("aprovado", true)
     .single();
+  // Fallback se coluna aprovado não existe ainda
+  if (qResult.error && (qResult.error as { code?: string }).code === "42703") {
+    qResult = await db.from("Question")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, Subject(name)")
+      .eq("id", questionId)
+      .single();
+  }
+  const q = qResult.data;
 
   if (!q) return NextResponse.json({ error: "Questão não encontrada" }, { status: 404 });
 

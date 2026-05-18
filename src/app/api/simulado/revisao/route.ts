@@ -80,11 +80,20 @@ export async function GET(req: Request) {
   // Fetch full question data in batches
   const questionsData: Record<number, unknown> = {};
   for (let i = 0; i < questionIds.length; i += 100) {
-    const { data: qs } = await db
+    const chunk = questionIds.slice(i, i + 100);
+    let result = await db
       .from("Question")
       .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
-      .in("id", questionIds.slice(i, i + 100));
-    for (const q of qs ?? []) questionsData[(q as { id: number }).id] = q;
+      .in("id", chunk)
+      .eq("aprovado", true);
+    // Fallback se coluna aprovado não existe ainda
+    if (result.error && (result.error as { code?: string }).code === "42703") {
+      result = await db
+        .from("Question")
+        .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+        .in("id", chunk);
+    }
+    for (const q of result.data ?? []) questionsData[(q as { id: number }).id] = q;
   }
 
   // Fetch subject names

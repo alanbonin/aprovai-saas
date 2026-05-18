@@ -48,10 +48,17 @@ export async function GET(req: Request) {
   }
 
   // Busca as questões
-  let query = db.from("Question").select("*").in("id", wrongIds.slice(0, limit));
+  let query = db.from("Question").select("*").in("id", wrongIds.slice(0, limit)).eq("aprovado", true);
   if (subjectId) query = query.eq("subjectId", subjectId);
 
-  const { data: questions } = await query;
+  let queryResult = await query;
+  // Fallback se coluna aprovado não existe ainda
+  if (queryResult.error && (queryResult.error as { code?: string }).code === "42703") {
+    let fallbackQ = db.from("Question").select("*").in("id", wrongIds.slice(0, limit));
+    if (subjectId) fallbackQ = fallbackQ.eq("subjectId", subjectId);
+    queryResult = await fallbackQ;
+  }
+  const questions = queryResult.data;
 
   // Reordena na mesma ordem dos erros (mais recente primeiro)
   const qMap = new Map((questions ?? []).map(q => [q.id, q]));

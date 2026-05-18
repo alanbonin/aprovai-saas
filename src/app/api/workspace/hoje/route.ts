@@ -99,10 +99,11 @@ export async function GET() {
   let prioridade: { subjectName: string; erros: number } | null = null;
   if (recentProgress && recentProgress.length > 0) {
     const qIds = [...new Set(recentProgress.map(p => p.questionId))];
-    const { data: questions } = await db
-      .from("Question")
-      .select("id, subjectId")
-      .in("id", qIds);
+    let questResult = await db.from("Question").select("id, subjectId").in("id", qIds).eq("aprovado", true);
+    if (questResult.error && (questResult.error as { code?: string }).code === "42703") {
+      questResult = await db.from("Question").select("id, subjectId").in("id", qIds);
+    }
+    const questions = questResult.data;
     const subjectErros: Record<string, number> = {};
     for (const q of questions ?? []) {
       if (q.subjectId) subjectErros[q.subjectId] = (subjectErros[q.subjectId] ?? 0) + 1;

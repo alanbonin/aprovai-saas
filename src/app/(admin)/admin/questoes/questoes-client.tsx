@@ -1,6 +1,6 @@
 "use client";
 import { useState, useCallback } from "react";
-import { Plus, X, Check, Sparkles, Loader2, BookOpen, ChevronDown, Bot, Zap, CheckCircle2, Search, ChevronLeft, ChevronRight, Upload, FileText, AlertCircle, Edit2, Download } from "lucide-react";
+import { Plus, X, Check, Sparkles, Loader2, BookOpen, ChevronDown, Bot, Zap, CheckCircle2, Search, ChevronLeft, ChevronRight, Upload, FileText, AlertCircle, Edit2, Download, ShieldCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Question {
@@ -307,6 +307,10 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
         </select>
         <span className="text-xs text-gray-600">{loadingQ ? "carregando…" : `${total} questão(ões)`}</span>
         <div className="ml-auto flex gap-2">
+          <a href="/admin/questoes/moderacao"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500/15 border border-amber-500/30 hover:bg-amber-500/25 rounded-lg text-sm font-medium text-amber-400 transition-colors">
+            <ShieldCheck className="w-4 h-4" />Moderar
+          </a>
           <button onClick={() => setShowLoteModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-violet-600 hover:bg-violet-700 rounded-lg text-sm font-medium transition-colors">
             <Zap className="w-4 h-4" />Lote em massa
