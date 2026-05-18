@@ -52,7 +52,7 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
   endDate.setDate(endDate.getDate() + plan.intervalDays);
   const now = new Date().toISOString();
 
-  const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).single();
+  const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).maybeSingle();
 
   if (existing) {
     await db.from("Subscription").update({
@@ -75,7 +75,7 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
 }
 
 async function cancelSubscription(userId: string, reason: string) {
-  const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).single();
+  const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).maybeSingle();
   if (existing) {
     await db.from("Subscription").update({
       status: "CANCELLED",

@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import { Check, Zap, Star, Trophy, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckoutButton } from "./checkout-button";
@@ -20,15 +21,38 @@ const SLUG_CONFIG: Record<string, { icon: typeof Zap; tagline: string; highlight
   "aprovacao":     { icon: Star,   tagline: "Até 2 trilhas simultâneas",    highlight: "Mais popular",        popular: true  },
   "elite":         { icon: Trophy, tagline: "Sem limites, ponto.",           highlight: "Melhor custo-benefício", popular: false },
   "prova-marcada": { icon: Lock,   tagline: "Pagamento único, 12 meses",    highlight: "",                    popular: false },
+  // variantes anuais herdam do slug-base
+  "focado-anual":       { icon: Zap,    tagline: "1 concurso, foco total",    highlight: "Economize 20%",      popular: false },
+  "aprovacao-anual":    { icon: Star,   tagline: "Até 2 trilhas simultâneas", highlight: "Mais popular",       popular: true  },
+  "elite-anual":        { icon: Trophy, tagline: "Sem limites, ponto.",        highlight: "Melhor custo-benefício", popular: false },
 };
+
+function getSlugConfig(slug: string) {
+  return SLUG_CONFIG[slug] ?? SLUG_CONFIG["focado"];
+}
 
 function isOneTime(plan: Plan) {
   return plan.intervalDays >= 365 || plan.slug === "prova-marcada";
 }
 
+function isAnual(plan: Plan) {
+  return plan.intervalDays >= 360 && plan.intervalDays < 3650 && plan.slug !== "prova-marcada";
+}
+
+function isMensal(plan: Plan) {
+  return !isOneTime(plan) && !isAnual(plan);
+}
+
 export function PlanosClient({ plans, currentPlanId }: Props) {
-  const recorrentes = plans.filter(p => !isOneTime(p));
-  const provaMarcada = plans.find(isOneTime);
+  const mensais = plans.filter(isMensal);
+  const anuais = plans.filter(isAnual);
+  const provaMarcada = plans.find(p => isOneTime(p) && !isAnual(p));
+
+  // Só mostra toggle se houver planos anuais além do prova-marcada
+  const temAnuais = anuais.length > 0;
+  const [periodo, setPeriodo] = useState<"mensal" | "anual">("mensal");
+
+  const recorrentes = periodo === "anual" && temAnuais ? anuais : mensais;
 
   return (
     <div className="min-h-screen text-white p-8 max-w-5xl mx-auto">
@@ -37,6 +61,37 @@ export function PlanosClient({ plans, currentPlanId }: Props) {
         <p className="text-gray-400">
           Todos os planos incluem workspace personalizado, matérias, questões e flashcards.
         </p>
+
+        {/* Toggle Mensal / Anual */}
+        {temAnuais && (
+          <div className="inline-flex items-center mt-6 rounded-xl border border-white/10 bg-white/5 p-1 gap-1">
+            <button
+              onClick={() => setPeriodo("mensal")}
+              className={cn(
+                "px-5 py-2 rounded-lg text-sm font-medium transition-all",
+                periodo === "mensal"
+                  ? "bg-indigo-600 text-white shadow"
+                  : "text-gray-400 hover:text-white"
+              )}
+            >
+              Mensal
+            </button>
+            <button
+              onClick={() => setPeriodo("anual")}
+              className={cn(
+                "px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5",
+                periodo === "anual"
+                  ? "bg-indigo-600 text-white shadow"
+                  : "text-gray-400 hover:text-white"
+              )}
+            >
+              Anual
+              <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-semibold">
+                -20%
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Cards principais */}
@@ -46,11 +101,14 @@ export function PlanosClient({ plans, currentPlanId }: Props) {
         recorrentes.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"
       )}>
         {recorrentes.map(plan => {
-          const config = SLUG_CONFIG[plan.slug] ?? SLUG_CONFIG["focado"];
+          const config = getSlugConfig(plan.slug);
           const Icon = config.icon;
           const isCurrent = plan.id === currentPlanId;
-          const priceMonth = plan.intervalDays > 0
-            ? (plan.price / (plan.intervalDays / 30)).toFixed(0)
+
+          // Preço por mês (para anuais, divide pelos 12 meses)
+          const monthsDuration = plan.intervalDays / 30;
+          const priceMonth = monthsDuration > 0
+            ? (plan.price / monthsDuration).toFixed(0)
             : plan.price.toFixed(0);
 
           return (
@@ -85,7 +143,10 @@ export function PlanosClient({ plans, currentPlanId }: Props) {
                 </div>
                 {plan.intervalDays > 30 && (
                   <p className="text-xs text-gray-600">
-                    R$ {plan.price.toFixed(0)} cobrado a cada {Math.round(plan.intervalDays / 30)} meses
+                    R$ {plan.price.toFixed(0)} cobrado{" "}
+                    {plan.intervalDays >= 360
+                      ? "anualmente"
+                      : `a cada ${Math.round(plan.intervalDays / 30)} meses`}
                   </p>
                 )}
               </div>
