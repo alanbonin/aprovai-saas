@@ -81,6 +81,12 @@ export default function LoginPage() {
                 Não tem conta?{" "}
                 <a href="/cadastro" className="text-indigo-400 hover:underline">Cadastrar grátis</a>
               </p>
+              <p className="text-center text-[11px] text-gray-600 mt-4">
+                Ao entrar, você concorda com nossos{" "}
+                <a href="/termos" target="_blank" className="text-gray-500 hover:text-teal-400 transition-colors">Termos de Uso</a>
+                {" "}e{" "}
+                <a href="/privacidade" target="_blank" className="text-gray-500 hover:text-teal-400 transition-colors">Política de Privacidade</a>
+              </p>
             </>
           )}
 

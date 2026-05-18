@@ -128,6 +128,22 @@ export default function CadastroPage() {
 
             {error && <p className="text-red-400 text-sm">{error}</p>}
 
+            <div className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                id="aceite"
+                required
+                className="mt-0.5 w-4 h-4 rounded border-gray-600 bg-transparent accent-teal-500 cursor-pointer flex-shrink-0"
+              />
+              <label htmlFor="aceite" className="text-xs text-gray-400 leading-relaxed cursor-pointer">
+                Li e aceito os{" "}
+                <a href="/termos" target="_blank" className="text-teal-400 hover:underline">Termos de Uso</a>
+                {" "}e a{" "}
+                <a href="/privacidade" target="_blank" className="text-teal-400 hover:underline">Política de Privacidade</a>
+                . Confirmo que tenho 18 anos ou mais.
+              </label>
+            </div>
+
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Criando conta..." : "Criar conta grátis"}
             </Button>

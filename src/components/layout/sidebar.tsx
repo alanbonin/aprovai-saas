@@ -435,9 +435,15 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               {userName ?? (isAdmin ? "Admin" : "Aluno")}
             </p>
             {!isAdmin && (
-              <div className="flex gap-2">
-                <Link href="/configuracoes" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Config.</Link>
-                <Link href="/planos" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Planos</Link>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex gap-2">
+                  <Link href="/configuracoes" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Config.</Link>
+                  <Link href="/planos" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Planos</Link>
+                </div>
+                <div className="flex gap-2 mt-0.5">
+                  <a href="/termos" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Termos</a>
+                  <a href="/privacidade" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Privacidade</a>
+                </div>
               </div>
             )}
           </div>
