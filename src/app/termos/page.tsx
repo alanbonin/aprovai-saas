@@ -209,7 +209,7 @@ export default function TermosPage() {
             <p>
               Estes Termos de Uso são regidos pelas leis da República Federativa do Brasil. Para dirimir
               quaisquer controvérsias decorrentes destes Termos, as partes elegem o foro da Comarca de
-              São Paulo/SP, com exclusão de qualquer outro, por mais privilegiado que seja.
+              Salvador/BA, com exclusão de qualquer outro, por mais privilegiado que seja.
             </p>
           </section>
 
