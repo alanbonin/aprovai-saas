@@ -26,8 +26,24 @@ loadEnvFile(path.join(root, ".env.local"));
 loadEnvFile(path.join(root, ".env"));
 
 const nextConfig: NextConfig = {
+  // Remove header X-Powered-By: Next.js por segurança
+  poweredByHeader: false,
+
   // Compressão automática (brotli/gzip) para assets estáticos
   compress: true,
+
+  // Otimização de imports de pacotes pesados
+  experimental: {
+    optimizePackageImports: ["lucide-react", "@supabase/supabase-js"],
+  },
+
+  // Domínios permitidos para next/image
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "*.supabase.co" },
+      { protocol: "https", hostname: "*.supabase.in" },
+    ],
+  },
 
   // Headers de cache para assets estáticos e rotas públicas
   async headers() {

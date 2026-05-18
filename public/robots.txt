@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Allow: /termos
+Allow: /privacidade
+Disallow: /api/
+Disallow: /admin/
+Disallow: /workspace/
+Disallow: /dashboard/
+
+Sitemap: https://aprovai.app/sitemap.xml
