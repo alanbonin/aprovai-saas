@@ -47,19 +47,36 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* ── Light mode — sobrescreve fundos hardcoded ────────────────────────────── */
-html.light [class*="bg-\[\#080c18\]"],
-html.light [class*="bg-\[\#0a0d14\]"],
-html.light [class*="bg-\[\#0d1117\]"],
-html.light [class*="bg-\[\#0f1117\]"],
-html.light [class*="bg-\[\#0a0a0a\]"] {
+/* ── Light mode — sobrescreve fundos hardcoded com seletores corretos ─────── */
+html.light .bg-\[\#080c18\],
+html.light .bg-\[\#0a0d14\],
+html.light .bg-\[\#0d1117\],
+html.light .bg-\[\#0f1117\],
+html.light .bg-\[\#0a0a0a\] {
   background-color: var(--bg-card) !important;
 }
-html.light [class*="bg-\[\#1a1f2e\]"],
-html.light [class*="bg-\[\#111827\]"],
-html.light [class*="bg-\[\#0f172a\]"] {
+html.light .bg-\[\#1a1f2e\],
+html.light .bg-\[\#111827\],
+html.light .bg-\[\#0f172a\] {
   background-color: var(--bg-surface) !important;
 }
+/* textos claros → escuros no light */
+html.light .text-white        { color: var(--text-primary) !important; }
+html.light .text-gray-100,
+html.light .text-slate-100    { color: var(--text-primary) !important; }
+html.light .text-gray-300,
+html.light .text-slate-300    { color: var(--text-secondary) !important; }
+html.light .text-gray-400,
+html.light .text-slate-400,
+html.light .text-gray-500,
+html.light .text-slate-500    { color: var(--text-muted) !important; }
+/* bordas claras → tom light */
+html.light .border-white\/\[0\.06\],
+html.light .border-white\/8   { border-color: var(--border-color) !important; }
+/* backgrounds com opacidade */
+html.light .bg-white\/\[0\.03\],
+html.light .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/10      { background-color: rgba(0,0,0,0.08) !important; }
 
 /* ── Scrollbar estilizada ─────────────────────────────────────────────────── */
 ::-webkit-scrollbar             { width: 5px; height: 5px; }

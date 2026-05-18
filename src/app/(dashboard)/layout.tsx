@@ -30,7 +30,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     ?.subscription?.plan?.name ?? "Gratuito";
 
   return (
-    <div className="flex min-h-screen bg-[#080c18]">
+    <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
       <Sidebar
         userName={dbUser.name ?? undefined}
         planName={planName}

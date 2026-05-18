@@ -299,7 +299,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
   }
 
   return (
-    <aside className="flex flex-col w-56 min-h-screen bg-[#0a0d14] border-r border-white/[0.06] flex-shrink-0">
+    <aside className="flex flex-col w-56 min-h-screen border-r border-white/[0.06] flex-shrink-0" style={{ backgroundColor: "var(--bg-surface)" }}>
 
       {/* ── Logo + Briefing do Dia ──────────────────────────────── */}
       <div className="px-4 py-4 border-b border-white/[0.06] flex-shrink-0 space-y-2">
