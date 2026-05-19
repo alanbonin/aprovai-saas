@@ -648,7 +648,7 @@ const send = useCallback(async (customMsg?: string) => {
       if (data.done) {
         if (data.agents?.length) setSelectedAgents(data.agents as Agent[]);
         setStep(PROGRESS_LABELS.length);
-        await new Promise(r => setTimeout(r, 3500)); // tempo para ler a mensagem final
+        await new Promise(r => setTimeout(r, 5500)); // tempo para ler a mensagem final
         setStage("generating");
         try {
           const planoRes = await fetch("/api/onboarding/plano", {
