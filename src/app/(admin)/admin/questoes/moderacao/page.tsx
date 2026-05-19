@@ -1,26 +1,36 @@
 import { db } from "@/lib/db";
 import { ModeracaoClient } from "./moderacao-client";
 
-interface PendingQuestion {
+export interface PendingQuestion {
   id: number;
   statement: string;
+  optionA: string | null;
+  optionB: string | null;
+  optionC: string | null;
+  optionD: string | null;
+  optionE: string | null;
+  answer: string | null;
+  explanation: string | null;
   banca: string | null;
   year: number | null;
+  level: string | null;
   source: string | null;
   createdAt: string;
   subjectId: string | null;
 }
 
-async function fetchPendingQuestions(): Promise<{ questions: PendingQuestion[]; subjectMap: Record<string, string> }> {
+async function fetchPendingQuestions(): Promise<{
+  questions: PendingQuestion[];
+  subjectMap: Record<string, string>;
+}> {
   try {
     const { data, error } = await db
       .from("Question")
-      .select("id, statement, banca, year, source, createdAt, subjectId")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, source, createdAt, subjectId")
       .eq("aprovado", false)
       .order("createdAt", { ascending: false })
-      .limit(100);
+      .limit(200);
 
-    // PostgREST returns code "42703" if column doesn't exist yet
     if (error) {
       const code = (error as { code?: string }).code;
       if (code === "42703") return { questions: [], subjectMap: {} };
@@ -29,7 +39,6 @@ async function fetchPendingQuestions(): Promise<{ questions: PendingQuestion[]; 
 
     const questions = (data ?? []) as PendingQuestion[];
 
-    // Fetch subject names
     const subjectIds = [...new Set(questions.map(q => q.subjectId).filter(Boolean) as string[])];
     const subjectMap: Record<string, string> = {};
     if (subjectIds.length > 0) {
@@ -47,7 +56,7 @@ export default async function ModeracaoPage() {
   const { questions, subjectMap } = await fetchPendingQuestions();
 
   return (
-    <div className="p-8">
+    <div className="p-6 max-w-6xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-white">Moderação de Questões</h1>
         <p className="text-gray-400 text-sm mt-1">
