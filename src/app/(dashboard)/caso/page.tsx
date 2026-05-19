@@ -1,29 +1,20 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan } from "@/lib/db";
-import { PremiumGate } from "@/components/ui/premium-gate";
+import { getAccessLevel } from "@/lib/access";
+import { UpgradeUI } from "@/components/upgrade-ui";
 import { CasoClient } from "./caso-client";
 
 export default async function CasoPage() {
+  const { isPremium } = await getAccessLevel();
+  if (!isPremium) return <UpgradeUI recurso="Estudo de Caso" desc="Resolva casos práticos com avaliação detalhada por IA. Disponível nos planos pagos." icon="🔍" />;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
-
-  const isPremium = !!(dbUser.subscription && dbUser.subscription.status === "ACTIVE" && (dbUser.subscription.plan?.price ?? 0) > 0);
-
-  if (!isPremium) {
-    return (
-      <div className="p-8">
-        <PremiumGate
-          recurso="Estudo de Caso"
-          descricao="Resolva casos práticos com avaliação por IA. Simula as provas discursivas dos principais concursos. Disponível a partir do plano Focado."
-        />
-      </div>
-    );
-  }
 
   return <CasoClient />;
 }

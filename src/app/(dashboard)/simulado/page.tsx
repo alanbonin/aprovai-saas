@@ -2,8 +2,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { SimuladoClient } from "./simulado-client";
+import { getAccessLevel } from "@/lib/access";
+import { UpgradeUI } from "@/components/upgrade-ui";
 
 export default async function SimuladoPage() {
+  const { isPremium } = await getAccessLevel();
+  if (!isPremium) return <UpgradeUI recurso="Simulados" desc="Simulados completos com gabarito comentado e análise de desempenho. Disponível nos planos pagos." icon="🎯" />;
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");

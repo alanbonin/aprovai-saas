@@ -147,7 +147,7 @@ const SECTIONS_ADMIN: NavSection[] = [
 
 /* ── Subcomponente: seção recolhível ────────────────────────────────────── */
 function SidebarSection({
-  section, isAdmin, open, onToggle, pathname, unreadNotifs,
+  section, isAdmin, open, onToggle, pathname, unreadNotifs, isPremium,
 }: {
   section: NavSection;
   isAdmin: boolean;
@@ -155,6 +155,7 @@ function SidebarSection({
   onToggle: () => void;
   pathname: string;
   unreadNotifs: number;
+  isPremium?: boolean;
 }) {
   const activeInSection = section.items.some(
     item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))
@@ -187,6 +188,7 @@ function SidebarSection({
           {section.items.map(({ href, label, icon, badge }) => {
             const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
             const isNotif = href === "/notificacoes";
+            const isLocked = !isPremium && TRIAL_LOCKED_HREFS.has(href);
             return (
               <Link
                 key={href}
@@ -202,6 +204,9 @@ function SidebarSection({
               >
                 <span className="text-sm leading-none flex-shrink-0">{icon}</span>
                 <span className="flex-1 truncate">{label}</span>
+                {isLocked && (
+                  <span className="text-[10px] text-gray-600 flex-shrink-0">🔒</span>
+                )}
                 {badge && isNotif && unreadNotifs > 0 && (
                   <span className="min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-1 flex-shrink-0">
                     {unreadNotifs > 9 ? "9+" : unreadNotifs}
@@ -222,13 +227,23 @@ interface Stats {
   xp: number; levelName: string; levelColor: string; xpProgress: number;
 }
 
+const TRIAL_LOCKED_HREFS = new Set([
+  "/quiz", "/desafio-semanal", "/questoes", "/adaptativo",
+  "/simulado", "/simulado/filtrado", "/simulado/revisao", "/simulado/exame", "/historico-simulados",
+  "/revisao", "/agenda-revisoes", "/favoritos",
+  "/glossario", "/artigos", "/caso", "/redacao", "/materiais",
+  "/resumo-semanal", "/diagnostico", "/bancas", "/nivel", "/comparar",
+  "/plano-semanal", "/edital-watch",
+  "/ranking", "/grupos", "/conquistas", "/timeline", "/notificacoes",
+]);
+
 interface SidebarProps {
   isAdmin?: boolean; userName?: string; planName?: string;
-  aiCreditsLeft?: number; aiCreditsTotal?: number;
+  aiCreditsLeft?: number; aiCreditsTotal?: number; isPremium?: boolean;
 }
 
 /* ── Componente principal ───────────────────────────────────────────────── */
-export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10 }: SidebarProps) {
+export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -346,6 +361,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             onToggle={() => toggleSection(section.id)}
             pathname={pathname}
             unreadNotifs={unreadNotifs}
+            isPremium={isPremium}
           />
         ))}
       </nav>

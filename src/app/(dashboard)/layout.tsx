@@ -37,6 +37,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const planName = (dbUser as { subscription?: { plan?: { name?: string } } })
     ?.subscription?.plan?.name ?? "Gratuito";
 
+  // Verifica se é premium (plano pago e não expirado)
+  const sub = (dbUser as any).subscription;
+  const isExpiredSub = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
+  const isPremium = !isExpiredSub && !!(sub && (sub.plan?.price ?? 0) > 0);
+
   return (
     <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
       <Sidebar
@@ -44,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         planName={planName}
         aiCreditsLeft={aiCreditsLeft}
         aiCreditsTotal={aiCreditsTotal}
+        isPremium={isPremium}
       />
       <main className="flex-1 min-w-0 overflow-auto" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
