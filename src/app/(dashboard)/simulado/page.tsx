@@ -16,17 +16,25 @@ export default async function SimuladoPage() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
 
-  const { data: history } = await db
-    .from("SimuladoHistory")
-    .select("id, total, correct, timeSecs, createdAt")
-    .eq("userId", dbUser.id)
-    .order("createdAt", { ascending: false })
-    .limit(20);
+  const [historyRes, profileRes] = await Promise.all([
+    db.from("SimuladoHistory")
+      .select("id, total, correct, timeSecs, createdAt")
+      .eq("userId", dbUser.id)
+      .order("createdAt", { ascending: false })
+      .limit(20),
+    db.from("StudentProfile")
+      .select("modalidade")
+      .eq("userId", dbUser.id)
+      .maybeSingle(),
+  ]);
+
+  const modalidade = (profileRes.data as { modalidade?: string } | null)?.modalidade ?? "CONCURSO_PUBLICO";
 
   return (
     <SimuladoClient
-      history={history ?? []}
+      history={historyRes.data ?? []}
       userId={dbUser.id}
+      modalidade={modalidade}
     />
   );
 }

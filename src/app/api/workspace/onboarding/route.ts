@@ -29,9 +29,69 @@ function detectArea(cargo: string, orgao: string): string {
   return "geral";
 }
 
-interface AgentRow { id: string; name: string; categoria: string | null; banca: string | null }
+interface AgentRow { id: string; name: string; categoria: string | null; area: string | null; banca: string | null }
 
-function selectAgents(allAgents: AgentRow[], cargo: string, orgao: string, banca: string, maxAgents: number): string[] {
+// Mapeia modalidade → categorias de Subject que devem ser atribuídas ao aluno
+function getSubjectCategorias(modalidade: string, agentAreas: string[]): string[] {
+  const directMap: Record<string, string[]> = {
+    "ENEM":       ["enem"],
+    "VESTIBULAR": ["vestibular"],
+    "OAB":        ["oab"],
+    "REVALIDA":   ["revalida"],
+    "CFC":        ["cfc"],
+  };
+  if (directMap[modalidade]) return directMap[modalidade];
+
+  // CONCURSO_PUBLICO — deriva das áreas dos agentes selecionados
+  const cats = new Set<string>(["geral"]); // mínimo sempre
+  for (const area of agentAreas) {
+    if (["policial", "judiciario", "ministerio-publico", "procuradoria", "legislativo"].includes(area)) {
+      cats.add("direito");
+    }
+    if (["tributario-auditoria", "banco-central", "agencias-reguladoras"].includes(area)) {
+      cats.add("fiscal");
+      cats.add("direito");
+    }
+    if (["gestao-publica"].includes(area)) {
+      cats.add("direito");
+    }
+  }
+  return [...cats];
+}
+
+function selectAgents(allAgents: AgentRow[], cargo: string, orgao: string, banca: string, maxAgents: number, modalidade = "CONCURSO_PUBLICO", trilha?: string | null): string[] {
+  // For special modalidades, use keyword matching on modalidade first
+  const modalidadeKeywords: Record<string, string[]> = {
+    "ENEM":       ["enem"],
+    "OAB":        ["oab"],
+    "REVALIDA":   ["revalida"],
+    "CFC":        ["cfc"],
+    "VESTIBULAR": ["vestibular", "medicina", "engenharia", "direito"],
+  };
+
+  // For VESTIBULAR, prefer the specific trilha agent (e.g., "Mentor Medicina")
+  let primaryAgent: AgentRow | undefined;
+  if (modalidade === "VESTIBULAR" && trilha) {
+    const trilhaKeyword = normalize(trilha).split(/[\s/]/)[0]; // "medicina" | "engenharia" | "direito"
+    primaryAgent = allAgents.find(a =>
+      normalize(a.name ?? "").includes(trilhaKeyword) ||
+      normalize(a.categoria ?? "").includes(trilhaKeyword)
+    );
+  }
+
+  if (!primaryAgent) {
+    const mKeywords = modalidadeKeywords[modalidade] ?? [];
+    if (mKeywords.length > 0) {
+      primaryAgent = allAgents.find(a =>
+        mKeywords.some(k =>
+          normalize(a.name ?? "").includes(k) ||
+          normalize(a.categoria ?? "").includes(k)
+        )
+      );
+    }
+  }
+
+  // Fallback to existing area/banca detection for CONCURSO_PUBLICO
   const area   = detectArea(cargo, orgao);
   const bancaN = normalize(banca).split(/[\s/]/)[0];
 
@@ -44,49 +104,188 @@ function selectAgents(allAgents: AgentRow[], cargo: string, orgao: string, banca
     (a.name && normalize(a.name).includes(bancaN))
   ) : undefined;
 
-  const ids = [...new Set([areaAgent?.id, bancaAgent?.id].filter(Boolean))] as string[];
+  const candidates = primaryAgent
+    ? [primaryAgent.id, areaAgent?.id, bancaAgent?.id]
+    : [areaAgent?.id, bancaAgent?.id];
+
+  const ids = [...new Set(candidates.filter(Boolean))] as string[];
   if (ids.length === 0 && allAgents.length > 0) ids.push(allAgents[0].id);
   return ids.slice(0, Math.max(1, maxAgents));
 }
 
-export async function POST(req: Request) {
-  try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+function buildSistemPrompt(modalidade: string, maxConcursos: number): string {
+  const multiConcurso = maxConcursos > 1;
+  const hoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  const anoAtual = new Date().getFullYear();
 
-    const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
-    if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+  if (modalidade === "ENEM") {
+    return `Você é a Estrategista Aprovai, especialista em preparação para o ENEM.
 
-    const body = await req.json();
-    const { message, history = [], maxConcursos = 1, userName = "" } = body as {
-      message: string;
-      history: { role: string; content: string }[];
-      maxConcursos: number;
-      userName: string;
-    };
+CONTEXTO: A saudação pedindo o nome já foi feita. A partir da resposta do nome, use-o sempre.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre o ENEM e prazos.
 
-    // ── System prompt dinâmico conforme o plano ──────────────────────
-    const multiConcurso = maxConcursos > 1;
-    const concursoBloco = multiConcurso
-      ? `2. Qual(is) cargo(s) e órgão(s) você quer prestar? (Seu plano permite até ${maxConcursos} concursos simultâneos — liste todos se quiser)
-   *(Ex: "1) Delegado PCSP / 2) Auditor Receita Federal")*`
-      : `2. Qual cargo e órgão você quer prestar? (e em qual estado, se aplicável)
-   *(Ex: Delegado da Polícia Civil de SP, Auditor da Receita Federal, Analista do TRF…)*`;
+SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
+1. [JÁ FEITO] Nome preferido
+2. Você ainda está no Ensino Médio ou já é egresso? Em qual série/ano está (se ainda na escola)?
+3. Quais áreas do ENEM você mais precisa melhorar? (Ciências da Natureza, Ciências Humanas, Linguagens e Códigos, Matemática, Redação)
+4. Você sabe a data do ENEM deste ano? (geralmente novembro de ${anoAtual} — confirme ou informe o ano-alvo)
+5. Quantas horas por dia você consegue dedicar aos estudos?
+6. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
+7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
+8. Qual é sua maior dificuldade? (matéria ou área específica)
 
-    // ── Mensagem de init: gera apenas o primeiro greeting ───────────────
-    if (message === "__INIT__") {
-      const greeting = userName
-        ? `Olá, **${userName.split(" ")[0]}**! 😊 Fico feliz em te ajudar a conquistar sua aprovação!\n\nAntes de tudo: como você prefere ser chamado(a)? Pode ser seu nome, apelido — o que preferir!`
-        : `Olá! 😊 Fico feliz em te ajudar a conquistar sua aprovação!\n\nAntes de tudo: como você prefere ser chamado(a)? Pode ser seu nome ou apelido favorito!`;
-      return NextResponse.json({ text: greeting, done: false });
-    }
+REGRAS:
+- UMA pergunta por mensagem
+- Use SEMPRE o nome informado pelo aluno
+- Seja motivador, use emojis com moderação
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores" ou "agentes"
 
-    const sistemPrompt = `Você é a Estrategista Aprovai, assistente especializada em planejamento para concursos públicos.
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + pelo menos 5 respostas coletadas:
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"ENEM","cargo":"Candidato ENEM","orgao":"INEP","banca":"ENEM","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","trilha":null}
+
+ATENÇÃO: Não faça mais perguntas após ter nome + 5 respostas. Encerre imediatamente.
+Valores válidos: horasEstudo: inteiro 1-12, nivelAtual: "iniciante"|"intermediario"|"avancado", disponibilidade: "manha"|"tarde"|"noite"|"variado", dataProva: "YYYY-MM-DD" ou null
+Responda SEMPRE em português brasileiro.`;
+  }
+
+  if (modalidade === "VESTIBULAR") {
+    return `Você é a Estrategista Aprovai, especialista em preparação para vestibulares.
+
+CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre vestibulares e prazos.
+
+SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
+1. [JÁ FEITO] Nome preferido
+2. Qual(is) vestibular(es) você vai prestar? (FUVEST, UNICAMP, UNESP, UERJ ou outro)${multiConcurso ? ` — você pode indicar até ${maxConcursos}` : ""}
+3. Qual curso você quer fazer? (Medicina, Direito, Engenharia, Administração, outro)
+4. Você tem data prevista para a prova?
+5. Quantas horas por dia você consegue estudar?
+6. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
+7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
+8. Qual é sua maior dificuldade? (matéria ou área específica)
+
+REGRAS:
+- UMA pergunta por mensagem
+- Use SEMPRE o nome do aluno
+- Seja motivador
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores" ou "agentes"
+
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + vestibular + curso + pelo menos 3 outras respostas (mínimo 5 informações coletadas):
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"VESTIBULAR","cargo":"<curso escolhido>","orgao":"<vestibular alvo>","banca":"<vestibular alvo>","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","vestibular":"<vestibular>","trilha":"<curso>"}
+
+ATENÇÃO: Não espere mais perguntas após ter as 5 informações. Encerre imediatamente com o __DONE__.
+
+Responda SEMPRE em português brasileiro.`;
+  }
+
+  if (modalidade === "OAB") {
+    return `Você é a Estrategista Aprovai, especialista em preparação para a OAB.
+
+CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre edições da OAB e prazos.
+
+SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
+1. [JÁ FEITO] Nome preferido
+2. Você vai fazer a 1ª fase ou a 2ª fase da OAB? (Se 2ª fase, qual área: Civil, Penal, Trabalhista, Tributário, Administrativo?)
+3. Você sabe qual edição/número do exame vai prestar? (ou "ainda não sei")
+4. Você tem data prevista para a prova?
+5. Quantas horas por dia você consegue estudar?
+6. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
+7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
+8. Qual matéria da OAB você mais teme? (Ex: Direito Constitucional, Direito Penal, Ética OAB, Peça Processual…)
+
+REGRAS:
+- UMA pergunta por mensagem
+- Use SEMPRE o nome do aluno
+- NÃO use travessão (—) ou traço longo em nenhuma frase.
+- Banca da OAB é sempre FGV desde 2010
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores" ou "agentes"
+
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + fase OAB + pelo menos 3 outras respostas (mínimo 5 informações):
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"OAB","cargo":"OAB <fase>","orgao":"OAB","banca":"FGV","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","oabFase":"primeira","trilha":null}
+
+ATENÇÃO: Não faça mais perguntas após ter as 5 informações. Encerre imediatamente.
+Valores oabFase: "primeira" | "segunda". Responda SEMPRE em português brasileiro.`;
+  }
+
+  if (modalidade === "REVALIDA") {
+    return `Você é a Estrategista Aprovai, especialista em preparação para o REVALIDA.
+
+CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre o REVALIDA e prazos.
+
+SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
+1. [JÁ FEITO] Nome preferido
+2. Em qual país você se formou em Medicina? (Contexto: currículos variam bastante entre países)
+3. Você vai focar na Etapa 1 (múltipla escolha, clínica teórica) ou Etapa 2 (OSCE, avaliação prática)?
+4. Você tem data prevista para a prova?
+5. Quantas horas por dia você consegue estudar?
+6. Como você se avalia hoje no contexto do REVALIDA? Iniciante, Intermediário ou Avançado?
+7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
+8. Qual área da medicina você tem mais dificuldade? (Clínica Médica, Cirurgia, Pediatria, Ginecologia/Obstetrícia, Saúde Coletiva)
+
+REGRAS:
+- UMA pergunta por mensagem
+- Use SEMPRE o nome do aluno
+- NÃO use travessão (—) ou traço longo em nenhuma frase.
+- Organize a banca como "INEP/REVALIDA"
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores" ou "agentes"
+
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + etapa + pelo menos 3 outras respostas (mínimo 5 informações):
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"REVALIDA","cargo":"Médico REVALIDA","orgao":"REVALIDA/INEP","banca":"INEP","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","trilha":"Etapa 1"}
+
+ATENÇÃO: Não faça mais perguntas após ter as 5 informações. Encerre imediatamente.
+Responda SEMPRE em português brasileiro.`;
+  }
+
+  if (modalidade === "CFC") {
+    return `Você é a Estrategista Aprovai, especialista em preparação para o Exame de Suficiência do CFC.
+
+CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre o exame do CFC e prazos.
+
+SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
+1. [JÁ FEITO] Nome preferido
+2. Você é Bacharel em Ciências Contábeis ou Técnico em Contabilidade? (A prova tem escopos diferentes)
+3. Você tem data prevista para o exame?
+4. Quantas horas por dia você consegue estudar?
+5. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
+6. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
+7. Qual matéria da contabilidade você mais teme? (Contabilidade Geral, Custos, Auditoria, Perícia, Ética, Legislação…)
+
+REGRAS:
+- UMA pergunta por mensagem
+- Use SEMPRE o nome do aluno
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores" ou "agentes"
+
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + habilitação + pelo menos 3 outras respostas (mínimo 4 informações):
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"CFC","cargo":"<Bacharel ou Técnico> CFC","orgao":"CFC","banca":"CFC","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","trilha":"<Bacharel|Tecnico>"}
+
+ATENÇÃO: Não faça mais perguntas após ter as 4 informações. Encerre imediatamente.
+Responda SEMPRE em português brasileiro.`;
+  }
+
+  // Default: CONCURSO_PUBLICO (existing behavior)
+  const concursoBloco = multiConcurso
+    ? `2. Qual(is) cargo(s) e órgão(s) você quer prestar? (Seu plano permite até ${maxConcursos} concursos simultâneos — liste todos se quiser)\n   *(Ex: "1) Delegado PCSP / 2) Auditor Receita Federal")*`
+    : `2. Qual cargo e órgão você quer prestar? (e em qual estado, se aplicável)\n   *(Ex: Delegado da Polícia Civil de SP, Auditor da Receita Federal, Analista do TRF…)*`;
+
+  return `Você é a Estrategista Aprovai, assistente especializada em planejamento para concursos públicos.
 
 Seu papel é coletar as informações essenciais do aluno de forma NATURAL e CONVERSACIONAL — UMA pergunta por mensagem.
 
 CONTEXTO: A conversa já foi iniciada e o aluno já foi saudado. A primeira mensagem do histórico é sua saudação pedindo o nome preferido. A partir da RESPOSTA DO NOME do aluno, use esse nome em TODAS as mensagens seguintes.
+DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre concursos, editais e prazos.
 
 SEQUÊNCIA OBRIGATÓRIA (siga esta ordem, uma por mensagem — a saudação já foi feita):
 1. [JÁ FEITO] Perguntou como o aluno prefere ser chamado
@@ -100,18 +299,21 @@ ${concursoBloco}
 
 REGRAS:
 - EXATAMENTE UMA pergunta por mensagem
-- Use SEMPRE o nome que o aluno informou ao responder a pergunta 1 — nunca use o nome cadastrado como substituto
+- Use SEMPRE o nome que o aluno informou ao responder a pergunta 1
 - Se o aluno responder várias coisas de uma vez, agradeça e avance pelas próximas pendentes (uma por uma)
 - Seja motivador, use emojis com moderação
 - Se não souber a banca, anote como "Não informada"
-- NÃO mencione "mentores", "agentes" ou "equipe" — você é a única IA neste momento
+- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
+- NÃO mencione "mentores", "agentes" ou "equipe"
 - Ao fazer a pergunta 5 (horas), forneça exemplos: "1h", "2h", "3h ou mais"
 - Ao fazer a pergunta 6 (nível), apresente as 3 opções claramente
 - Ao fazer a pergunta 7 (horário), apresente as 4 opções
 
-QUANDO TIVER nome + cargo + banca + pelo menos 3 outras respostas (mínimo 6 infos coletadas):
-Envie uma mensagem de encerramento animada chamando o aluno pelo nome preferido. Depois adicione na MESMA linha (sem quebra):
-__DONE__{"nomePreferido":"...","cargo":"...","orgao":"...","banca":"...","dataProva":null,"horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"..."}
+ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + cargo + banca + pelo menos 3 outras respostas (mínimo 6 infos):
+Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento chamando o aluno pelo nome preferido e, na mesma linha (sem quebra de linha), adicione exatamente:
+__DONE__{"nomePreferido":"...","modalidade":"CONCURSO_PUBLICO","cargo":"...","orgao":"...","banca":"...","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","vestibular":null,"trilha":null,"oabFase":null}
+
+ATENÇÃO CRÍTICA: Ao receber a resposta da pergunta 8 (dificuldades), você JÁ TEM todas as informações necessárias. Não faça mais nenhuma pergunta. Encerre IMEDIATAMENTE com a mensagem animada + __DONE__.
 
 Valores válidos:
 - nomePreferido: exatamente o nome/apelido que o aluno disse querer ser chamado
@@ -121,6 +323,35 @@ Valores válidos:
 - dataProva: "YYYY-MM-DD" ou null
 
 Responda SEMPRE em português brasileiro.`;
+}
+
+export async function POST(req: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
+    if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
+    const body = await req.json();
+    const { message, history = [], maxConcursos = 1, userName = "", modalidade = "CONCURSO_PUBLICO" } = body as {
+      message: string;
+      history: { role: string; content: string }[];
+      maxConcursos: number;
+      userName: string;
+      modalidade: string;
+    };
+
+    // ── Mensagem de init: gera apenas o primeiro greeting ───────────────
+    if (message === "__INIT__") {
+      const greeting = userName
+        ? `Olá, **${userName.split(" ")[0]}**! 😊 Fico feliz em te ajudar a conquistar sua aprovação!\n\nAntes de tudo: como você prefere ser chamado(a)? Pode ser seu nome, apelido — o que preferir!`
+        : `Olá! 😊 Fico feliz em te ajudar a conquistar sua aprovação!\n\nAntes de tudo: como você prefere ser chamado(a)? Pode ser seu nome ou apelido favorito!`;
+      return NextResponse.json({ text: greeting, done: false });
+    }
+
+    const sistemPrompt = buildSistemPrompt(modalidade, maxConcursos);
 
     // Filtra histórico — Anthropic exige que 1ª msg seja "user"
     const rawHistory = history.slice(-14).map(m => ({
@@ -152,6 +383,7 @@ Responda SEMPRE em português brasileiro.`;
 
     interface ProfileData {
       nomePreferido: string | null;
+      modalidade: string;
       cargo: string;
       orgao: string;
       banca: string;
@@ -160,6 +392,9 @@ Responda SEMPRE em português brasileiro.`;
       nivelAtual: string | null;
       disponibilidade: string | null;
       dificuldades: string | null;
+      vestibular: string | null;
+      trilha: string | null;
+      oabFase: string | null;
     }
 
     let profile: ProfileData | null = null;
@@ -223,6 +458,11 @@ Responda SEMPRE em português brasileiro.`;
       horasEstudo: sanitizeHoras(profile.horasEstudo),
       nivelAtual: sanitizeNivel(profile.nivelAtual),
       disponibilidade: sanitizeDisp(profile.disponibilidade),
+      modalidade: profile.modalidade ?? "CONCURSO_PUBLICO",
+      vestibular: profile.vestibular ?? null,
+      trilha: profile.trilha ?? null,
+      oabFase: profile.oabFase ?? null,
+      banca: profile.banca ?? null,
     };
 
     const { data: existingRows } = await db
@@ -288,13 +528,15 @@ Responda SEMPRE em português brasileiro.`;
     // 2. Buscar agentes e selecionar os ideais
     const { data: allAgents } = await db
       .from("Agent")
-      .select("id, name, categoria, banca, color, description, systemPrompt")
+      .select("id, name, categoria, area, banca, color, description, systemPrompt")
       .eq("active", true);
 
     const selectedIds = selectAgents(
       (allAgents ?? []) as AgentRow[],
       profile.cargo, profile.orgao, profile.banca,
       maxConcursos,
+      profile.modalidade ?? "CONCURSO_PUBLICO",
+      profile.trilha,
     );
 
     // 3. Limpar UserAgent anteriores e inserir novos
@@ -308,13 +550,56 @@ Responda SEMPRE em português brasileiro.`;
 
     // 4. Buscar dados dos agentes selecionados
     const { data: selectedAgents } = selectedIds.length > 0
-      ? await db.from("Agent").select("id, name, description, categoria, banca, color, systemPrompt").in("id", selectedIds)
+      ? await db.from("Agent").select("id, name, description, categoria, area, banca, color, systemPrompt").in("id", selectedIds)
       : { data: [] };
+
+    // 5. Atribuir matérias ao aluno baseado na modalidade
+    //    Limpa antigas e insere novas — garante isolamento correto por modalidade
+    await db.from("StudentSubject").delete().eq("userId", dbUser.id);
+
+    const agentAreas = (selectedAgents ?? [])
+      .map((a: { area?: string | null }) => a.area ?? "")
+      .filter(Boolean);
+
+    const subjectCats = getSubjectCategorias(
+      profile.modalidade ?? "CONCURSO_PUBLICO",
+      agentAreas,
+    );
+
+    if (subjectCats.length > 0) {
+      const { data: matchedSubjects } = await db
+        .from("Subject")
+        .select("id")
+        .in("categoria", subjectCats)
+        .order("ordem");
+
+      if (matchedSubjects && matchedSubjects.length > 0) {
+        const now = new Date().toISOString();
+        const ssRows = matchedSubjects.map((s: { id: string }) => ({
+          id: crypto.randomUUID(),
+          userId: dbUser.id,
+          subjectId: s.id,
+          fromEdital: false,
+          createdAt: now,
+        }));
+        // Inserção em lote
+        const { error: ssErr } = await db.from("StudentSubject").insert(ssRows);
+        if (ssErr) console.error("[onboarding] StudentSubject insert error:", ssErr.message);
+      }
+    }
+
+    // Mescla savedProfile (do DB) com extendedFields do __DONE__ para garantir que
+    // modalidade/vestibular/trilha/oabFase/banca estejam disponíveis para a geração do plano
+    // mesmo quando as colunas ainda não existem no banco
+    const mergedProfile = {
+      ...(savedProfile ?? {}),
+      ...extendedFields,
+    };
 
     return NextResponse.json({
       text: textPart,
       done: true,
-      profile: savedProfile,
+      profile: mergedProfile,
       subjects: [],
       agents: selectedAgents ?? [],
     });

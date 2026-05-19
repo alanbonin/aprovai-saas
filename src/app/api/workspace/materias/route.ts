@@ -13,22 +13,42 @@ export async function GET(req: Request) {
   // Buscar perfil para saber a categoria
   const { data: profile } = await db.from("StudentProfile").select("*").eq("userId", dbUser.id).single();
 
-  // Buscar agentes do aluno para pegar categorias
+  // Buscar agentes do aluno para pegar categorias/areas
   const { data: userAgents } = await db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
   const agentIds = (userAgents ?? []).map((ua: { agentId: string }) => ua.agentId);
   const { data: agents } = agentIds.length
-    ? await db.from("Agent").select("categoria").in("id", agentIds)
+    ? await db.from("Agent").select("categoria, area").in("id", agentIds)
     : { data: [] };
 
-  const categorias = [...new Set((agents ?? []).map((a: { categoria: string | null }) => a.categoria).filter(Boolean))];
+  // Usa categoria se disponível, senão area (seed pode ter só um dos dois)
+  const categorias = [...new Set(
+    (agents ?? [])
+      .map((a: { categoria: string | null; area: string | null }) => a.categoria || a.area)
+      .filter(Boolean)
+  )];
 
-  // Matérias da categoria dos agentes selecionados
-  let query = db.from("Subject").select("id, name, slug, description").order("ordem");
-  if (categorias.length > 0) {
-    query = query.in("categoria", categorias as string[]);
+  // Matérias da categoria/area dos agentes selecionados
+  // — se não houver filtro, usa os StudentSubject existentes para não retornar tudo
+  if (categorias.length === 0) {
+    const { data: studentSubjects } = await db
+      .from("StudentSubject")
+      .select("subjectId, Subject(id, name, slug, description)")
+      .eq("userId", dbUser.id);
+    const subjects = (studentSubjects ?? [])
+      .map((ss: { subjectId: string; Subject: unknown }) => {
+        const s = ss.Subject as { id: string; name: string; slug: string; description: string }[] | null;
+        return Array.isArray(s) ? s[0] : s;
+      })
+      .filter(Boolean);
+    return NextResponse.json({ subjects });
   }
 
-  const { data: subjects } = await query;
+  const { data: subjects } = await db
+    .from("Subject")
+    .select("id, name, slug, description")
+    .in("categoria", categorias as string[])
+    .order("ordem");
+
   return NextResponse.json({ subjects: subjects ?? [] });
 }
 

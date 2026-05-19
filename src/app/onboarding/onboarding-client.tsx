@@ -10,11 +10,18 @@ interface Message { role: "user" | "assistant"; content: string; ts?: number; }
 interface RotinaDiaria { questoes: number; flashcards: number; leituraMin: number; revisaoMin: number; simulado: string; dica?: string; }
 interface StudyPlan { titulo: string; matérias: string[]; horasPorDia: number; foco: string; editalStatus?: string; rotinaDiaria?: RotinaDiaria; cronograma: { semana: string; tema: string }[]; }
 
-type Stage = "welcome" | "chat" | "generating" | "plan";
+type Stage = "welcome" | "modalidade" | "chat" | "generating" | "plan";
 
 
-// ── Steps da barra de progresso — agora 7 perguntas ──────────────────────────
-const PROGRESS_LABELS = ["Cargo/Órgão", "Banca", "Data da Prova", "Horas/dia", "Nível", "Horário", "Dificuldades"];
+// ── Steps da barra de progresso — por modalidade ─────────────────────────────
+const PROGRESS_LABELS_MAP: Record<string, string[]> = {
+  CONCURSO_PUBLICO: ["Cargo/Órgão", "Banca", "Data da Prova", "Horas/dia", "Nível", "Horário", "Dificuldades"],
+  ENEM:            ["Etapa escolar", "Áreas foco", "Data ENEM",  "Horas/dia", "Nível", "Horário", "Dificuldades"],
+  VESTIBULAR:      ["Vestibular",    "Curso/trilha", "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
+  OAB:             ["Fase OAB",      "Edição",       "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
+  REVALIDA:        ["País formação",  "Etapa",        "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
+  CFC:             ["Habilitação",   "Data",         "Horas/dia","Nível",     "Horário","Dificuldades", ""],
+};
 
 // ── Marca o texto com **bold** e _italic_ ─────────────────────────────────────
 function renderMd(text: string) {
@@ -22,7 +29,7 @@ function renderMd(text: string) {
     const parts = line.split(/\*\*(.+?)\*\*/g);
     return (
       <span key={i}>
-        {parts.map((p, j) => j % 2 === 1 ? <strong key={j} className="font-semibold text-white">{p}</strong> : p)}
+        {parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ fontWeight: 700, color: "#ffffff" }}>{p}</strong> : p)}
         {i < arr.length - 1 && <br />}
       </span>
     );
@@ -61,16 +68,16 @@ function TypingDots() {
 }
 
 // ── Barra de progresso ────────────────────────────────────────────────────────
-function ProgressBar({ step }: { step: number }) {
-  const pct = Math.min(100, (step / PROGRESS_LABELS.length) * 100);
-  const label = step >= PROGRESS_LABELS.length
+function ProgressBar({ step, labels }: { step: number; labels: string[] }) {
+  const pct = Math.min(100, (step / labels.length) * 100);
+  const label = step >= labels.length
     ? "✓ Perfil completo"
-    : `Coletando: ${PROGRESS_LABELS[Math.min(step, PROGRESS_LABELS.length - 1)]}`;
+    : `Coletando: ${labels[Math.min(step, labels.length - 1)]}`;
 
   return (
     <div className="px-5 py-3 border-b border-white/5">
       <div className="flex justify-between items-center mb-1.5">
-        <span className="text-xs text-slate-500 font-medium">{label}</span>
+        <span className="text-xs text-slate-300 font-medium">{label}</span>
         <span className="text-xs text-teal-400/70 font-semibold">{Math.round(pct)}%</span>
       </div>
       <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -79,7 +86,7 @@ function ProgressBar({ step }: { step: number }) {
       </div>
       {/* Dots indicadores */}
       <div className="flex justify-between mt-1.5 px-0.5">
-        {PROGRESS_LABELS.map((_, i) => (
+        {labels.map((_, i) => (
           <div key={i} className="w-1 h-1 rounded-full transition-all duration-300"
             style={{ background: i < step ? "#0ab5bd" : "rgba(255,255,255,0.1)" }} />
         ))}
@@ -134,7 +141,7 @@ function GeneratingScreen() {
         ))}
       </div>
 
-      <p className="text-xs text-slate-600">Isso levará apenas alguns segundos…</p>
+      <p className="text-xs text-slate-300">Isso levará apenas alguns segundos…</p>
     </div>
   );
 }
@@ -149,15 +156,27 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
   }, []);
 
   return (
-    <div className={`flex-1 overflow-y-auto transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
+    <div className={`flex-1 flex flex-col transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
       style={{ transform: visible ? "none" : "translateY(16px)" }}>
+      {/* Plano scrollável */}
+      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 100 }}>
       <div className="max-w-lg mx-auto px-5 py-8 space-y-5">
         {/* Hero */}
         <div className="text-center space-y-2 mb-8">
           <div className="text-5xl mb-3" style={{ animation: "obPulse 3s ease-in-out infinite" }}>🚀</div>
-          <h1 className="text-xl font-bold text-white">Seu plano está pronto!</h1>
-          <p className="text-sm text-slate-400">Personalizado exclusivamente para você conquistar sua aprovação.</p>
+          <h1 className="text-xl font-bold text-white">{plan ? "Seu plano está pronto!" : "Perfil criado com sucesso!"}</h1>
+          <p className="text-sm text-slate-200">
+            {plan ? "Personalizado exclusivamente para você conquistar sua aprovação." : "Seu workspace foi configurado. O plano detalhado ficará disponível dentro da plataforma."}
+          </p>
         </div>
+
+        {/* Fallback quando plano não carregou — mostra mentores e CTA de entrada */}
+        {!plan && agents.length > 0 && (
+          <div className="rounded-2xl p-5 text-center space-y-3" style={{ background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.2)" }}>
+            <p className="text-sm text-slate-200">Seus mentores IA foram selecionados e suas matérias foram configuradas.</p>
+            <p className="text-xs text-slate-300">Dentro do workspace você poderá ver seu plano completo, estudar questões e conversar com seus mentores.</p>
+          </div>
+        )}
 
         {/* Cargo card */}
         {plan && (
@@ -168,7 +187,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
                 <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider">Seu objetivo</span>
               </div>
               <p className="font-bold text-white text-base">{plan.titulo}</p>
-              <p className="text-xs text-slate-400 mt-1">{plan.foco}</p>
+              <p className="text-xs text-slate-200 mt-1">{plan.foco}</p>
             </div>
           </div>
         )}
@@ -179,12 +198,12 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
             <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <Clock size={16} className="text-teal-400 mb-1" />
               <div className="text-2xl font-bold text-white">{plan.horasPorDia}h</div>
-              <div className="text-xs text-slate-500">por dia recomendadas</div>
+              <div className="text-xs text-slate-300">por dia recomendadas</div>
             </div>
             <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <BookOpen size={16} className="text-amber-400 mb-1" />
               <div className="text-2xl font-bold text-white">{(plan.matérias ?? []).length}</div>
-              <div className="text-xs text-slate-500">matérias prioritárias</div>
+              <div className="text-xs text-slate-300">matérias prioritárias</div>
             </div>
           </div>
         )}
@@ -206,7 +225,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
                 <div key={item.label} className="flex items-center gap-2.5 rounded-xl p-3" style={{ background: "rgba(10,181,189,0.06)", border: "1px solid rgba(10,181,189,0.15)" }}>
                   <span className="text-lg flex-shrink-0">{item.icon}</span>
                   <div className="min-w-0">
-                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">{item.label}</div>
+                    <div className="text-[10px] text-slate-300 uppercase tracking-wide">{item.label}</div>
                     <div className="text-sm font-bold text-white">{item.value}</div>
                   </div>
                 </div>
@@ -215,7 +234,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
             <div className="px-5 pb-4 flex items-center gap-2.5 rounded-xl">
               <span className="text-lg">📋</span>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase tracking-wide">Simulado</span>
+                <span className="text-[10px] text-slate-300 uppercase tracking-wide">Simulado</span>
                 <div className="text-sm font-semibold text-white capitalize">{plan.rotinaDiaria.simulado}</div>
               </div>
             </div>
@@ -255,7 +274,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
                 <Calendar size={14} className="text-violet-400" />
                 <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cronograma de Estudos</span>
               </div>
-              <span className="text-xs text-slate-500">{plan.cronograma.length} semanas</span>
+              <span className="text-xs text-slate-300">{plan.cronograma.length} semanas</span>
             </div>
             {/* Status do edital */}
             {plan.editalStatus && (
@@ -308,7 +327,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-white">{a.name}</p>
-                    {a.description && <p className="text-xs text-slate-500 truncate">{a.description}</p>}
+                    {a.description && <p className="text-xs text-slate-300 truncate">{a.description}</p>}
                   </div>
                   <CheckCircle size={14} className="text-teal-400 flex-shrink-0" />
                 </div>
@@ -317,13 +336,98 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
           </div>
         )}
 
-        {/* CTA */}
+      </div>
+      </div>
+
+      {/* CTA fixo na parte inferior — sempre visível */}
+      <div className="flex-shrink-0 px-5 py-4 border-t border-white/5"
+        style={{ background: "rgba(5,5,17,0.95)", backdropFilter: "blur(12px)" }}>
         <button onClick={onEnter}
-          className="w-full py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-          style={{ background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: "0 0 30px rgba(10,181,189,0.4)" }}>
+          className="w-full max-w-lg mx-auto py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
+          style={{ background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: "0 0 30px rgba(10,181,189,0.4)", display: "flex" }}>
           Entrar no workspace <ArrowRight size={16} />
         </button>
-        <p className="text-center text-xs text-slate-600 pb-4">Você pode ajustar seu plano a qualquer momento no workspace.</p>
+        <p className="text-center text-xs text-slate-300 mt-2">Você pode ajustar seu plano a qualquer momento no workspace.</p>
+      </div>
+    </div>
+  );
+}
+
+// ── Seletor de modalidade ─────────────────────────────────────────────────────
+const MODALIDADE_OPTIONS = [
+  { id: "CONCURSO_PUBLICO", icon: "🏛️", title: "Concurso Público",  desc: "Federal, estadual ou municipal. Qualquer cargo e banca.",         color: "#0ab5bd" },
+  { id: "ENEM",             icon: "📋", title: "ENEM",               desc: "Plano personalizado por área de conhecimento e Redação.",          color: "#6366f1" },
+  { id: "VESTIBULAR",       icon: "🎓", title: "Vestibular",          desc: "Para qualquer vestibular. Medicina, Engenharia, Direito e mais.",  color: "#8b5cf6" },
+  { id: "OAB",              icon: "⚖️", title: "OAB",                 desc: "1ª fase (objetiva) ou 2ª fase (peça processual).",                color: "#f59e0b" },
+  { id: "REVALIDA",         icon: "🩺", title: "REVALIDA",            desc: "Revalidação de diploma médico estrangeiro no Brasil.",             color: "#10b981" },
+  { id: "CFC",              icon: "📊", title: "CFC",                 desc: "Exame de Suficiência do Conselho Federal de Contabilidade.",       color: "#ec4899" },
+];
+
+function ModalidadeChooser({ onSelect }: { onSelect: (id: string) => void }) {
+  const [visible, setVisible] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    const t = setTimeout(() => setVisible(true), 100);
+    return () => clearTimeout(t);
+  }, []);
+
+  function confirm() {
+    if (selected) onSelect(selected);
+  }
+
+  return (
+    <div className={`flex-1 overflow-y-auto transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
+      style={{ transform: visible ? "none" : "translateY(16px)" }}>
+      <div className="max-w-lg mx-auto px-5 py-8">
+        <div className="text-center mb-8">
+          <div className="text-4xl mb-3">🎯</div>
+          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>
+            Para qual exame você vai se preparar?
+          </h1>
+          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
+            Vou personalizar todo o seu plano de estudos com base na sua escolha.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 mb-6">
+          {MODALIDADE_OPTIONS.map(opt => {
+            const isSelected = selected === opt.id;
+            return (
+              <button key={opt.id} onClick={() => setSelected(opt.id)}
+                className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 hover:scale-[1.01]"
+                style={{
+                  background: isSelected ? `${opt.color}22` : "rgba(255,255,255,0.05)",
+                  border: `1.5px solid ${isSelected ? opt.color : "rgba(255,255,255,0.14)"}`,
+                  boxShadow: isSelected ? `0 0 24px ${opt.color}35` : "none",
+                }}>
+                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
+                  style={{ background: `${opt.color}28`, border: `1px solid ${opt.color}50` }}>
+                  {opt.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p style={{ fontWeight: 700, fontSize: 14, color: "#ffffff", margin: 0 }}>{opt.title}</p>
+                    {isSelected && (
+                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 600, background: `${opt.color}30`, color: opt.color }}>
+                        ✓ Selecionado
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5, color: isSelected ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.5)" }}>
+                    {opt.desc}
+                  </p>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        <button onClick={confirm} disabled={!selected}
+          className="w-full py-4 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
+          style={{ fontWeight: 700, background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: selected ? "0 0 30px rgba(10,181,189,0.4)" : "none" }}>
+          Continuar <ArrowRight size={16} />
+        </button>
       </div>
     </div>
   );
@@ -358,7 +462,7 @@ function WelcomeScreen({ userName, maxConcursos, onStart }: { userName: string; 
         <h1 className="text-2xl font-bold text-white">
           {userName ? `Olá, ${userName.split(" ")[0]}! 👋` : "Bem-vindo à Aprovai! 👋"}
         </h1>
-        <p className="text-slate-400 text-sm leading-relaxed max-w-sm">
+        <p className="text-slate-200 text-sm leading-relaxed max-w-sm">
           Vou ser sua estrategista pessoal de concursos. Em menos de 3 minutos, monto um{" "}
           <strong className="text-white">plano de estudos personalizado</strong> para você.
         </p>
@@ -384,7 +488,7 @@ function WelcomeScreen({ userName, maxConcursos, onStart }: { userName: string; 
           <div key={f.label} className="rounded-xl p-3 text-center space-y-1.5"
             style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="text-xl">{f.icon}</div>
-            <div className="text-xs text-slate-500 leading-tight">{f.label}</div>
+            <div className="text-xs text-slate-300 leading-tight">{f.label}</div>
           </div>
         ))}
       </div>
@@ -394,7 +498,7 @@ function WelcomeScreen({ userName, maxConcursos, onStart }: { userName: string; 
         style={{ background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: "0 0 30px rgba(10,181,189,0.35)" }}>
         Começar agora <ArrowRight size={16} />
       </button>
-      <p className="text-xs text-slate-600">Leva menos de 3 minutos · Sem necessidade de cartão</p>
+      <p className="text-xs text-slate-300">Leva menos de 3 minutos · Sem necessidade de cartão</p>
     </div>
   );
 }
@@ -413,31 +517,6 @@ interface ChatStageProps {
   onEditalSubmit: () => void;
 }
 
-function detectQuickReplies(lastAiMessage: string): string[] {
-  const t = lastAiMessage.toLowerCase();
-
-  // Nível — checa primeiro pois mensagens de nível nunca têm "quantas horas"
-  if (t.includes("iniciante") && t.includes("intermediár"))
-    return ["Iniciante", "Intermediário", "Avançado"];
-
-  // Horário preferido
-  if (t.includes("horário") && (t.includes("manhã") || t.includes("tarde") || t.includes("noite")))
-    return ["Manhã", "Tarde", "Noite", "Varia"];
-
-  // Horas/dia — exige que esteja PERGUNTANDO (quantas horas / consegue dedicar)
-  if (t.includes("quantas horas") || (t.includes("hora") && (t.includes("consegue") || t.includes("dedicar") || t.includes("disponív"))))
-    return ["1 hora", "2 horas", "3 horas", "4 horas ou mais"];
-
-  // Data da prova
-  if ((t.includes("data") || t.includes("quando")) && (t.includes("prova") || t.includes("edital")))
-    return ["Não tenho data definida", "Em 3 meses", "Em 6 meses", "Em mais de 1 ano"];
-
-  // Banca — exige frase específica de pergunta
-  if (t.includes("organizadora") || (t.includes("qual") && t.includes("é a banca")) || t.includes("qual banca"))
-    return ["CESPE/CEBRASPE", "FCC", "AOCP", "FGV", "VUNESP", "Não sei a banca"];
-
-  return [];
-}
 
 function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, setEditalVisible, editalText, setEditalText, onEditalSubmit }: ChatStageProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -445,10 +524,6 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
-
-  // Quick replies baseadas no conteúdo real da última mensagem da IA
-  const lastAiMsg = [...messages].reverse().find(m => m.role === "assistant")?.content ?? "";
-  const quickReplies = !loading ? detectQuickReplies(lastAiMsg) : [];
 
   return (
     <>
@@ -458,10 +533,10 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
           <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
             style={{ animation: "msgIn 0.3s ease-out both" }}>
             {msg.role === "assistant" && <AIOrb thinking={false} />}
-            <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "text-white rounded-br-sm" : "text-slate-200 rounded-bl-sm"}`}
+            <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
               style={msg.role === "user"
-                ? { background: "linear-gradient(135deg, #0891b2, #0ab5bd)", borderRadius: "18px 18px 4px 18px" }
-                : { background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px 18px 18px 4px" }}>
+                ? { background: "linear-gradient(135deg, #0891b2, #0ab5bd)", borderRadius: "18px 18px 4px 18px", color: "#fff" }
+                : { background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.13)", borderRadius: "18px 18px 18px 4px", color: "#e2e8f0" }}>
               {msg.content ? renderMd(msg.content) : <TypingDots />}
             </div>
           </div>
@@ -487,9 +562,9 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
           </div>
           <textarea value={editalText} onChange={e => setEditalText(e.target.value)} rows={5}
             placeholder="Cole aqui o conteúdo programático ou as matérias do edital…"
-            className="w-full px-4 py-3 text-xs text-slate-300 bg-transparent resize-none outline-none placeholder-slate-600" />
+            className="w-full px-4 py-3 text-xs bg-transparent resize-none outline-none placeholder-slate-400" style={{ color: "#e2e8f0" }} />
           <div className="px-4 py-2 flex gap-2 justify-end">
-            <button onClick={() => setEditalVisible(false)} className="text-xs text-slate-600 hover:text-slate-400 transition-colors px-3 py-1.5">Cancelar</button>
+            <button onClick={() => setEditalVisible(false)} className="text-xs text-slate-300 hover:text-slate-200 transition-colors px-3 py-1.5">Cancelar</button>
             <button onClick={onEditalSubmit} disabled={!editalText.trim()}
               className="text-xs font-semibold px-4 py-1.5 rounded-lg transition-all disabled:opacity-40"
               style={{ background: "rgba(10,181,189,0.2)", border: "1px solid rgba(10,181,189,0.4)", color: "#7ae8ed" }}>
@@ -499,25 +574,12 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
         </div>
       )}
 
-      {/* Quick replies */}
-      {quickReplies.length > 0 && !loading && (
-        <div className="px-4 pb-3 flex flex-wrap gap-2">
-          {quickReplies.map(r => (
-            <button key={r} onClick={() => onSend(r)}
-              className="px-3 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105"
-              style={{ background: "rgba(10,181,189,0.1)", border: "1px solid rgba(10,181,189,0.3)", color: "#7ae8ed" }}>
-              {r}
-            </button>
-          ))}
-        </div>
-      )}
-
       {/* Input */}
       <div className="px-4 pb-5 pt-2">
         <div className="flex gap-2 items-end">
           <button onClick={() => setEditalVisible(!editalVisible)} title="Colar edital"
             className="p-2.5 rounded-xl transition-colors flex-shrink-0"
-            style={{ background: editalVisible ? "rgba(10,181,189,0.2)" : "rgba(255,255,255,0.05)", border: `1px solid ${editalVisible ? "rgba(10,181,189,0.4)" : "rgba(255,255,255,0.08)"}`, color: editalVisible ? "#7ae8ed" : "#4b5563" }}>
+            style={{ background: editalVisible ? "rgba(10,181,189,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${editalVisible ? "rgba(10,181,189,0.4)" : "rgba(255,255,255,0.15)"}`, color: editalVisible ? "#7ae8ed" : "#94a3b8" }}>
             <FileText size={15} />
           </button>
           <div className="flex-1 relative">
@@ -527,8 +589,8 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
               disabled={loading}
               placeholder="Responda aqui…"
               rows={1}
-              className="w-full px-4 py-3 pr-12 text-sm text-white placeholder-slate-600 rounded-2xl resize-none outline-none transition-all"
-              style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)", minHeight: 48, maxHeight: 120 }}
+              className="onboarding-input w-full px-4 py-3 pr-12 text-sm rounded-2xl resize-none outline-none transition-all"
+              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", minHeight: 48, maxHeight: 120 }}
               onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }} />
             <button disabled={loading || !input.trim()} onClick={() => onSend()}
               className="absolute right-2.5 bottom-2 w-8 h-8 rounded-xl flex items-center justify-center transition-all"
@@ -539,7 +601,7 @@ function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, s
             </button>
           </div>
         </div>
-        <p className="text-center text-xs text-slate-700 mt-2">Enter para enviar · Shift+Enter para nova linha</p>
+        <p className="text-center text-xs mt-2" style={{ color: "rgba(255,255,255,0.35)" }}>Enter para enviar · Shift+Enter para nova linha</p>
       </div>
     </>
   );
@@ -568,12 +630,14 @@ export function OnboardingClient({
   const [editalText, setEditalText] = useState("");
   const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
   const [selectedAgents, setSelectedAgents] = useState<Agent[]>([]);
+  const [modalidade, setModalidade] = useState("CONCURSO_PUBLICO");
   const initSent = useRef(false);
 
   const isTrial = maxConcursos === 1;
 
   // Primeira mensagem — gerada pela API para não ter duplicata
-  async function startChat() {
+  async function startChat(selectedModalidade: string) {
+    setModalidade(selectedModalidade);
     setStage("chat");
     setMessages([{ role: "assistant", content: "" }]); // placeholder de loading
     setLoading(true);
@@ -582,7 +646,7 @@ export function OnboardingClient({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         // Mensagem especial de init — a IA gera o primeiro greeting
-        body: JSON.stringify({ message: "__INIT__", history: [], maxConcursos, userName }),
+        body: JSON.stringify({ message: "__INIT__", history: [], maxConcursos, userName, modalidade: selectedModalidade }),
       });
       const data = await res.json();
       const text: string = data.text ?? "";
@@ -612,13 +676,14 @@ const send = useCallback(async (customMsg?: string) => {
     setMessages(newMessages);
     setInput("");
     setLoading(true);
-    setStep(prev => Math.min(prev + 1, PROGRESS_LABELS.length));
+    const progressLabels = PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO;
+    setStep(prev => Math.min(prev + 1, progressLabels.length));
 
     try {
       const res = await fetch("/api/workspace/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: historyToSend, maxConcursos, userName }),
+        body: JSON.stringify({ message: text, history: historyToSend, maxConcursos, userName, modalidade }),
       });
 
       const data = await res.json();
@@ -647,26 +712,29 @@ const send = useCallback(async (customMsg?: string) => {
 
       if (data.done) {
         if (data.agents?.length) setSelectedAgents(data.agents as Agent[]);
-        setStep(PROGRESS_LABELS.length);
+        setStep((PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO).length);
         await new Promise(r => setTimeout(r, 5500)); // tempo para ler a mensagem final
         setStage("generating");
         try {
-          const planoRes = await fetch("/api/onboarding/plano", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              profile: {
-                ...data.profile,
-                editalContent: editalText.trim() || null, // conteúdo colado pelo aluno (se houver)
-              },
+          // Roda fetch e animação mínima em paralelo — plano aparece assim que a IA terminar
+          const [planoRes] = await Promise.all([
+            fetch("/api/onboarding/plano", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                profile: {
+                  ...data.profile,
+                  editalContent: editalText.trim() || null,
+                },
+              }),
             }),
-          });
+            new Promise(r => setTimeout(r, 3000)), // mínimo 3s de animação
+          ]);
           if (planoRes.ok) {
             const planoData = await planoRes.json();
             if (planoData.plan) setStudyPlan(planoData.plan as StudyPlan);
           }
         } catch { /* plan generation failed — show anyway */ }
-        await new Promise(r => setTimeout(r, 7000));
         setStage("plan");
       }
     } catch (err) {
@@ -675,7 +743,7 @@ const send = useCallback(async (customMsg?: string) => {
     } finally {
       setLoading(false);
     }
-  }, [input, loading, messages, maxConcursos]);
+  }, [input, loading, messages, maxConcursos, modalidade]);
 
   function handleEditalSubmit() {
     const msg = `Aqui está o conteúdo programático do edital:\n\n${editalText}`;
@@ -728,14 +796,21 @@ const send = useCallback(async (customMsg?: string) => {
           {/* Welcome */}
           {stage === "welcome" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <WelcomeScreen userName={userName} maxConcursos={maxConcursos} onStart={startChat} />
-                </div>
+              <WelcomeScreen userName={userName} maxConcursos={maxConcursos} onStart={() => setStage("modalidade")} />
+            </div>
+          )}
+
+          {/* Modalidade chooser */}
+          {stage === "modalidade" && (
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+              <ModalidadeChooser onSelect={(id) => startChat(id)} />
+            </div>
           )}
 
           {/* Chat */}
           {stage === "chat" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <ProgressBar step={step} />
+              <ProgressBar step={step} labels={PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO} />
               <ChatStage
                 messages={messages}
                 input={input}

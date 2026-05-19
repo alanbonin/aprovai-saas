@@ -64,7 +64,8 @@ html.light .bg-\[\#1a1f2e\],
 html.light .bg-\[\#111827\],
 html.light .bg-\[\#0f172a\],
 html.light .bg-\[\#1e2433\],
-html.light .bg-\[\#12161f\] {
+html.light .bg-\[\#12161f\],
+html.light .bg-\[\#131820\] {
   background-color: var(--bg-surface) !important;
 }
 
@@ -89,9 +90,13 @@ html.light .text-slate-600      { color: var(--text-secondary) !important; }
 html.light .border-white\/\[0\.04\],
 html.light .border-white\/\[0\.05\],
 html.light .border-white\/\[0\.06\],
+html.light .border-white\/\[0\.07\],
 html.light .border-white\/\[0\.08\],
+html.light .border-white\/\[0\.09\],
 html.light .border-white\/\[0\.10\],
 html.light .border-white\/5,
+html.light .border-white\/6,
+html.light .border-white\/7,
 html.light .border-white\/8,
 html.light .border-white\/10    { border-color: var(--border-color) !important; }
 
@@ -99,7 +104,12 @@ html.light .border-white\/10    { border-color: var(--border-color) !important; 
 html.light .bg-white\/\[0\.02\],
 html.light .bg-white\/\[0\.03\],
 html.light .bg-white\/\[0\.04\],
-html.light .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/\[0\.05\],
+html.light .bg-white\/2,
+html.light .bg-white\/3         { background-color: rgba(0,0,0,0.03) !important; }
+html.light .bg-white\/5,
+html.light .bg-white\/\[0\.05\] { background-color: rgba(0,0,0,0.04) !important; }
+html.light .bg-white\/8         { background-color: rgba(0,0,0,0.05) !important; }
 html.light .bg-white\/10        { background-color: rgba(0,0,0,0.06) !important; }
 html.light .bg-white\/20        { background-color: rgba(0,0,0,0.10) !important; }
 
@@ -155,4 +165,15 @@ html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
 @keyframes fadeSlideUp {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Onboarding input — força texto branco ───────────────────────────────── */
+.onboarding-input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #0ab5bd !important;
+}
+.onboarding-input::placeholder {
+  color: rgba(255,255,255,0.45) !important;
+  -webkit-text-fill-color: rgba(255,255,255,0.45) !important;
 }

@@ -30,11 +30,50 @@ interface HistoryItem {
 interface Props {
   history: HistoryItem[];
   userId: string;
+  modalidade?: string;
 }
+
+// ── Presets por modalidade ──────────────────────────────────────────────────
+interface Preset {
+  label: string;
+  icon: string;
+  totalQ: number;
+  timeMins: number;
+  passThreshold: number | null; // % mínimo para "aprovado" (null = sem threshold)
+  minCorrect: number | null;    // nº absoluto mínimo (ex: OAB = 40/80)
+  desc: string;
+}
+
+const MODALIDADE_PRESETS: Record<string, Preset[]> = {
+  ENEM: [
+    { label: "Caderno ENEM — 1 Área", icon: "📋", totalQ: 45, timeMins: 300, passThreshold: null, minCorrect: null, desc: "45 questões · 5h (estilo ENEM)" },
+    { label: "Mini-ENEM", icon: "⚡", totalQ: 20, timeMins: 60, passThreshold: null, minCorrect: null, desc: "20 questões · 1h (treino rápido)" },
+  ],
+  OAB: [
+    { label: "Simulado OAB — Oficial", icon: "⚖️", totalQ: 80, timeMins: 300, passThreshold: 50, minCorrect: 40, desc: "80 questões · 5h · mínimo 40 acertos (50%)" },
+    { label: "Treino OAB — Rápido", icon: "⚡", totalQ: 20, timeMins: 60, passThreshold: 50, minCorrect: 10, desc: "20 questões · 1h · mínimo 50%" },
+  ],
+  VESTIBULAR: [
+    { label: "Simulado FUVEST 1ª Fase", icon: "🎓", totalQ: 90, timeMins: 270, passThreshold: null, minCorrect: null, desc: "90 questões · 4h30 (estilo FUVEST)" },
+    { label: "Treino Rápido", icon: "⚡", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
+  ],
+  REVALIDA: [
+    { label: "Simulado REVALIDA Etapa 1", icon: "🩺", totalQ: 120, timeMins: 270, passThreshold: 60, minCorrect: 72, desc: "120 questões · 4h30 · 5 áreas" },
+    { label: "Treino por Área", icon: "⚡", totalQ: 24, timeMins: 60, passThreshold: 60, minCorrect: null, desc: "24 questões · 1h · foco em 1 área" },
+  ],
+  CFC: [
+    { label: "Simulado CFC Completo", icon: "📊", totalQ: 75, timeMins: 270, passThreshold: 50, minCorrect: 38, desc: "75 questões · 4h30 · mínimo 50%" },
+    { label: "Treino Rápido CFC", icon: "⚡", totalQ: 25, timeMins: 90, passThreshold: 50, minCorrect: null, desc: "25 questões · 1h30" },
+  ],
+  CONCURSO_PUBLICO: [
+    { label: "Simulado Padrão", icon: "🏛️", totalQ: 20, timeMins: 60, passThreshold: null, minCorrect: null, desc: "20 questões · 1h" },
+    { label: "Simulado Longo", icon: "📋", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
+  ],
+};
 
 type Phase = "menu" | "config" | "running" | "result" | "gabarito";
 
-export function SimuladoClient({ history: initialHistory, userId }: Props) {
+export function SimuladoClient({ history: initialHistory, userId, modalidade = "CONCURSO_PUBLICO" }: Props) {
   const [phase, setPhase] = useState<Phase>("menu");
   const [history, setHistory] = useState(initialHistory);
 
@@ -46,6 +85,9 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
   const [filterSubject, setFilterSubject] = useState("");
   const [availableBancas, setAvailableBancas] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<{ id: string; name: string }[]>([]);
+  // Aprovação threshold (OAB, CFC, REVALIDA)
+  const [passThreshold, setPassThreshold] = useState<number | null>(null);
+  const [minCorrect, setMinCorrect] = useState<number | null>(null);
 
   // Running
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -192,15 +234,57 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
   // ── TELA RESULTADO ──────────────────────────────────────────────
   if (phase === "result" && result) {
     const pct = result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0;
-    const color = pct >= 70 ? "text-green-400" : pct >= 50 ? "text-yellow-400" : "text-red-400";
+
+    // Lógica de aprovação — OAB, CFC, REVALIDA têm threshold mínimo
+    const hasThreshold = passThreshold !== null || minCorrect !== null;
+    const approvedByPct = passThreshold !== null ? pct >= passThreshold : true;
+    const approvedByCount = minCorrect !== null ? result.correct >= minCorrect : true;
+    const approved = !hasThreshold || (approvedByPct && approvedByCount);
+
+    const color = hasThreshold
+      ? (approved ? "text-green-400" : "text-red-400")
+      : (pct >= 70 ? "text-green-400" : pct >= 50 ? "text-yellow-400" : "text-red-400");
+
     return (
       <div className="min-h-screen bg-[#0d1117] text-white p-6 flex flex-col items-center justify-center">
         <div className="w-full max-w-md text-center">
-          <CheckCircle2 className={cn("w-16 h-16 mx-auto mb-4", pct >= 60 ? "text-green-400" : "text-red-400")} />
+          {hasThreshold ? (
+            approved
+              ? <CheckCircle2 className="w-16 h-16 mx-auto mb-3 text-green-400" />
+              : <XCircle className="w-16 h-16 mx-auto mb-3 text-red-400" />
+          ) : (
+            <CheckCircle2 className={cn("w-16 h-16 mx-auto mb-3", pct >= 60 ? "text-green-400" : "text-red-400")} />
+          )}
+
+          {hasThreshold && (
+            <div className={cn("inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-bold mb-3",
+              approved ? "bg-green-500/10 text-green-400 border border-green-500/30" : "bg-red-500/10 text-red-400 border border-red-500/30"
+            )}>
+              {approved ? "✅ APROVADO" : "❌ REPROVADO"}
+            </div>
+          )}
+
           <h2 className="text-2xl font-bold mb-2">Simulado concluído!</h2>
           <p className={cn("text-5xl font-bold mb-1", color)}>{pct}%</p>
-          <p className="text-gray-400 text-sm mb-2">{result.correct}/{result.total} corretas</p>
+          <p className="text-gray-400 text-sm mb-1">{result.correct}/{result.total} corretas</p>
+
+          {hasThreshold && (
+            <p className="text-xs mb-1">
+              {passThreshold !== null && (
+                <span className={approvedByPct ? "text-green-400" : "text-red-400"}>
+                  Mínimo: {passThreshold}% {approvedByPct ? "✓" : "✗"}
+                </span>
+              )}
+              {minCorrect !== null && (
+                <span className={cn("ml-3", approvedByCount ? "text-green-400" : "text-red-400")}>
+                  Mínimo: {minCorrect} acertos {approvedByCount ? "✓" : "✗"}
+                </span>
+              )}
+            </p>
+          )}
+
           <p className="text-gray-500 text-xs mb-8">Tempo: {fmtDuration(result.timeSecs)}</p>
+
           <div className="flex flex-col gap-3 items-center">
             <button onClick={() => { setGabaritoExpanded(null); setPhase("gabarito"); }}
               className="w-full max-w-xs px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 justify-center">
@@ -448,21 +532,58 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
 
   // ── CONFIGURAÇÃO ────────────────────────────────────────────────
   if (phase === "config") {
+    const presets = MODALIDADE_PRESETS[modalidade] ?? MODALIDADE_PRESETS.CONCURSO_PUBLICO;
+
+    function applyPreset(p: Preset) {
+      setTotalQ(p.totalQ);
+      setTimeMins(p.timeMins);
+      setPassThreshold(p.passThreshold);
+      setMinCorrect(p.minCorrect);
+    }
+
     return (
       <div className="min-h-screen bg-[#0d1117] text-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md">
           <h2 className="text-xl font-bold mb-6 text-center">Configurar Simulado</h2>
 
+          {/* Presets de modalidade */}
+          <div className="mb-6">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-2">Presets rápidos</p>
+            <div className="grid grid-cols-1 gap-2">
+              {presets.map(p => (
+                <button key={p.label} onClick={() => applyPreset(p)}
+                  className={cn(
+                    "flex items-center gap-3 p-3 rounded-xl border text-left transition-colors",
+                    totalQ === p.totalQ && timeMins === p.timeMins
+                      ? "border-indigo-500 bg-indigo-600/20"
+                      : "border-white/10 bg-white/3 hover:bg-white/5"
+                  )}>
+                  <span className="text-xl">{p.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-white">{p.label}</p>
+                    <p className="text-xs text-gray-500">{p.desc}</p>
+                  </div>
+                  {p.passThreshold !== null && (
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 flex-shrink-0">
+                      Mín. {p.passThreshold}%
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="space-y-4 mb-8">
+            <p className="text-xs text-gray-500 uppercase tracking-wider">Personalizar</p>
             <div>
               <label className="block text-sm text-gray-400 mb-2">Número de questões</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[10, 20, 30].map(n => (
+              <div className="grid grid-cols-4 gap-2">
+                {[10, 20, 30, 80].map(n => (
                   <button key={n} onClick={() => setTotalQ(n)}
                     className={cn("py-2 rounded-lg border text-sm font-medium transition-colors", totalQ === n
                       ? "border-indigo-500 bg-indigo-600/20 text-indigo-400"
                       : "border-white/10 text-gray-400 hover:border-white/20")}>
-                    {n} questões
+                    {n}q
                   </button>
                 ))}
               </div>
@@ -470,13 +591,13 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
 
             <div>
               <label className="block text-sm text-gray-400 mb-2">Tempo limite</label>
-              <div className="grid grid-cols-3 gap-2">
-                {[30, 60, 90].map(m => (
+              <div className="grid grid-cols-4 gap-2">
+                {[30, 60, 90, 300].map(m => (
                   <button key={m} onClick={() => setTimeMins(m)}
                     className={cn("py-2 rounded-lg border text-sm font-medium transition-colors", timeMins === m
                       ? "border-indigo-500 bg-indigo-600/20 text-indigo-400"
                       : "border-white/10 text-gray-400 hover:border-white/20")}>
-                    {m} min
+                    {m >= 60 ? `${m / 60}h` : `${m}min`}
                   </button>
                 ))}
               </div>
@@ -549,10 +670,23 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
   }
 
   // ── MENU PRINCIPAL ──────────────────────────────────────────────
+  const menuPresets = MODALIDADE_PRESETS[modalidade] ?? MODALIDADE_PRESETS.CONCURSO_PUBLICO;
+
+  function startFromPreset(p: Preset) {
+    setTotalQ(p.totalQ);
+    setTimeMins(p.timeMins);
+    setPassThreshold(p.passThreshold);
+    setMinCorrect(p.minCorrect);
+    setFilterBanca("");
+    setFilterLevel("");
+    setFilterSubject("");
+    setPhase("config");
+  }
+
   return (
     <div className="p-6 text-white min-h-screen bg-[#0d1117]">
       <div className="max-w-2xl mx-auto">
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
             <Trophy className="w-5 h-5 text-yellow-400" />
           </div>
@@ -562,16 +696,28 @@ export function SimuladoClient({ history: initialHistory, userId }: Props) {
           </div>
         </div>
 
-        <button onClick={() => setPhase("config")}
-          className="w-full mb-8 p-6 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/20 transition-colors text-left flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-indigo-600/20 flex items-center justify-center flex-shrink-0">
-            <Play className="w-6 h-6 text-indigo-400" />
-          </div>
-          <div>
-            <p className="font-semibold text-base">Novo Simulado</p>
-            <p className="text-sm text-gray-400 mt-0.5">Questões das suas matérias, com timer</p>
-          </div>
-        </button>
+        {/* Presets de acesso rápido por modalidade */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+          {menuPresets.map(p => (
+            <button key={p.label} onClick={() => startFromPreset(p)}
+              className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/20 transition-colors text-left flex items-center gap-3">
+              <span className="text-2xl flex-shrink-0">{p.icon}</span>
+              <div className="min-w-0">
+                <p className="font-semibold text-sm">{p.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{p.desc}</p>
+              </div>
+            </button>
+          ))}
+          {/* Personalizado */}
+          <button onClick={() => setPhase("config")}
+            className="p-4 rounded-2xl bg-white/3 border border-white/10 hover:bg-white/5 transition-colors text-left flex items-center gap-3 sm:col-span-2">
+            <span className="text-2xl flex-shrink-0">⚙️</span>
+            <div>
+              <p className="font-semibold text-sm">Personalizado</p>
+              <p className="text-xs text-gray-400 mt-0.5">Escolha número de questões, tempo e filtros</p>
+            </div>
+          </button>
+        </div>
 
         {history.length > 0 ? (
           <div>

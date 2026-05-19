@@ -386,6 +386,244 @@ const MATERIAS = [
     ordem: 87,
     description: "ISO 9001, ferramentas da qualidade (PDCA, 5S, diagrama de Ishikawa) e gestão por resultados.",
   },
+
+  // ── ENEM ─────────────────────────────────────────────────────────────────────
+  {
+    name: "Linguagens e Códigos (ENEM)",
+    categoria: "enem",
+    ordem: 90,
+    description: "Língua Portuguesa, Literatura, Língua Estrangeira (Inglês/Espanhol), Artes e Tecnologias — 45 questões + Redação.",
+  },
+  {
+    name: "Ciências Humanas (ENEM)",
+    categoria: "enem",
+    ordem: 91,
+    description: "História, Geografia, Filosofia e Sociologia — 45 questões. Interdisciplinar com foco em interpretação.",
+  },
+  {
+    name: "Ciências da Natureza (ENEM)",
+    categoria: "enem",
+    ordem: 92,
+    description: "Biologia, Física e Química — 45 questões. Foco em experimentação e aplicação cotidiana.",
+  },
+  {
+    name: "Matemática e suas Tecnologias (ENEM)",
+    categoria: "enem",
+    ordem: 93,
+    description: "Matemática — 45 questões. Inclui estatística, probabilidade, funções, geometria e matemática financeira.",
+  },
+  {
+    name: "Redação ENEM",
+    categoria: "enem",
+    ordem: 94,
+    description: "Dissertação argumentativa — proposta de intervenção social respeitando Direitos Humanos. Avaliada em 5 competências (200 pts cada).",
+  },
+
+  // ── Vestibular ────────────────────────────────────────────────────────────────
+  {
+    name: "Biologia (Vestibular)",
+    categoria: "vestibular",
+    ordem: 100,
+    description: "Genética, ecologia, citologia, anatomia, evolução, fisiologia — exigida em FUVEST, UNICAMP, UNESP, UERJ para Medicina e Biológicas.",
+  },
+  {
+    name: "Química (Vestibular)",
+    categoria: "vestibular",
+    ordem: 101,
+    description: "Química orgânica, inorgânica, físico-química — com foco em FUVEST Medicina e UNICAMP.",
+  },
+  {
+    name: "Física (Vestibular)",
+    categoria: "vestibular",
+    ordem: 102,
+    description: "Mecânica, termodinâmica, eletromagnetismo, óptica e ondulatória — exigida em Engenharia e Medicina.",
+  },
+  {
+    name: "Matemática (Vestibular)",
+    categoria: "vestibular",
+    ordem: 103,
+    description: "Álgebra, geometria, análise combinatória, probabilidade, cálculo elementar — peso máximo em Engenharia.",
+  },
+  {
+    name: "Português e Literatura (Vestibular)",
+    categoria: "vestibular",
+    ordem: 104,
+    description: "Interpretação textual, gramática, literatura brasileira e portuguesa — peso alto em Direito/Humanas.",
+  },
+  {
+    name: "História (Vestibular)",
+    categoria: "vestibular",
+    ordem: 105,
+    description: "História do Brasil e Geral — exigida em Direito, Ciências Sociais e Humanas.",
+  },
+  {
+    name: "Geografia (Vestibular)",
+    categoria: "vestibular",
+    ordem: 106,
+    description: "Geopolítica, cartografia, geomorfologia, clima, urbanização — base de Humanas/Direito.",
+  },
+  {
+    name: "Redação Vestibular",
+    categoria: "vestibular",
+    ordem: 107,
+    description: "Dissertação argumentativa ou discursiva — avaliada em FUVEST 2ª fase, UNICAMP (discursivas), UNESP, UERJ.",
+  },
+
+  // ── OAB ───────────────────────────────────────────────────────────────────────
+  {
+    name: "Ética e Estatuto da OAB",
+    categoria: "oab",
+    ordem: 110,
+    description: "Código de Ética e Disciplina, Estatuto da Advocacia (Lei 8.906/94), regulamentos OAB — ~8% das questões.",
+  },
+  {
+    name: "Direito Constitucional (OAB)",
+    categoria: "oab",
+    ordem: 111,
+    description: "Direitos fundamentais, controle de constitucionalidade, organização do Estado — ~10% das questões FGV.",
+  },
+  {
+    name: "Direito Civil (OAB)",
+    categoria: "oab",
+    ordem: 112,
+    description: "Pessoas, negócios jurídicos, responsabilidade civil, contratos, família e sucessões — ~12%, maior peso.",
+  },
+  {
+    name: "Direito Processual Civil (OAB)",
+    categoria: "oab",
+    ordem: 113,
+    description: "CPC/2015 — processo de conhecimento, execução, cautelares, recursos — ~9%.",
+  },
+  {
+    name: "Direito Penal (OAB)",
+    categoria: "oab",
+    ordem: 114,
+    description: "Parte geral e especial do CP, legislação penal extravagante — ~8%.",
+  },
+  {
+    name: "Direito Processual Penal (OAB)",
+    categoria: "oab",
+    ordem: 115,
+    description: "CPP — inquérito, ação penal, provas, prisões, recursos — ~6%.",
+  },
+  {
+    name: "Direito do Trabalho (OAB)",
+    categoria: "oab",
+    ordem: 116,
+    description: "CLT, jornada, férias, FGTS, rescisão, negociação coletiva — ~8%.",
+  },
+  {
+    name: "Direito Tributário (OAB)",
+    categoria: "oab",
+    ordem: 117,
+    description: "CTN, espécies tributárias, obrigação, crédito tributário, ICMS, ISS, IR — ~8%.",
+  },
+  {
+    name: "Direito Empresarial (OAB)",
+    categoria: "oab",
+    ordem: 118,
+    description: "Direito societário, falência, recuperação judicial, títulos de crédito — ~7%.",
+  },
+  {
+    name: "Direito Administrativo (OAB)",
+    categoria: "oab",
+    ordem: 119,
+    description: "Atos administrativos, licitações, servidores, responsabilidade do Estado — ~8%.",
+  },
+  {
+    name: "Peça Processual OAB 2ª Fase",
+    categoria: "oab",
+    ordem: 120,
+    description: "Elaboração de peças: petição inicial, contestação, recurso, habeas corpus, mandado de segurança — área escolhida pelo candidato.",
+  },
+
+  // ── REVALIDA ──────────────────────────────────────────────────────────────────
+  {
+    name: "Clínica Médica (REVALIDA)",
+    categoria: "revalida",
+    ordem: 130,
+    description: "Cardiologia, pneumologia, endocrinologia, gastroenterologia, nefrologia, doenças infecciosas — maior peso.",
+  },
+  {
+    name: "Cirurgia Geral (REVALIDA)",
+    categoria: "revalida",
+    ordem: 131,
+    description: "Abdome agudo, trauma, cirurgia digestiva, hérnias, pré e pós-operatório.",
+  },
+  {
+    name: "Pediatria (REVALIDA)",
+    categoria: "revalida",
+    ordem: 132,
+    description: "Crescimento e desenvolvimento, neonatologia, doenças prevalentes na infância, imunizações.",
+  },
+  {
+    name: "Ginecologia e Obstetrícia (REVALIDA)",
+    categoria: "revalida",
+    ordem: 133,
+    description: "Pré-natal, parto, puerpério, doenças ginecológicas, planejamento familiar.",
+  },
+  {
+    name: "Saúde Coletiva e MFC (REVALIDA)",
+    categoria: "revalida",
+    ordem: 134,
+    description: "Medicina de Família e Comunidade, epidemiologia, vigilância em saúde, SUS, PNAB.",
+  },
+  {
+    name: "OSCE — Estações Práticas (REVALIDA)",
+    categoria: "revalida",
+    ordem: 135,
+    description: "Etapa 2: anamnese, exame físico, comunicação médico-paciente, conduta diagnóstica e terapêutica em estações simuladas.",
+  },
+
+  // ── CFC ───────────────────────────────────────────────────────────────────────
+  {
+    name: "Contabilidade Geral (CFC)",
+    categoria: "cfc",
+    ordem: 140,
+    description: "Plano de contas, lançamentos, balanço patrimonial, DRE, demonstrações contábeis — base do exame.",
+  },
+  {
+    name: "Análise das Demonstrações Contábeis (CFC)",
+    categoria: "cfc",
+    ordem: 141,
+    description: "Índices de liquidez, endividamento, rentabilidade, EBITDA — interpretação econômico-financeira.",
+  },
+  {
+    name: "Teoria da Contabilidade (CFC)",
+    categoria: "cfc",
+    ordem: 142,
+    description: "Postulados, princípios, convenções contábeis, estrutura conceitual CPC.",
+  },
+  {
+    name: "Contabilidade de Custos (CFC)",
+    categoria: "cfc",
+    ordem: 143,
+    description: "Custeio por absorção, variável, ABC, ponto de equilíbrio, margem de contribuição.",
+  },
+  {
+    name: "Auditoria Contábil (CFC)",
+    categoria: "cfc",
+    ordem: 144,
+    description: "NBC TA — planejamento, execução, evidências, risco de auditoria, parecer.",
+  },
+  {
+    name: "Perícia Contábil (CFC)",
+    categoria: "cfc",
+    ordem: 145,
+    description: "NBC TP — perícia judicial e extrajudicial, laudo, arbitragem.",
+  },
+  {
+    name: "Normas Brasileiras de Contabilidade (CFC)",
+    categoria: "cfc",
+    ordem: 146,
+    description: "NBCs profissionais e técnicas, CPCs (Pronunciamentos Contábeis), convergência ao IFRS.",
+  },
+  {
+    name: "Ética Profissional Contábil (CFC)",
+    categoria: "cfc",
+    ordem: 147,
+    description: "Código de Ética do Contabilista, deveres e proibições, penalidades.",
+  },
 ];
 
 async function main() {
@@ -413,7 +651,6 @@ async function main() {
           description: materia.description,
           categoria: materia.categoria,
           ordem: materia.ordem,
-          updatedAt: new Date().toISOString(),
         })
         .eq("id", existing.id);
 
@@ -433,7 +670,6 @@ async function main() {
         categoria: materia.categoria,
         ordem: materia.ordem,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
       });
 
       if (error) {

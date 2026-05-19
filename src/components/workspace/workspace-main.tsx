@@ -155,13 +155,13 @@ function LockedSection({ recurso, desc, onUpgrade }: { recurso: string; desc: st
 // ── Modal de upgrade (Trial) ──────────────────────────────────────────────────
 function UpgradeModal({ recurso, onClose }: { recurso: string; onClose: () => void }) {
   const beneficios = [
-    "Simulados ilimitados com ranking",
-    "Flashcards com repetição espaçada",
-    "Relatório de desempenho completo",
-    "Artigos jurídicos em texto completo",
-    "Modo companhia de estudos",
+    "Questões ilimitadas (Trial: 20/dia)",
+    "Simulados com gabarito comentado",
+    "Relatório avançado de desempenho",
+    "Artigos e materiais completos",
     "Redação com correção por IA",
-    "Mentores IA ilimitados",
+    "Casos práticos e companhia de estudos",
+    "Mentores IA sem limite de mensagens",
   ];
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
@@ -554,8 +554,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 const pct = Math.min(100, (today / limit) * 100);
                 const atLimit = !isPremium && today >= limit;
                 return (
-                  <div className="mx-5 mt-3 rounded-2xl border px-4 py-3"
-                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : "#0d1117", borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
+                  <div className="mx-5 mt-3 rounded-2xl border px-4 py-3 bg-[#0d1117]"
+                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : undefined, borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-medium">🎯 {atLimit ? "Limite diário atingido" : "Questões hoje"}</span>
                       <span className="text-xs font-semibold" style={{ color: atLimit ? "#a5b4fc" : "#6b7280" }}>
