@@ -124,8 +124,23 @@ Data atual: ${hoje}`;
       return NextResponse.json({ error: "Plano não gerado" }, { status: 500 });
     }
 
-    const plan = JSON.parse(jsonMatch[0]);
-    return NextResponse.json({ plan });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const raw_plan: any = JSON.parse(jsonMatch[0]);
+
+    // Normaliza campo matérias — AI às vezes retorna sem acento ("materias")
+    if (!raw_plan["matérias"] && raw_plan["materias"]) {
+      raw_plan["matérias"] = raw_plan["materias"];
+      delete raw_plan["materias"];
+    }
+    // Garante array vazio como fallback
+    if (!Array.isArray(raw_plan["matérias"])) {
+      raw_plan["matérias"] = [];
+    }
+    if (!Array.isArray(raw_plan["cronograma"])) {
+      raw_plan["cronograma"] = [];
+    }
+
+    return NextResponse.json({ plan: raw_plan });
 
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);

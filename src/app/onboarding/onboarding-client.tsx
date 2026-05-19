@@ -183,7 +183,7 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
             </div>
             <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
               <BookOpen size={16} className="text-amber-400 mb-1" />
-              <div className="text-2xl font-bold text-white">{plan.matérias.length}</div>
+              <div className="text-2xl font-bold text-white">{(plan.matérias ?? []).length}</div>
               <div className="text-xs text-slate-500">matérias prioritárias</div>
             </div>
           </div>
@@ -230,14 +230,14 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
         )}
 
         {/* Matérias */}
-        {plan && plan.matérias.length > 0 && (
+        {plan && (plan.matérias ?? []).length > 0 && (
           <div className="rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
             <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
               <BookOpen size={14} className="text-amber-400" />
               <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Matérias prioritárias</span>
             </div>
             <div className="px-5 py-4 flex flex-wrap gap-2">
-              {plan.matérias.map((m, i) => (
+              {(plan.matérias ?? []).map((m, i) => (
                 <span key={i} className="px-3 py-1 rounded-full text-xs font-medium"
                   style={{ background: "rgba(10,181,189,0.12)", border: "1px solid rgba(10,181,189,0.25)", color: "#7ae8ed" }}>
                   {m}
