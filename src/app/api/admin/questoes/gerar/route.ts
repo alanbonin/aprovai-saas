@@ -162,6 +162,7 @@ export async function POST(req: Request) {
               answer,
               explanation: q.justificativa ?? null,
               source: "ia",
+              aprovado: false,
             };
           });
 
@@ -248,6 +249,7 @@ export async function POST(req: Request) {
       answer,
       explanation: q.justificativa ?? null,
       source: "ia",
+      aprovado: false,
     };
   });
 

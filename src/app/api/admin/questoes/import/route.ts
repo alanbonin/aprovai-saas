@@ -205,6 +205,7 @@ export async function POST(req: Request) {
       optionE: result.alternatives[4] ?? null,
       answer: result.answer,
       explanation: result.explanation,
+      aprovado: false,
     });
   }
 
