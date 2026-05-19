@@ -49,6 +49,13 @@ ${profile.editalContent.slice(0, 4000)}
 ---FIM DO EDITAL---`
       : `EDITAL NÃO DISPONÍVEL — use seu conhecimento profundo sobre editais históricos para ${profile.cargo} ${profile.orgao ? `no ${profile.orgao}` : ""} realizados pela banca ${profile.banca ?? "desconhecida"}. Liste as matérias que REALMENTE caem nesse concurso específico, com os pesos típicos de cada uma. Baseie-se em provas antigas e editais anteriores.`;
 
+    // Calcula rotina diária estimada baseada nas horas disponíveis
+    const questoesDia = horasDia <= 1 ? 10 : horasDia <= 2 ? 20 : horasDia <= 3 ? 30 : 40;
+    const flashcardsDia = horasDia <= 1 ? 15 : horasDia <= 2 ? 25 : horasDia <= 3 ? 40 : 60;
+    const leituraMin = horasDia <= 1 ? 20 : horasDia <= 2 ? 40 : horasDia <= 3 ? 60 : 90;
+    const revisaoMin = horasDia <= 1 ? 10 : horasDia <= 2 ? 20 : horasDia <= 3 ? 30 : 40;
+    const simuladoFreq = horasDia <= 1 ? "quinzenal" : horasDia <= 2 ? "semanal" : "semanal";
+
     const systemPrompt = `Você é um especialista sênior em concursos públicos com profundo conhecimento de editais, bancas e matérias cobradas em cada cargo.
 
 ${editalBloco}
@@ -60,6 +67,14 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
   "foco": "Frase motivadora e específica para este concurso/banca (máx 90 chars)",
   "horasPorDia": 3,
   "editalStatus": "com_edital" | "sem_edital_historico",
+  "rotinaDiaria": {
+    "questoes": ${questoesDia},
+    "flashcards": ${flashcardsDia},
+    "leituraMin": ${leituraMin},
+    "revisaoMin": ${revisaoMin},
+    "simulado": "${simuladoFreq}",
+    "dica": "Uma frase curta de motivação/estratégia para a rotina diária (máx 80 chars)"
+  },
   "matérias": [
     "Matéria 1 (peso alto)",
     "Matéria 2 (peso alto)",
@@ -67,20 +82,22 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
     "..."
   ],
   "cronograma": [
-    {"semana": "Sem. 1", "tema": "Matéria — Tópico específico"},
-    {"semana": "Sem. 2", "tema": "Matéria — Tópico específico"},
+    {"semana": "Sem. 1", "tema": "Seg/Ter: Matéria A — Tópico | Qua/Qui: Matéria B — Tópico | Sex: Matéria C — Tópico"},
+    {"semana": "Sem. 2", "tema": "Seg/Ter: Matéria A — Tópico | Qua/Qui: Matéria B — Tópico | Sex: Matéria D — Tópico"},
     ...
   ]
 }
 
 REGRAS CRÍTICAS:
 1. matérias: liste TODAS as matérias do edital (ou histórico) em ordem de peso/frequência — sem limite máximo
-2. cronograma: TODAS as matérias do campo "matérias" devem aparecer no cronograma — distribua proporcionalmente ao peso de cada uma. Matérias de alto peso = 2-3 semanas. Médio = 1-2 semanas. Baixo = 1 semana.
+2. cronograma: cada semana deve MESCLAR 2-3 matérias diferentes por semana, distribuídas por dias. Use o formato "Seg/Ter: Matéria — Tópico | Qua/Qui: Matéria — Tópico | Sex: Matéria — Tópico". Matérias de alto peso aparecem em mais semanas e mais dias. Matérias de baixo peso aparecem 1-2 vezes no total. TODAS as matérias devem aparecer no cronograma.
 3. horasPorDia: use exatamente ${horasDia} (informado pelo aluno) — não altere
-4. Se não há edital publicado, baseie-se 100% em editais anteriores para este cargo/banca específicos
-5. foco: mencione a banca ou o órgão na frase motivadora
-6. Seja específico nos temas do cronograma (ex: "Direito Constitucional — Controle de Constitucionalidade e Repartição de Competências", não apenas "Direito Constitucional")
-7. Para aluno ${nivelLabel[nivel]}, ajuste o nível dos tópicos iniciais (mais básico para iniciante, pode ir fundo para avançado)`;
+4. rotinaDiaria: use os valores já calculados acima (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}"). A dica deve ser motivadora e específica para este concurso.
+5. Se não há edital publicado, baseie-se 100% em editais anteriores para este cargo/banca específicos
+6. foco: mencione a banca ou o órgão na frase motivadora
+7. Seja específico nos tópicos (ex: "Dir. Constitucional — Controle de constitucionalidade", não apenas "Direito Constitucional")
+8. Para aluno ${nivelLabel[nivel]}, ajuste o nível dos tópicos (mais básico para iniciante, mais avançado para avançado)
+9. Número de semanas: calcule com base no tempo disponível e volume de conteúdo — entre 8 e 20 semanas normalmente`;
 
     const userMsg = `Cargo: ${profile.cargo}
 Órgão: ${profile.orgao ?? "Não informado"}
@@ -93,7 +110,7 @@ Data atual: ${hoje}`;
 
     const response = await createWithCache({
       model: MODELS.sonnet, // Sonnet tem conhecimento real de editais, Haiku não
-      maxTokens: 2000,       // mais tokens para cronograma completo
+      maxTokens: 2500,       // mais tokens para cronograma completo + rotinaDiaria
       systemPrompt,
       cacheSystem: true,
       messages: [{ role: "user", content: userMsg }],

@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { BookOpen, Target, Layers, ChevronRight, Clock, CheckCircle2, XCircle, RotateCcw, ClipboardList, Filter, Pause, Play, ArrowLeft, Flame, RefreshCw, Calendar, Sparkles, TrendingUp, AlertCircle, Brain } from "lucide-react";
+import { BookOpen, Target, Layers, ChevronRight, Clock, CheckCircle2, XCircle, RotateCcw, ClipboardList, Filter, Pause, Play, ArrowLeft, Flame, RefreshCw, Calendar, Sparkles, TrendingUp, AlertCircle, Brain, Lock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SimuladoClient } from "@/app/(dashboard)/simulado/simulado-client";
 import { SimuladoBanca } from "@/components/workspace/simulado-banca";
@@ -132,6 +132,90 @@ function PremiumGateInline({ recurso, desc }: { recurso: string; desc: string })
   );
 }
 
+// ── Tela bloqueada (Trial) ────────────────────────────────────────────────────
+function LockedSection({ recurso, desc, onUpgrade }: { recurso: string; desc: string; onUpgrade: () => void }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+      <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 relative"
+        style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.08))", border: "1px solid rgba(99,102,241,0.25)" }}>
+        <Lock size={24} className="text-indigo-400" />
+      </div>
+      <h3 className="font-bold text-base mb-2 text-white">{recurso}</h3>
+      <p className="text-sm text-gray-500 max-w-xs mb-6">{desc}</p>
+      <button onClick={onUpgrade}
+        className="px-6 py-3 rounded-xl text-sm font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]"
+        style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", boxShadow: "0 0 20px rgba(99,102,241,0.35)" }}>
+        ⚡ Fazer upgrade para acessar
+      </button>
+      <p className="text-[11px] text-gray-600 mt-3">Disponível nos planos pagos</p>
+    </div>
+  );
+}
+
+// ── Modal de upgrade (Trial) ──────────────────────────────────────────────────
+function UpgradeModal({ recurso, onClose }: { recurso: string; onClose: () => void }) {
+  const beneficios = [
+    "Simulados ilimitados com ranking",
+    "Flashcards com repetição espaçada",
+    "Relatório de desempenho completo",
+    "Artigos jurídicos em texto completo",
+    "Modo companhia de estudos",
+    "Redação com correção por IA",
+    "Mentores IA ilimitados",
+  ];
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+      onClick={onClose}>
+      <div className="w-full max-w-sm rounded-3xl overflow-hidden relative"
+        style={{ background: "linear-gradient(160deg,#0f1520,#0a0d14)", border: "1px solid rgba(255,255,255,0.1)" }}
+        onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="relative px-6 pt-6 pb-4 text-center"
+          style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.15),rgba(139,92,246,0.08))" }}>
+          <button onClick={onClose} className="absolute right-4 top-4 p-1.5 rounded-lg hover:bg-white/10 text-gray-500 hover:text-white transition-colors">
+            <X size={16} />
+          </button>
+          <div className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-3 text-2xl"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 8px 24px rgba(99,102,241,0.4)" }}>
+            ⚡
+          </div>
+          <h2 className="text-white font-bold text-lg mb-1">Desbloqueie o {recurso}</h2>
+          <p className="text-gray-400 text-sm">Faça upgrade para acessar todos os recursos da plataforma.</p>
+        </div>
+
+        {/* Benefícios */}
+        <div className="px-6 py-4">
+          <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">O que você desbloqueia:</p>
+          <div className="space-y-2">
+            {beneficios.map(b => (
+              <div key={b} className="flex items-center gap-2.5">
+                <div className="w-4 h-4 rounded-full bg-indigo-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+                </div>
+                <span className="text-sm text-gray-300">{b}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* CTA */}
+        <div className="px-6 pb-6 space-y-2">
+          <a href="/planos"
+            className="block w-full py-3.5 rounded-2xl font-bold text-sm text-center transition-all hover:scale-[1.02] active:scale-[0.98]"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", boxShadow: "0 0 24px rgba(99,102,241,0.4)" }}>
+            Ver planos e preços →
+          </a>
+          <button onClick={onClose}
+            className="block w-full py-2.5 text-sm text-gray-600 hover:text-gray-400 transition-colors text-center">
+            Continuar no plano gratuito
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function getDifficultyBadge(accuracy: number | null): { label: string; color: string } {
   if (accuracy === null) return { label: "NOVO", color: "text-gray-500 bg-white/5 border-white/10" };
   if (accuracy < 50) return { label: "ALTO", color: "text-red-400 bg-red-500/10 border-red-500/20" };
@@ -207,6 +291,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     prontidao: number | null;
   } | null>(null);
   const [celebrate, setCelebrate] = useState<{ msg: string } | null>(null);
+  const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do recurso bloqueado
   const [metas, setMetas] = useState<{
     metas: { questoesMeta: number; flashcardsMeta: number; simuladosMeta: number };
     progresso: { questoes: number; flashcards: number; simulados: number };
@@ -218,11 +303,39 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
   const daysLeft = daysUntil(subscriptionEndDate);
 
+  // Funcionalidades bloqueadas para trial (isPremium = false)
+  const TRIAL_LOCKED: Partial<Record<NavId, string>> = {
+    simulado:  "Simulados",
+    relatorio: "Relatório de Desempenho",
+    artigos:   "Artigos Jurídicos",
+    companhia: "Modo Companhia",
+    redacao:   "Redação com IA",
+    casos:     "Estudo de Caso",
+  };
+
+  function tryNav(id: NavId) {
+    if (!isPremium && TRIAL_LOCKED[id]) {
+      setUpgradeModal(TRIAL_LOCKED[id]!);
+    } else {
+      setActiveNav(id);
+    }
+  }
+
   // Escuta evento do QuestoesTab para navegar ao mentor quando não há questões
   useEffect(() => {
     function onGoMentor() { setActiveNav("mentor"); setSelectedSubject(null); }
     window.addEventListener("aprovai:go-mentor", onGoMentor);
     return () => window.removeEventListener("aprovai:go-mentor", onGoMentor);
+  }, []);
+
+  // Escuta evento de navegação disparado pelos action cards [[IR:X]] do mentor
+  useEffect(() => {
+    function onNavigate(e: Event) {
+      const detail = (e as CustomEvent<{ nav: string }>).detail;
+      if (detail?.nav) setActiveNav(detail.nav as NavId);
+    }
+    window.addEventListener("aprovai:navigate", onNavigate);
+    return () => window.removeEventListener("aprovai:navigate", onNavigate);
   }, []);
 
   // Busca histórico de simulados quando abre a aba
@@ -375,6 +488,14 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
           {/* Push toggle + créditos */}
           <PushToggleCompact />
+          {!isPremium && !isExpired && (
+            <button onClick={() => setUpgradeModal("Premium")}
+              className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all hover:scale-[1.02]"
+              style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.12))", border: "1px solid rgba(99,102,241,0.3)", color: "#a5b4fc" }}>
+              <Lock size={10} />
+              Trial
+            </button>
+          )}
           {isExpired && (
             <a href="/planos"
               className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-indigo-400 text-xs font-medium hover:bg-indigo-600/20 transition-colors">
@@ -459,7 +580,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         : "Continue assim, não quebre a sequência!"}
                     </p>
                   </div>
-                  <button onClick={() => setActiveNav("relatorio")}
+                  <button onClick={() => tryNav("relatorio")}
                     className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex-shrink-0">
                     Ver relatório
                   </button>
@@ -476,14 +597,15 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     <p className="text-[10px] text-gray-500">Tire dúvidas agora</p>
                   </div>
                 </button>
-                <a href="/simulado"
-                  className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-left hover:bg-amber-500/10 transition-colors">
+                <button onClick={() => tryNav("simulado")}
+                  className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-left hover:bg-amber-500/10 transition-colors relative">
                   <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg flex-shrink-0">🎯</div>
                   <div>
                     <p className="text-sm font-semibold text-amber-300">Simulado</p>
                     <p className="text-[10px] text-gray-500">Teste seus limites</p>
                   </div>
-                </a>
+                  {!isPremium && <Lock size={11} className="absolute top-2.5 right-2.5 text-amber-500/60" />}
+                </button>
               </div>
 
               {/* ── Estudar Agora ── */}
@@ -502,6 +624,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         <ChevronRight className="w-4 h-4 text-gray-600 ml-auto flex-shrink-0" />
                       </button>
                     )}
+
                     {homeStats.pontoCritico.slice(0, 2).map(p => {
                       const subj = subjects.find(s => s.name.toLowerCase().includes(p.subjectName.toLowerCase().slice(0, 6)));
                       return (
@@ -706,20 +829,28 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
           {/* ───── ARTIGOS ───── */}
           {activeNav === "artigos" && (
-            <ArtigosPanel subjects={subjects} />
+            isPremium
+              ? <ArtigosPanel subjects={subjects} />
+              : <LockedSection recurso="Artigos Jurídicos" desc="Acesse artigos completos com referências legais e explicações para provas. Disponível nos planos pagos." onUpgrade={() => setUpgradeModal("Artigos Jurídicos")} />
           )}
 
           {/* ───── SIMULADO ───── */}
           {activeNav === "simulado" && (
             <div className="flex-1 overflow-y-auto flex flex-col">
-              <SimuladoBanca subjects={subjects} profile={profile} />
+              {isPremium
+                ? <SimuladoBanca subjects={subjects} profile={profile} />
+                : <LockedSection recurso="Simulados" desc="Faça simulados completos com gabarito comentado, ranking e análise de desempenho. Disponível nos planos pagos." onUpgrade={() => setUpgradeModal("Simulados")} />
+              }
             </div>
           )}
 
           {/* ───── RELATÓRIO ───── */}
           {activeNav === "relatorio" && (
             <div className="flex-1 overflow-y-auto">
-              <RelatorioPage />
+              {isPremium
+                ? <RelatorioPage />
+                : <LockedSection recurso="Relatório de Desempenho" desc="Veja gráficos detalhados de evolução, pontos fortes e fracos, e sugestões de estudo personalizadas." onUpgrade={() => setUpgradeModal("Relatório de Desempenho")} />
+              }
             </div>
           )}
 
@@ -728,7 +859,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
             <div className="flex-1 overflow-y-auto">
               {isPremium
                 ? <RedacaoClient />
-                : <PremiumGateInline recurso="Redação Oficial com IA" desc="Treine redações e receba correção detalhada com IA especializada. Disponível a partir do plano Focado." />
+                : <LockedSection recurso="Redação com IA" desc="Treine redações e receba correção detalhada com IA especializada. Disponível nos planos pagos." onUpgrade={() => setUpgradeModal("Redação com IA")} />
               }
             </div>
           )}
@@ -738,7 +869,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
             <div className="flex-1 overflow-y-auto">
               {isPremium
                 ? <CasoClient />
-                : <PremiumGateInline recurso="Estudo de Caso" desc="Resolva casos práticos com avaliação por IA. Simula provas discursivas dos principais concursos. Disponível a partir do plano Focado." />
+                : <LockedSection recurso="Estudo de Caso" desc="Resolva casos práticos com avaliação por IA. Simula provas discursivas dos principais concursos." onUpgrade={() => setUpgradeModal("Estudo de Caso")} />
               }
             </div>
           )}
@@ -770,11 +901,10 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
           {/* ───── COMPANHIA ───── */}
           {activeNav === "companhia" && (
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-              <ModoCompanhia
-                userId={userId}
-                userName={profile.cargo ?? "Estudante"}
-                subjects={subjects}
-              />
+              {isPremium
+                ? <ModoCompanhia userId={userId} userName={profile.cargo ?? "Estudante"} subjects={subjects} />
+                : <LockedSection recurso="Modo Companhia" desc="Estude acompanhado por uma IA que conversa, motiva e faz check-ins ao longo da sessão de estudos." onUpgrade={() => setUpgradeModal("Modo Companhia")} />
+              }
             </div>
           )}
 
@@ -785,6 +915,11 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
           )}
 
         </div>{/* fim conteúdo */}
+
+      {/* ══ UPGRADE MODAL ══════════════════════════════════════════════════ */}
+      {upgradeModal && (
+        <UpgradeModal recurso={upgradeModal} onClose={() => setUpgradeModal(null)} />
+      )}
 
       {/* ══ CONFETTI + TOAST ═══════════════════════════════════════════════ */}
       {celebrate && (

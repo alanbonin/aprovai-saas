@@ -1,25 +1,17 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, FileText, CheckCircle, ArrowRight, Calendar, Clock, BookOpen, Target, Zap, ChevronRight, Brain, Sparkles } from "lucide-react";
+import { Send, FileText, CheckCircle, ArrowRight, Calendar, Clock, BookOpen, Target, Zap, Brain, Sparkles } from "lucide-react";
 import Image from "next/image";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 interface Agent { id: string; name: string; description?: string; categoria?: string | null; banca?: string | null; color?: string | null; }
 interface Message { role: "user" | "assistant"; content: string; ts?: number; }
-interface StudyPlan { titulo: string; matérias: string[]; horasPorDia: number; foco: string; editalStatus?: string; cronograma: { semana: string; tema: string }[]; }
+interface RotinaDiaria { questoes: number; flashcards: number; leituraMin: number; revisaoMin: number; simulado: string; dica?: string; }
+interface StudyPlan { titulo: string; matérias: string[]; horasPorDia: number; foco: string; editalStatus?: string; rotinaDiaria?: RotinaDiaria; cronograma: { semana: string; tema: string }[]; }
 
 type Stage = "welcome" | "chat" | "generating" | "plan";
 
-// ── Concursos populares ────────────────────────────────────────────────────────
-const CONCURSOS_RAPIDOS = [
-  { label: "Polícia Federal", msg: "Quero prestar para Agente Federal de Polícia na Polícia Federal. Banca: CESPE/CEBRASPE." },
-  { label: "Receita Federal", msg: "Quero prestar para Auditor-Fiscal da Receita Federal. Banca: CESPE/CEBRASPE." },
-  { label: "TRF / TRE", msg: "Quero prestar para Analista Judiciário no TRF. Banca: FCC." },
-  { label: "INSS", msg: "Quero prestar para Técnico do INSS. Banca: CESPE/CEBRASPE." },
-  { label: "PRF", msg: "Quero prestar para Policial Rodoviário Federal na PRF. Banca: CESPE/CEBRASPE." },
-  { label: "Outro concurso", msg: "" },
-];
 
 // ── Steps da barra de progresso — agora 7 perguntas ──────────────────────────
 const PROGRESS_LABELS = ["Cargo/Órgão", "Banca", "Data da Prova", "Horas/dia", "Nível", "Horário", "Dificuldades"];
@@ -197,6 +189,46 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
           </div>
         )}
 
+        {/* Rotina Diária */}
+        {plan?.rotinaDiaria && (
+          <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
+            <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
+              <Brain size={14} className="text-teal-400" />
+              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rotina diária recomendada</span>
+            </div>
+            <div className="px-5 py-4 grid grid-cols-2 gap-3">
+              {[
+                { icon: "🎯", label: "Questões/dia", value: `${plan.rotinaDiaria.questoes} questões` },
+                { icon: "🃏", label: "Flashcards/dia", value: `${plan.rotinaDiaria.flashcards} cards` },
+                { icon: "📖", label: "Leitura", value: `${plan.rotinaDiaria.leituraMin} min` },
+                { icon: "🔁", label: "Revisão", value: `${plan.rotinaDiaria.revisaoMin} min` },
+              ].map(item => (
+                <div key={item.label} className="flex items-center gap-2.5 rounded-xl p-3" style={{ background: "rgba(10,181,189,0.06)", border: "1px solid rgba(10,181,189,0.15)" }}>
+                  <span className="text-lg flex-shrink-0">{item.icon}</span>
+                  <div className="min-w-0">
+                    <div className="text-[10px] text-slate-500 uppercase tracking-wide">{item.label}</div>
+                    <div className="text-sm font-bold text-white">{item.value}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="px-5 pb-4 flex items-center gap-2.5 rounded-xl">
+              <span className="text-lg">📋</span>
+              <div>
+                <span className="text-[10px] text-slate-500 uppercase tracking-wide">Simulado</span>
+                <div className="text-sm font-semibold text-white capitalize">{plan.rotinaDiaria.simulado}</div>
+              </div>
+            </div>
+            {plan.rotinaDiaria.dica && (
+              <div className="px-5 pb-4">
+                <div className="px-4 py-2.5 rounded-xl text-xs text-teal-300 italic" style={{ background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.15)" }}>
+                  💡 {plan.rotinaDiaria.dica}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Matérias */}
         {plan && plan.matérias.length > 0 && (
           <div className="rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
@@ -237,12 +269,25 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
               </div>
             )}
             <div className="divide-y divide-white/5">
-              {plan.cronograma.map((c: { semana: string; tema: string }, i: number) => (
-                <div key={i} className="px-5 py-3 flex items-start gap-4">
-                  <div className="w-16 flex-shrink-0 text-xs font-bold text-violet-400 pt-0.5">{c.semana}</div>
-                  <div className="text-sm text-slate-300">{c.tema}</div>
-                </div>
-              ))}
+              {plan.cronograma.map((c: { semana: string; tema: string }, i: number) => {
+                // Separa dias mesclados pelo delimitador "|"
+                const dias = c.tema.split("|").map(d => d.trim()).filter(Boolean);
+                return (
+                  <div key={i} className="px-5 py-3 flex items-start gap-4">
+                    <div className="w-16 flex-shrink-0 text-xs font-bold text-violet-400 pt-0.5">{c.semana}</div>
+                    <div className="flex-1 space-y-1">
+                      {dias.map((dia, j) => (
+                        <div key={j} className="text-sm text-slate-300 flex items-start gap-2">
+                          {dias.length > 1 && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 flex-shrink-0 mt-2" />
+                          )}
+                          <span>{dia}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
@@ -557,17 +602,7 @@ export function OnboardingClient({
     }
   }
 
-  // Atalho de concurso popular — inicia o chat (pede nome primeiro) sem enviar o cargo ainda
-  function handleConcursoRapido(msg: string) {
-    if (!msg) return;
-    if (stage !== "chat") {
-      startChat(); // pede nome primeiro; o cargo do chip vai ser respondido naturalmente depois
-    } else {
-      send(msg);
-    }
-  }
-
-  const send = useCallback(async (customMsg?: string) => {
+const send = useCallback(async (customMsg?: string) => {
     const text = (customMsg ?? input).trim();
     if (!text || loading) return;
 
@@ -694,21 +729,7 @@ export function OnboardingClient({
           {stage === "welcome" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
               <WelcomeScreen userName={userName} maxConcursos={maxConcursos} onStart={startChat} />
-              {/* Concursos populares — só para trial (foco único) */}
-              {isTrial && (
-                <div style={{ padding: "0 16px 24px", borderTop: "1px solid rgba(255,255,255,0.05)", paddingTop: 16 }}>
-                  <p style={{ fontSize: 11, color: "#4b5563", marginBottom: 10, textAlign: "center", textTransform: "uppercase", letterSpacing: "0.05em" }}>Ou escolha um concurso popular</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
-                    {CONCURSOS_RAPIDOS.map(c => (
-                      <button key={c.label} onClick={() => handleConcursoRapido(c.msg)}
-                        style={{ padding: "7px 14px", borderRadius: 99, fontSize: 11, fontWeight: 500, cursor: "pointer", background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "#94a3b8", transition: "all 0.15s", display: "flex", alignItems: "center", gap: 5 }}>
-                        {c.label} {c.msg && <ChevronRight size={10} />}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-              )}
-            </div>
           )}
 
           {/* Chat */}
