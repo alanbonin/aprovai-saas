@@ -216,11 +216,11 @@ function UpgradeModal({ recurso, onClose }: { recurso: string; onClose: () => vo
   );
 }
 
-function getDifficultyBadge(accuracy: number | null): { label: string; color: string } {
-  if (accuracy === null) return { label: "NOVO", color: "text-gray-500 bg-white/5 border-white/10" };
-  if (accuracy < 50) return { label: "ALTO", color: "text-red-400 bg-red-500/10 border-red-500/20" };
-  if (accuracy < 75) return { label: "MÉDIO", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
-  return { label: "BAIXO", color: "text-green-400 bg-green-500/10 border-green-500/20" };
+function getDifficultyBadge(accuracy: number | null): { label: string; color: string; emoji: string } {
+  if (accuracy === null) return { label: "Iniciar", emoji: "▶", color: "text-gray-500 bg-white/5 border-white/10" };
+  if (accuracy < 50)     return { label: "Ponto fraco", emoji: "⚠", color: "text-red-400 bg-red-500/10 border-red-500/20" };
+  if (accuracy < 75)     return { label: "Progredindo", emoji: "📈", color: "text-amber-400 bg-amber-500/10 border-amber-500/20" };
+  return                        { label: "Dominando",   emoji: "✓", color: "text-green-400 bg-green-500/10 border-green-500/20" };
 }
 
 type NavId = "estudar" | "mentor" | "flash" | "simulado" | "relatorio" | "redacao" | "casos" | "artigos" | "planos" | "estrategia" | "edital" | "companhia" | "pomodoro";
@@ -745,17 +745,24 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                             style={{ background: color + "18", border: `1px solid ${color}33`, color }}>
                             {abbr}
                           </div>
-                          <div className="relative">
-                            <CircularProgress pct={pct} color={ringColor} size={34} stroke={3} />
-                            <div className="absolute inset-0 flex items-center justify-center"
-                              style={{ fontSize: 7, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
-                              {pct > 0 ? `${pct}%` : ""}
+                          {/* Anel de acerto com label "acerto" abaixo */}
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="relative">
+                              <CircularProgress pct={pct} color={ringColor} size={34} stroke={3} />
+                              <div className="absolute inset-0 flex items-center justify-center"
+                                style={{ fontSize: 7, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
+                                {pct > 0 ? `${pct}%` : "—"}
+                              </div>
                             </div>
+                            <span className="text-[8px] text-gray-600 leading-none">acerto</span>
                           </div>
                         </div>
                         <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors leading-tight mb-2 line-clamp-2">{s.name}</p>
                         <div className="flex items-center justify-between mt-auto">
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-bold", badge.color)}>{badge.label}</span>
+                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-1", badge.color)}>
+                            <span>{badge.emoji}</span>
+                            <span>{badge.label}</span>
+                          </span>
                           <span className="text-[10px] text-gray-600">{ss?.total ? `${ss.total} feitas` : "Iniciar →"}</span>
                         </div>
                       </button>
