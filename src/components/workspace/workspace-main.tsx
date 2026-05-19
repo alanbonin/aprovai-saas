@@ -285,9 +285,9 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
   const [homeStats, setHomeStats] = useState<{
     totalAnswered: number; overallAccuracy: number; streak: number; todayCount: number;
     xp: number; levelName: string; levelColor: string; xpProgress: number;
-    subjectStats: { name: string; accuracy: number; total: number }[];
+    subjectStats: { name: string; subjectId: string; accuracy: number; total: number }[];
     flashcardDueToday: number;
-    pontoCritico: { subjectName: string; accuracy: number; urgencia: string }[];
+    pontoCritico: { subjectName: string; subjectId: string; accuracy: number; urgencia: string }[];
     prontidao: number | null;
   } | null>(null);
   const [celebrate, setCelebrate] = useState<{ msg: string } | null>(null);
@@ -642,7 +642,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     )}
 
                     {homeStats.pontoCritico.slice(0, 2).map(p => {
-                      const subj = subjects.find(s => s.name.toLowerCase().includes(p.subjectName.toLowerCase().slice(0, 6)));
+                      const subj = subjects.find(s => s.id === p.subjectId);
                       return (
                         <button key={p.subjectName}
                           onClick={() => subj && (setSelectedSubject(subj), setActiveTab("questoes"))}
@@ -729,10 +729,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   {subjects.map((s, idx) => {
                     const color = getSubjectColor(idx);
                     const abbr = getSubjectAbbr(s.name);
-                    const ss = homeStats?.subjectStats.find(x =>
-                      x.name.toLowerCase().includes(s.name.toLowerCase().slice(0, 6)) ||
-                      s.name.toLowerCase().includes(x.name.toLowerCase().slice(0, 6))
-                    );
+                    // Busca por subjectId exato primeiro (evita colisão entre "Direito X" e "Direito Y")
+                    const ss = homeStats?.subjectStats.find(x => x.subjectId === s.id);
                     const pct = ss && ss.total > 0 ? ss.accuracy : 0;
                     const ringColor = pct >= 70 ? "#34d399" : pct >= 40 ? color : ss?.total ? "#ef4444" : "rgba(255,255,255,0.1)";
                     const badge = getDifficultyBadge(ss?.total ? ss.accuracy : null);
@@ -754,7 +752,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                                 {pct > 0 ? `${pct}%` : "—"}
                               </div>
                             </div>
-                            <span className="text-[8px] text-gray-600 leading-none">acerto</span>
+                            <span className="text-[8px] text-gray-600 leading-none">de acerto</span>
                           </div>
                         </div>
                         <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors leading-tight mb-2 line-clamp-2">{s.name}</p>

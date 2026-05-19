@@ -195,10 +195,11 @@ export async function GET() {
     ? Math.max(0, Math.ceil((new Date(profile.dataProva).getTime() - now.getTime()) / 86400000))
     : null;
 
-  const pontoCritico: { subjectName: string; accuracy: number; urgencia: "alta" | "media" | "baixa" }[] = subjectStats
+  const pontoCritico: { subjectName: string; subjectId: string; accuracy: number; urgencia: "alta" | "media" | "baixa" }[] = subjectStats
     .filter(s => s.accuracy < 60 && s.total >= 5)
     .map(s => ({
       subjectName: s.name,
+      subjectId: s.subjectId,
       accuracy: s.accuracy,
       urgencia: (s.accuracy < 40 ? "alta" : s.accuracy < 50 ? "media" : "baixa") as "alta" | "media" | "baixa",
     }))
