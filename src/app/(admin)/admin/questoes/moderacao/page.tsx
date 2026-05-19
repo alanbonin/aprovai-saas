@@ -11,6 +11,7 @@ export interface PendingQuestion {
   optionE: string | null;
   answer: string | null;
   explanation: string | null;
+  analysis: string | null; // JSON: { banca: string|null, questao: string|null }
   banca: string | null;
   year: number | null;
   level: string | null;
@@ -26,7 +27,7 @@ async function fetchPendingQuestions(): Promise<{
   try {
     const { data, error } = await db
       .from("Question")
-      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, source, createdAt, subjectId")
+      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, analysis, banca, year, level, source, createdAt, subjectId")
       .eq("aprovado", false)
       .order("createdAt", { ascending: false })
       .limit(200);

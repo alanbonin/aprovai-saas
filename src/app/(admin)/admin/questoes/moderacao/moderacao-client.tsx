@@ -280,10 +280,35 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
                   {/* Justificativa */}
                   {q.explanation && (
                     <div className="rounded-lg bg-amber-500/5 border border-amber-500/15 p-3">
-                      <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider mb-1.5">💡 Justificativa</p>
+                      <p className="text-xs font-medium text-amber-400/80 uppercase tracking-wider mb-1.5">📖 Justificativa</p>
                       <p className="text-sm text-gray-300 leading-relaxed">{q.explanation}</p>
                     </div>
                   )}
+
+                  {/* Dicas (banca + tópico) */}
+                  {(() => {
+                    if (!q.analysis) return null;
+                    try {
+                      const dicas = JSON.parse(q.analysis) as { banca?: string | null; questao?: string | null };
+                      if (!dicas.banca && !dicas.questao) return null;
+                      return (
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {dicas.banca && (
+                            <div className="rounded-lg bg-blue-500/5 border border-blue-500/15 p-3">
+                              <p className="text-xs font-medium text-blue-400/80 uppercase tracking-wider mb-1.5">🏛️ Dica da Banca</p>
+                              <p className="text-sm text-gray-300 leading-relaxed">{dicas.banca}</p>
+                            </div>
+                          )}
+                          {dicas.questao && (
+                            <div className="rounded-lg bg-purple-500/5 border border-purple-500/15 p-3">
+                              <p className="text-xs font-medium text-purple-400/80 uppercase tracking-wider mb-1.5">💡 Dica do Tópico</p>
+                              <p className="text-sm text-gray-300 leading-relaxed">{dicas.questao}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    } catch { return null; }
+                  })()}
                 </div>
               )}
 

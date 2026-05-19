@@ -78,11 +78,12 @@ REGRAS OBRIGATÓRIAS:
 - 5 alternativas plausíveis — distratores tecnicamente plausíveis mas errados
 - Cite artigo/lei/súmula REAL no campo "artigo"
 - "justificativa": 2-4 frases explicando POR QUE a correta está certa, citando o artigo exato
-- "dicaBanca": 1-2 frases sobre o PADRÃO TÍPICO desta banca neste tema — armadilha que ela usa, o que ela gosta de cobrar, dica de prova
+- "dicaBanca": 1-2 frases sobre o PADRÃO TÍPICO desta banca neste tema — armadilha que ela costuma usar, como ela formula as pegadinhas, o que ela gosta de cobrar
+- "dicaQuestao": 1-2 frases de dica de estudo ESPECÍFICA para o tópico da questão — macete, regra prática ou ponto de atenção para não errar na prova
 - Nível variado: ~30% fácil, 50% médio, 20% difícil
 
 Retorne APENAS JSON válido, sem markdown, sem texto fora do JSON:
-{"questoes":[{"enunciado":"texto completo","alternativas":["A) texto","B) texto","C) texto","D) texto","E) texto"],"correta":"B","topico":"tópico específico","artigo":"Art. X da Lei Y ou Súmula Z do STJ","justificativa":"explicação 2-4 frases citando artigo","dicaBanca":"padrão típico da banca neste tema — armadilha ou dica de prova","nivel":"medio"}]}`;
+{"questoes":[{"enunciado":"texto completo","alternativas":["A) texto","B) texto","C) texto","D) texto","E) texto"],"correta":"B","topico":"tópico específico","artigo":"Art. X da Lei Y ou Súmula Z do STJ","justificativa":"explicação 2-4 frases citando artigo","dicaBanca":"padrão e armadilha típica desta banca neste tema","dicaQuestao":"macete ou ponto de atenção específico deste tópico","nivel":"medio"}]}`;
 }
 
 export async function POST(req: Request) {
@@ -149,9 +150,12 @@ export async function POST(req: Request) {
 
           const toInsert = questoes.map((q: {
             enunciado: string; alternativas: string[]; correta: string;
-            topico: string; artigo?: string; justificativa: string; dicaBanca?: string; nivel?: string;
+            topico: string; artigo?: string; justificativa: string; dicaBanca?: string; dicaQuestao?: string; nivel?: string;
           }) => {
             const { optionA, optionB, optionC, optionD, optionE, answer } = shuffleAndBuild(q.alternativas, q.correta);
+            const dicas = (q.dicaBanca || q.dicaQuestao)
+              ? JSON.stringify({ banca: q.dicaBanca ?? null, questao: q.dicaQuestao ?? null })
+              : null;
             return {
               subjectId: sid,
               banca: resolvedBanca,
@@ -161,6 +165,7 @@ export async function POST(req: Request) {
               optionA, optionB, optionC, optionD, optionE,
               answer,
               explanation: q.justificativa ?? null,
+              analysis: dicas,
               source: "ia",
               aprovado: false,
             };
@@ -236,9 +241,12 @@ export async function POST(req: Request) {
   const questoes = generated.questoes ?? [];
   if (questoes.length === 0) return NextResponse.json({ error: "IA não retornou questões" }, { status: 500 });
 
-  type QItem = { enunciado: string; alternativas: string[]; correta: string; topico: string; artigo?: string; justificativa: string; dicaBanca?: string; nivel?: string; };
+  type QItem = { enunciado: string; alternativas: string[]; correta: string; topico: string; artigo?: string; justificativa: string; dicaBanca?: string; dicaQuestao?: string; nivel?: string; };
   const toInsert = (questoes as QItem[]).map((q) => {
     const { optionA, optionB, optionC, optionD, optionE, answer } = shuffleAndBuild(q.alternativas, q.correta);
+    const dicas = (q.dicaBanca || q.dicaQuestao)
+      ? JSON.stringify({ banca: q.dicaBanca ?? null, questao: q.dicaQuestao ?? null })
+      : null;
     return {
       subjectId,
       banca: resolvedBanca,
@@ -248,6 +256,7 @@ export async function POST(req: Request) {
       optionA, optionB, optionC, optionD, optionE,
       answer,
       explanation: q.justificativa ?? null,
+      analysis: dicas,
       source: "ia",
       aprovado: false,
     };
