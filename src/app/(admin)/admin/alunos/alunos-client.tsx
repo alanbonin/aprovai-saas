@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+
 import { cn } from "@/lib/utils";
 import { UserPlus, Crown, Trash2, ChevronDown, X, AlertCircle, CheckCircle2, Search, BarChart2, Loader2, Target, Layers, ClipboardList, Flame, Zap } from "lucide-react";
 
@@ -31,7 +31,6 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 }
 
 export function AlunosClient({ users: initialUsers, plans, planMap, subMap: initialSubMap }: Props) {
-  const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [subMap, setSubMap] = useState(initialSubMap);
   const [search, setSearch] = useState("");
@@ -87,10 +86,14 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error ?? "Erro ao criar aluno", false); return; }
+      // Adiciona imediatamente na lista sem precisar recarregar
+      if (data.user) {
+        setUsers(prev => [data.user, ...prev]);
+        if (form.planId) setSubMap(m => ({ ...m, [data.user.id]: form.planId }));
+      }
       showToast("Aluno criado com sucesso!");
       setShowCreate(false);
       setForm({ name: "", email: "", password: "", planId: "" });
-      router.refresh();
     } finally {
       setLoading(false);
     }

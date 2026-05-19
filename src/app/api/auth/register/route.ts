@@ -83,7 +83,29 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-  // Dispara boas-vindas + ativação do trial em background (não-bloqueante)
+  // ── Ativa Trial de 7 dias automaticamente ───────────────────────────────
+  const { data: trialPlan } = await db
+    .from("Plan")
+    .select("id")
+    .eq("slug", "trial")
+    .eq("active", true)
+    .maybeSingle();
+
+  if (trialPlan) {
+    const trialEnd = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    await db.from("Subscription").insert({
+      id: crypto.randomUUID(),
+      userId: data.id,
+      planId: trialPlan.id,
+      status: "ACTIVE",
+      startDate: now,
+      endDate: trialEnd,
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+
+  // Dispara boas-vindas + notificação admin em background (não-bloqueante)
   void sendBoasVindas(data.id, email, name);
   void notifyAdminNewUser(name, email);
 

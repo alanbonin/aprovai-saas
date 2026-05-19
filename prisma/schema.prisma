@@ -230,6 +230,10 @@ model StudentProfile {
   orgao           String?
   dataProva       String?
   dificuldades    String?
+  nomePreferido   String?  // como o aluno quer ser chamado (pode ser apelido)
+  horasEstudo     Int?     // horas disponíveis por dia para estudar
+  nivelAtual      String?  // iniciante | intermediario | avancado
+  disponibilidade String?  // manha | tarde | noite | variado
   onboardingDone  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

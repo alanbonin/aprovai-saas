@@ -38,9 +38,10 @@ export default function CadastroPage() {
       return;
     }
 
-    // Se há sessão ativa (email auto-confirmado no Supabase), vai para o Briefing do Dia
+    // Se há sessão ativa (email auto-confirmado no Supabase), vai para o workspace
+    // que vai detectar onboardingDone=false e redirecionar para /onboarding
     if (data.session) {
-      window.location.href = "/hoje";
+      window.location.href = "/workspace";
       return;
     }
 
@@ -53,9 +54,17 @@ export default function CadastroPage() {
     return (
       <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
         <div className="w-full max-w-sm text-center">
-          <div className="flex items-center justify-center mb-8">
+          <div className="flex items-center justify-center gap-3 mb-8">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-full.svg" alt="AprovAI360" className="h-12 w-auto" />
+            <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
+            <div className="text-left">
+              <p className="font-bold text-lg leading-tight">
+                <span className="text-white">Aprov</span>
+                <span style={{ color: "#0ab5bd" }}>AI</span>
+                <span className="text-white">360</span>
+              </p>
+              <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
+            </div>
           </div>
           <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
             <div className="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
@@ -82,9 +91,17 @@ export default function CadastroPage() {
   return (
     <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        <div className="flex items-center justify-center mb-8">
+        <div className="flex items-center justify-center gap-3 mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-full.svg" alt="AprovAI360" className="h-12 w-auto" />
+          <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
+          <div className="text-left">
+            <p className="font-bold text-lg leading-tight">
+              <span className="text-white">Aprov</span>
+              <span style={{ color: "#0ab5bd" }}>AI</span>
+              <span className="text-white">360</span>
+            </p>
+            <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
+          </div>
         </div>
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">

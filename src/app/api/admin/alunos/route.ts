@@ -69,7 +69,17 @@ export async function POST(req: Request) {
     });
   }
 
-  return NextResponse.json({ ok: true, userId: dbUser?.id });
+  // Retorna o usuário completo para o frontend adicionar na lista sem reload
+  return NextResponse.json({
+    ok: true,
+    user: {
+      id: newId,
+      name,
+      email,
+      role: "STUDENT",
+      createdAt: now,
+    },
+  });
 }
 
 // PATCH — atribui/muda plano de um aluno
@@ -101,7 +111,7 @@ export async function PATCH(req: Request) {
   return NextResponse.json({ ok: true });
 }
 
-// DELETE — remove aluno
+// DELETE — remove aluno e todos os dados relacionados
 export async function DELETE(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
@@ -111,9 +121,30 @@ export async function DELETE(req: Request) {
   const { data: u } = await db.from("User").select("supabaseId").eq("id", userId).maybeSingle();
   if (!u?.supabaseId) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
+  // Remove todos os registros com FK em userId (ordem: dependentes → pai)
+  await db.from("UserAgent").delete().eq("userId", userId);
+  await db.from("StudentSubject").delete().eq("userId", userId);
+  await db.from("StudentProfile").delete().eq("userId", userId);
+  await db.from("Progress").delete().eq("userId", userId);
+  await db.from("SimuladoHistory").delete().eq("userId", userId);
+  await db.from("Note").delete().eq("userId", userId);
+  await db.from("FlashcardSet").delete().eq("userId", userId);
+  await db.from("AiUsage").delete().eq("userId", userId);
   await db.from("Subscription").delete().eq("userId", userId);
-  await db.from("User").delete().eq("id", userId);
-  await db.auth.admin.deleteUser(u.supabaseId);
+
+  // Agora deleta o User (sem FKs pendentes)
+  const { error: delErr } = await db.from("User").delete().eq("id", userId);
+  if (delErr) {
+    console.error("[admin/alunos DELETE] User delete error:", delErr.message);
+    return NextResponse.json({ error: `Erro ao remover usuário: ${delErr.message}` }, { status: 500 });
+  }
+
+  // Remove do Supabase Auth
+  const { error: authErr } = await db.auth.admin.deleteUser(u.supabaseId);
+  if (authErr) {
+    // Não falha — o DB já foi limpo, o usuário não consegue mais logar
+    console.warn("[admin/alunos DELETE] Auth delete warning:", authErr.message);
+  }
 
   return NextResponse.json({ ok: true });
 }

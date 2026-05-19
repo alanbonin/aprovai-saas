@@ -5,6 +5,7 @@ import { streamWithCache, MODELS } from "@/lib/anthropic";
 import { chatLimiter } from "@/lib/rate-limit";
 import { getWeekStart } from "@/lib/utils";
 import { buildAgentSystemPrompt } from "@/lib/agents";
+import { buildStudentContext } from "@/lib/student-context";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
     }, { status: 429 });
   }
 
-  const { message, agentIds, subjectId, history, profileContext } = await req.json();
+  const { message, agentIds, subjectId, history } = await req.json();
 
   const { data: agents } = await db.from("Agent").select("*").in("id", agentIds);
   const { data: subject } = subjectId
@@ -38,12 +39,8 @@ export async function POST(req: Request) {
 
   const agentList = (agents ?? []) as { name: string; categoria: string | null; banca: string | null; systemPrompt: string; description: string }[];
 
-  // Contexto do aluno (anexado ao system prompt de qualquer configuração)
-  const alunoCtx = [
-    profileContext?.cargo  ? `- Cargo alvo: ${profileContext.cargo}`  : "",
-    profileContext?.orgao  ? `- Órgão: ${profileContext.orgao}`        : "",
-    profileContext?.dataProva ? `- Data da prova: ${profileContext.dataProva}` : "",
-  ].filter(Boolean).join("\n");
+  // Contexto completo do aluno — buscado no servidor, não depende do cliente
+  const studentCtx = await buildStudentContext(dbUser.id, agentIds[0]);
 
   const materiaCtx = subject
     ? `\nMATÉRIA EM ESTUDO: ${subject.name}${subject.description ? ` — ${subject.description}` : ""}`
@@ -52,18 +49,18 @@ export async function POST(req: Request) {
   let systemPrompt: string;
 
   if (agentList.length === 1) {
-    // Agente único: usa o systemPrompt configurado direto — sem diluição
     const a = agentList[0];
     const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
     systemPrompt = `${base}
 
-CONTEXTO DO ALUNO:
-${alunoCtx}${materiaCtx}
-${subject ? "Sempre relacione sua resposta a essa matéria quando pertinente." : ""}
+${studentCtx}
+${materiaCtx ? `\nMATÉRIA EM FOCO: ${materiaCtx.trim()}${subject ? "\nSempre relacione sua resposta a essa matéria quando pertinente." : ""}` : ""}
 
-Responda sempre em português brasileiro. Seja direto, prático e focado no que cai em prova.`;
+REGRA ABSOLUTA: NUNCA crie questões, exercícios ou testes no chat. Use os marcadores [[IR:X]] para direcionar o aluno às seções do app:
+[[IR:questoes]] → resolver questões | [[IR:flashcards]] → revisão espaçada | [[IR:simulado]] → simulado completo
+[[IR:redacao]] → treinar redação | [[IR:relatorio]] → ver desempenho | [[IR:plano]] → plano de estudos
+[[IR:edital]] → analisar edital | [[IR:desafio]] → desafio diário`;
   } else {
-    // Múltiplos agentes: cada um mantém sua especialidade configurada
     const agentContexts = agentList.map(a => {
       const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
       return `--- ${a.name} ---\n${base}`;
@@ -73,14 +70,16 @@ Responda sempre em português brasileiro. Seja direto, prático e focado no que 
 
 ${agentContexts}
 
-CONTEXTO DO ALUNO:
-${alunoCtx}${materiaCtx}
+${studentCtx}
+${materiaCtx ? `\nMATÉRIA EM FOCO:${materiaCtx}` : ""}
 
 REGRAS:
 - Cada mentor responde apenas dentro da sua especialidade configurada acima
 - Quando relevante, identifique qual mentor está falando (ex: "Como especialista em CESPE...")
 - Não extrapole para áreas fora da especialidade de cada agente
-- Sempre em português brasileiro. Direto ao ponto. Foque no que cai em prova.`;
+- Sempre em português brasileiro. Direto ao ponto. Foque no que cai em prova.
+- NUNCA crie questões ou exercícios no chat. Use marcadores [[IR:X]] para direcionar ao app:
+  [[IR:questoes]] | [[IR:flashcards]] | [[IR:simulado]] | [[IR:redacao]] | [[IR:relatorio]] | [[IR:plano]] | [[IR:edital]] | [[IR:desafio]]`;
   }
 
   // Registrar uso

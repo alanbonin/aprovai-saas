@@ -1,25 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
+import { getUserWithPlan, getWeeklyAiUsage } from "@/lib/db";
+import { db } from "@/lib/db";
 import { getWeekStart } from "@/lib/utils";
 import { buildAgentSystemPrompt } from "@/lib/agents";
 import { streamWithCache, MODELS } from "@/lib/anthropic";
-
-const MEMORY_PREFIX = "__MENTOR_MEMORY__";
-
-async function fetchMentorMemory(userId: string, agentId: string): Promise<string | null> {
-  const { data: note } = await db
-    .from("Note")
-    .select("content")
-    .eq("userId", userId)
-    .like("content", `${MEMORY_PREFIX}:${agentId}:%`)
-    .order("updatedAt", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  if (!note) return null;
-  return note.content.replace(`${MEMORY_PREFIX}:${agentId}:`, "").trim();
-}
+import { buildStudentContext } from "@/lib/student-context";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -56,13 +42,20 @@ export async function POST(req: Request) {
     await db.from("AiUsage").insert({ id: crypto.randomUUID(), userId: dbUser.id, agentId, weekStart, count: 1, updatedAt: new Date().toISOString() });
   }
 
-  // ── Memória do mentor ────────────────────────────────────────────────────────
-  const memory = await fetchMentorMemory(dbUser.id, agentId);
+  // ── Contexto completo do aluno (perfil + desempenho + memória) ─────────────
+  const studentCtx = await buildStudentContext(dbUser.id, agentId);
 
-  let systemPrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria, agent.banca);
-  if (memory) {
-    systemPrompt += `\n\n## MEMÓRIA DAS SESSÕES ANTERIORES COM ESTE ALUNO\n${memory}\n\nUse estas informações para personalizar suas respostas. Lembre-se dos pontos fortes e fracos do aluno sem mencioná-los explicitamente — apenas adapte sua abordagem.`;
-  }
+  const basePrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria, agent.banca);
+
+  const systemPrompt = `${basePrompt}
+
+${studentCtx}
+
+REGRA ABSOLUTA: NUNCA crie questões, exercícios ou testes no chat. Redirecione usando marcadores:
+[[IR:questoes]] → resolver questões | [[IR:flashcards]] → revisão/flashcards | [[IR:simulado]] → simulado completo
+[[IR:redacao]] → treinar redação | [[IR:relatorio]] → ver desempenho | [[IR:plano]] → plano de estudos
+[[IR:edital]] → analisar edital | [[IR:desafio]] → desafio diário
+O app converte [[IR:X]] em botão clicável — use sempre que sugerir uma atividade.`;
 
   const stream = streamWithCache({
     model: MODELS.sonnet,

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { getUserWithPlan, getWeeklyAiUsage } from "@/lib/db";
+import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -13,6 +13,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Admin vai direto para o painel admin
   if (dbUser.role === "ADMIN") redirect("/admin");
+
+  // Verifica onboarding — alunos sem perfil completo vão para /onboarding
+  const { data: profile } = await db
+    .from("StudentProfile")
+    .select("onboardingDone")
+    .eq("userId", dbUser.id)
+    .maybeSingle();
+  if (!profile?.onboardingDone) redirect("/onboarding");
 
   // Busca créditos de IA da semana
   const aiCreditsTotal = 10;
