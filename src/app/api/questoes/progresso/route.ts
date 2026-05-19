@@ -96,6 +96,8 @@ function calcNextReview(existing: { interval: number; easeFactor: number } | nul
   return { interval: newInterval, easeFactor: newEase, nextReview: nextReview.toISOString(), correct };
 }
 
+const TRIAL_DAILY_LIMIT = 20;
+
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -103,6 +105,36 @@ export async function POST(req: Request) {
 
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).maybeSingle();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  // ── Limite trial: 20 questões/dia ────────────────────────────────────────
+  const { data: subRow } = await db
+    .from("Subscription")
+    .select("status, endDate, Plan(price)")
+    .eq("userId", dbUser.id)
+    .eq("status", "ACTIVE")
+    .maybeSingle();
+
+  const planPrice = (() => {
+    const p = (subRow as { Plan?: { price?: number } | { price?: number }[] | null } | null)?.Plan;
+    if (!p) return 0;
+    return Array.isArray(p) ? (p[0]?.price ?? 0) : (p.price ?? 0);
+  })();
+  const isTrial = !subRow || planPrice === 0 || (subRow.endDate && new Date(subRow.endDate) < new Date());
+
+  if (isTrial) {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const { count } = await db
+      .from("Progress")
+      .select("id", { count: "exact", head: true })
+      .eq("userId", dbUser.id)
+      .gte("reviewedAt", todayStart.toISOString());
+    const todayCount = count ?? 0;
+    if (todayCount >= TRIAL_DAILY_LIMIT) {
+      return NextResponse.json({ limitReached: true, todayCount, limit: TRIAL_DAILY_LIMIT }, { status: 200 });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const { questionId, correct, quality } = await req.json();
   const q = quality ?? (correct ? "ok" : "again");

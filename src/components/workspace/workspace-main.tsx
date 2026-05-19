@@ -548,16 +548,32 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               </div>
 
               {/* Meta do dia */}
-              <div className="mx-5 mt-3 rounded-2xl border border-white/[0.06] bg-[#0d1117] px-4 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm font-medium">🎯 Meta do dia</span>
-                  <span className="text-xs text-gray-500">{homeStats?.todayCount ?? 0}/20 questões</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
-                  <div className="h-full rounded-full bg-indigo-500 transition-all duration-500"
-                    style={{ width: `${Math.min(100, ((homeStats?.todayCount ?? 0) / 20) * 100)}%` }} />
-                </div>
-              </div>
+              {(() => {
+                const today = homeStats?.todayCount ?? 0;
+                const limit = 20;
+                const pct = Math.min(100, (today / limit) * 100);
+                const atLimit = !isPremium && today >= limit;
+                return (
+                  <div className="mx-5 mt-3 rounded-2xl border px-4 py-3"
+                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : "#0d1117", borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">🎯 {atLimit ? "Limite diário atingido" : "Questões hoje"}</span>
+                      <span className="text-xs font-semibold" style={{ color: atLimit ? "#a5b4fc" : "#6b7280" }}>
+                        {today}/{isPremium ? "∞" : limit}
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                      <div className="h-full rounded-full transition-all duration-500"
+                        style={{ width: `${pct}%`, background: atLimit ? "linear-gradient(90deg,#6366f1,#8b5cf6)" : "#6366f1" }} />
+                    </div>
+                    {atLimit && (
+                      <a href="/planos" className="block mt-2 text-center text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+                        ⚡ Fazer upgrade para questões ilimitadas →
+                      </a>
+                    )}
+                  </div>
+                );
+              })()}
 
               {/* ── Streak banner ── */}
               {homeStats && homeStats.streak >= 3 && (
@@ -791,6 +807,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     items={content.questoes as Question[]}
                     onProgressUpdate={onProgressUpdate}
                     onCelebrate={(msg: string) => setCelebrate({ msg })}
+                    isPremium={isPremium}
+                    todayCount={homeStats?.todayCount ?? 0}
                   />
                 ) : activeTab === "flashcards" ? (
                   <FlashcardsTab items={content.flashcards as Flashcard[]} />
@@ -1090,12 +1108,20 @@ function TermoTooltip({ termo, onClose }: { termo: GlossTermo; onClose: () => vo
 }
 
 // ── Toggle Questões Normal vs Adaptativas ────────────────────────────────────
-function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUpdate, onCelebrate }: {
+function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUpdate, onCelebrate, isPremium, todayCount }: {
   subjectId: string; subjectName: string; items: Question[];
   onProgressUpdate: (id: number, next: string) => void;
   onCelebrate?: (msg: string) => void;
+  isPremium: boolean; todayCount: number;
 }) {
   const [modo, setModo] = useState<"normal" | "adaptativo">("normal");
+
+  // Revisão Inteligente bloqueada para trial
+  const handleModoAdaptativo = () => {
+    if (!isPremium) { setModo("normal"); return; } // bloqueado — não muda
+    setModo("adaptativo");
+  };
+
   return (
     <div>
       <div className="flex gap-1 mb-4">
@@ -1104,15 +1130,21 @@ function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUp
             modo === "normal" ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white")}>
           <Target className="w-3.5 h-3.5" /> Por matéria
         </button>
-        <button onClick={() => setModo("adaptativo")}
-          className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-            modo === "adaptativo" ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white")}>
+        <button onClick={handleModoAdaptativo}
+          className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors relative",
+            modo === "adaptativo" ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white",
+            !isPremium && "opacity-60"
+          )}>
           <Brain className="w-3.5 h-3.5" /> 🧠 Revisão Inteligente
+          {!isPremium && <Lock size={10} className="ml-1 text-gray-500" />}
         </button>
       </div>
+      {!isPremium && modo === "adaptativo" && (
+        <LockedSection recurso="Revisão Inteligente" desc="Modo adaptativo com algoritmo SM-2 personalizado ao seu desempenho. Disponível nos planos pagos." onUpgrade={() => setModo("normal")} />
+      )}
       {modo === "normal"
-        ? <QuestoesTab items={items} subjectName={subjectName} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} />
-        : <QuestoesAdaptativas subjectId={subjectId} subjectName={subjectName} onClose={() => setModo("normal")} />
+        ? <QuestoesTab items={items} subjectName={subjectName} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} isPremium={isPremium} todayCount={todayCount} />
+        : isPremium ? <QuestoesAdaptativas subjectId={subjectId} subjectName={subjectName} onClose={() => setModo("normal")} /> : null
       }
     </div>
   );
@@ -1165,16 +1197,19 @@ const CORRECT_MSGS = [
   "💪 Excelente! +15 XP", "⚡ Perfeito! Ótimo ritmo!", "🏆 Correto! +15 XP",
 ];
 
-function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate }: {
+function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPremium = true, todayCount = 0 }: {
   items: Question[]; subjectName: string;
   onProgressUpdate: (id: number, next: string) => void;
   onCelebrate?: (msg: string) => void;
+  isPremium?: boolean; todayCount?: number;
 }) {
+  const DAILY_LIMIT = 20;
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [showExpl, setShowExpl] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [answered, setAnswered] = useState<Set<number>>(new Set());
+  const [dailyLimitHit, setDailyLimitHit] = useState(!isPremium && todayCount >= DAILY_LIMIT);
   const [filterBanca, setFilterBanca] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [filterStatus, setFilterStatus] = useState<"todas" | "pendentes" | "revisadas" | "favoritas">("todas");
@@ -1302,6 +1337,11 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate }: {
     });
     if (res.ok) {
       const data = await res.json();
+      // Limite diário atingido (trial)
+      if (data.limitReached) {
+        setDailyLimitHit(true);
+        return;
+      }
       onProgressUpdate(q.id, data.nextReview);
       setAnswered(prev => new Set([...prev, q.id]));
     }
@@ -1312,6 +1352,29 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate }: {
   }
 
   const isFinished = current >= filtered.length;
+
+  // Parede de limite diário trial
+  if (dailyLimitHit) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4 text-3xl"
+          style={{ background: "linear-gradient(135deg,rgba(99,102,241,0.2),rgba(139,92,246,0.1))", border: "1px solid rgba(99,102,241,0.3)" }}>
+          🎯
+        </div>
+        <h2 className="text-xl font-bold text-white mb-2">Limite diário atingido!</h2>
+        <p className="text-gray-400 text-sm mb-1">Você já respondeu <strong className="text-white">20 questões</strong> hoje.</p>
+        <p className="text-gray-500 text-xs mb-6">No plano Trial, o limite é de 20 questões por dia no total.</p>
+        <div className="w-full max-w-xs space-y-2">
+          <a href="/planos"
+            className="block w-full py-3.5 rounded-2xl font-bold text-sm text-center transition-all hover:scale-[1.02]"
+            style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", color: "#fff", boxShadow: "0 0 24px rgba(99,102,241,0.35)" }}>
+            ⚡ Fazer upgrade — questões ilimitadas
+          </a>
+          <p className="text-[11px] text-gray-600">Seu limite reseta amanhã à meia-noite</p>
+        </div>
+      </div>
+    );
+  }
 
   if (isFinished) {
     return (
