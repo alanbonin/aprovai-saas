@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { BookMarked, Sparkles, RefreshCw, AlertCircle } from "lucide-react";
+import { BookMarked, Sparkles, RefreshCw, AlertCircle, ChevronDown, ChevronUp, AlertTriangle, Tag, FileText, ClipboardList } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Artigo {
@@ -8,6 +8,10 @@ interface Artigo {
   topico: string;
   frequencia: "muito alta" | "alta" | "media";
   dica: string;
+  definicao?: string;
+  palavras_chave?: string[];
+  pegadinha?: string;
+  exemplo_prova?: string;
 }
 
 interface ArtigosData {
@@ -24,6 +28,119 @@ const FREQ_CONFIG = {
   alta:         { label: "Alta",        color: "text-amber-400",  bg: "bg-amber-500/10 border-amber-500/20",   bar: "bg-amber-500",   pct: 67  },
   media:        { label: "Média",       color: "text-blue-400",   bg: "bg-blue-500/10 border-blue-500/20",     bar: "bg-blue-500",    pct: 40  },
 };
+
+function ArtigoCard({ artigo, index }: { artigo: Artigo; index: number }) {
+  const [expanded, setExpanded] = useState(false);
+  const freq = FREQ_CONFIG[artigo.frequencia] ?? FREQ_CONFIG.media;
+  const hasDetails = artigo.definicao || artigo.palavras_chave?.length || artigo.pegadinha || artigo.exemplo_prova;
+
+  return (
+    <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] overflow-hidden">
+      {/* Header sempre visível */}
+      <button
+        onClick={() => hasDetails && setExpanded(v => !v)}
+        className={cn(
+          "w-full text-left p-4 flex items-start gap-3",
+          hasDetails ? "cursor-pointer hover:bg-white/[0.03] transition-colors" : "cursor-default"
+        )}
+      >
+        {/* Rank */}
+        <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-[11px] font-bold text-gray-500 flex-shrink-0 mt-0.5">
+          {index + 1}
+        </div>
+
+        {/* Conteúdo */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start gap-2 flex-wrap mb-1">
+            <span className="text-sm font-bold text-indigo-300 font-mono">{artigo.referencia}</span>
+            <span className={cn(
+              "text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0",
+              freq.bg, freq.color
+            )}>
+              {freq.label}
+            </span>
+          </div>
+          <p className="text-sm text-gray-200 mb-1">{artigo.topico}</p>
+          <p className="text-xs text-gray-500 italic">💡 {artigo.dica}</p>
+
+          {/* Freq bar */}
+          <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden w-full">
+            <div
+              className={cn("h-full rounded-full transition-all duration-500", freq.bar)}
+              style={{ width: `${freq.pct}%`, opacity: 0.6 }}
+            />
+          </div>
+        </div>
+
+        {/* Expand icon */}
+        {hasDetails && (
+          <div className="flex-shrink-0 mt-0.5">
+            {expanded
+              ? <ChevronUp className="w-4 h-4 text-gray-600" />
+              : <ChevronDown className="w-4 h-4 text-gray-600" />
+            }
+          </div>
+        )}
+      </button>
+
+      {/* Detalhes expansíveis */}
+      {expanded && hasDetails && (
+        <div className="px-4 pb-4 border-t border-white/[0.06] pt-3 space-y-3 ml-9">
+
+          {/* Definição */}
+          {artigo.definicao && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <FileText className="w-3.5 h-3.5 text-indigo-400" />
+                <span className="text-[11px] font-semibold text-indigo-400 uppercase tracking-wide">Definição</span>
+              </div>
+              <p className="text-sm text-gray-300 leading-relaxed">{artigo.definicao}</p>
+            </div>
+          )}
+
+          {/* Palavras-chave */}
+          {artigo.palavras_chave && artigo.palavras_chave.length > 0 && (
+            <div>
+              <div className="flex items-center gap-1.5 mb-1.5">
+                <Tag className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wide">Palavras-chave</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {artigo.palavras_chave.map((kw, i) => (
+                  <span key={i} className="text-[11px] px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Pegadinha */}
+          {artigo.pegadinha && (
+            <div className="rounded-lg bg-amber-500/5 border border-amber-500/20 p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                <span className="text-[11px] font-semibold text-amber-400 uppercase tracking-wide">Pegadinha de prova</span>
+              </div>
+              <p className="text-sm text-amber-200/80">{artigo.pegadinha}</p>
+            </div>
+          )}
+
+          {/* Exemplo de prova */}
+          {artigo.exemplo_prova && (
+            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <ClipboardList className="w-3.5 h-3.5 text-gray-400" />
+                <span className="text-[11px] font-semibold text-gray-400 uppercase tracking-wide">Como já foi cobrado</span>
+              </div>
+              <p className="text-sm text-gray-400 italic">{artigo.exemplo_prova}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function ArtigosInner() {
   const [subjects, setSubjects]       = useState<Subject[]>([]);
@@ -91,7 +208,7 @@ export function ArtigosInner() {
             Artigos Mais Cobrados
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            Os 10 artigos, leis e súmulas que mais caem nas provas — gerados com IA
+            Os 10 artigos, leis e súmulas que mais caem — com definição, pegadinhas e exemplos de prova
           </p>
         </div>
       </div>
@@ -103,6 +220,9 @@ export function ArtigosInner() {
           onChange={e => setSelectedId(e.target.value)}
           className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500/50"
         >
+          {subjects.length === 0 && (
+            <option value="">Nenhuma matéria cadastrada</option>
+          )}
           {subjects.map(s => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
@@ -140,14 +260,14 @@ export function ArtigosInner() {
       )}
 
       {/* Empty — no cache yet */}
-      {!loading && !generating && !data && !error && (
+      {!loading && !generating && !data && !error && selectedId && (
         <div className="text-center py-14">
           <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
             <BookMarked className="w-8 h-8 text-indigo-400" />
           </div>
           <h2 className="text-lg font-bold text-gray-300 mb-2">Nenhum dado para {selectedName}</h2>
           <p className="text-gray-600 text-sm mb-5 max-w-xs mx-auto">
-            Clique em "Gerar" para a IA listar os artigos mais cobrados em provas para esta matéria.
+            Clique em &quot;Gerar&quot; para a IA listar os artigos mais cobrados, com definições e pegadinhas.
           </p>
           <button
             onClick={generate}
@@ -159,10 +279,19 @@ export function ArtigosInner() {
         </div>
       )}
 
+      {/* Sem matérias */}
+      {!loading && !generating && subjects.length === 0 && (
+        <div className="text-center py-14">
+          <p className="text-gray-500 text-sm">
+            Adicione matérias à sua lista de estudo para usar os artigos IA.
+          </p>
+        </div>
+      )}
+
       {/* Results */}
       {!loading && !generating && data && (
         <>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-300">
               {data.artigos.length} itens para <span className="text-white">{data.subjectName}</span>
             </h2>
@@ -181,46 +310,13 @@ export function ArtigosInner() {
                 {v.label}
               </div>
             ))}
+            <span className="text-[11px] text-gray-600 ml-auto">Toque no card para ver detalhes</span>
           </div>
 
           <div className="space-y-2">
-            {data.artigos.map((a, i) => {
-              const freq = FREQ_CONFIG[a.frequencia] ?? FREQ_CONFIG.media;
-              return (
-                <div
-                  key={i}
-                  className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 flex items-start gap-3"
-                >
-                  {/* Rank */}
-                  <div className="w-6 h-6 rounded-lg bg-white/5 flex items-center justify-center text-[11px] font-bold text-gray-500 flex-shrink-0 mt-0.5">
-                    {i + 1}
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start gap-2 flex-wrap mb-1">
-                      <span className="text-sm font-bold text-indigo-300 font-mono">{a.referencia}</span>
-                      <span className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded-full border flex-shrink-0",
-                        freq.bg, freq.color
-                      )}>
-                        {freq.label}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-200 mb-1.5">{a.topico}</p>
-                    <p className="text-xs text-gray-500 italic">💡 {a.dica}</p>
-
-                    {/* Freq bar */}
-                    <div className="mt-2 h-1 rounded-full bg-white/10 overflow-hidden w-full">
-                      <div
-                        className={cn("h-full rounded-full transition-all duration-500", freq.bar)}
-                        style={{ width: `${freq.pct}%`, opacity: 0.6 }}
-                      />
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            {data.artigos.map((a, i) => (
+              <ArtigoCard key={i} artigo={a} index={i} />
+            ))}
           </div>
 
           <p className="text-[10px] text-gray-700 text-center mt-5">

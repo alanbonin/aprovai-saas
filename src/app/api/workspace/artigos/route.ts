@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import { createWithCache, MODELS } from "@/lib/anthropic";
+import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 
 const NOTE_PREFIX = "__ARTIGOS_COBRADOS__";
 
@@ -65,28 +65,30 @@ export async function POST(req: Request) {
 
   const prompt = `Liste os 10 artigos, leis, súmulas e tópicos MAIS COBRADOS em provas de concursos públicos brasileiros para a matéria: ${subjectName}${perfilLine}
 
-Para cada item, forneça:
+Para cada item, forneça TODOS estes campos:
 - referencia: identificação precisa (ex: "Art. 37, caput, CF/88", "Súmula 473 STF", "Art. 121 CP")
 - topico: o tema/assunto principal desse item (ex: "Princípios LIMPE", "Anulação de atos administrativos")
 - frequencia: "muito alta" | "alta" | "media" (frequência de cobrança em provas)
-- dica: uma observação curtíssima sobre o que mais cai nesse ponto (máx. 15 palavras)
+- dica: observação curtíssima sobre o que mais cai nesse ponto (máx. 15 palavras)
+- definicao: transcrição ou paráfrase fiel do conteúdo do artigo/súmula/lei em 2-4 linhas, com linguagem clara
+- palavras_chave: array com 3 a 5 termos ou expressões centrais desse item para memorização rápida
+- pegadinha: a armadilha ou erro mais comum que as bancas costumam explorar nesse ponto (1 frase direta)
+- exemplo_prova: trecho ou enunciado típico de como esse item já foi cobrado em prova (1-2 linhas, sem citar banca)
 
-Retorne APENAS JSON válido:
-{"artigos":[{"referencia":"...","topico":"...","frequencia":"muito alta","dica":"..."}]}`;
+Retorne APENAS JSON válido sem markdown:
+{"artigos":[{"referencia":"...","topico":"...","frequencia":"muito alta","dica":"...","definicao":"...","palavras_chave":["..."],"pegadinha":"...","exemplo_prova":"..."}]}`;
 
   let artigos: unknown[];
   try {
     const msg = await createWithCache({
-      model: MODELS.haiku,
-      maxTokens: 1200,
+      model: MODELS.sonnet,
+      maxTokens: 4000,
       systemPrompt: SYSTEM_PROMPT,
       cacheSystem: true,
       messages: [{ role: "user", content: prompt }],
     });
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    const jsonStart = raw.indexOf("{");
-    const jsonEnd = raw.lastIndexOf("}");
-    const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1)) as { artigos: unknown[] };
+    const parsed = extractJSON<{ artigos: unknown[] }>(raw);
     artigos = parsed.artigos ?? [];
   } catch {
     return NextResponse.json({ error: "Erro ao gerar artigos com IA" }, { status: 500 });
