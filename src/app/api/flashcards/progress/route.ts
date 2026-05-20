@@ -84,10 +84,18 @@ export async function POST(req: Request) {
       progressMap[cardId] = srsData;
 
       const content = JSON.stringify(progressMap);
+      const now = new Date().toISOString();
       if (progNote?.id) {
-        await db.from("Note").update({ content }).eq("id", progNote.id);
+        await db.from("Note").update({ content, updatedAt: now }).eq("id", progNote.id);
       } else {
-        await db.from("Note").insert({ userId: dbUser.id, subjectId: noteKey, content });
+        await db.from("Note").insert({
+          id: crypto.randomUUID(),
+          userId: dbUser.id,
+          subjectId: noteKey,
+          content,
+          createdAt: now,
+          updatedAt: now,
+        });
       }
       srsResult = { interval: srsData.interval, nextReview: srsData.nextReview };
     }
