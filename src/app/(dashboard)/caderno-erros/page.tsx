@@ -14,6 +14,12 @@ interface QuestionError {
   level: string;
   banca: string | null;
   year: number | null;
+  optionA: string | null;
+  optionB: string | null;
+  optionC: string | null;
+  optionD: string | null;
+  optionE: string | null;
+  explanation: string | null;
   wrongCount: number;
   aprendido: boolean;
   lastWrong: string;
@@ -53,8 +59,9 @@ export default function CadernoErrosPage() {
   const [expanded, setExpanded]   = useState<string | null>(null);
   const [search, setSearch]       = useState("");
   const [filter, setFilter]       = useState<"all" | "pendente" | "aprendido">("pendente");
-  const [toggling, setToggling]   = useState<number | null>(null);
+  const [toggling, setToggling]     = useState<number | null>(null);
   const [autoFcCount, setAutoFcCount] = useState<number>(0);
+  const [expandedQ, setExpandedQ]  = useState<number | null>(null);
 
   const load = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
@@ -295,56 +302,123 @@ export default function CadernoErrosPage() {
 
                     {isExp && (
                       <div className="border-t border-white/[0.04] divide-y divide-white/[0.03]">
-                        {subj.questions.map(q => (
-                          <div key={q.id} className={cn(
-                            "flex items-start gap-3 p-4 transition-colors",
-                            q.aprendido && "opacity-60"
-                          )}>
-                            <button
-                              onClick={() => toggleAprendido(subj.id, q.id, q.aprendido)}
-                              disabled={toggling === q.id}
-                              className="mt-0.5 flex-shrink-0 transition-colors"
-                            >
-                              {q.aprendido
-                                ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-                                : <Circle className="w-5 h-5 text-gray-600 hover:text-emerald-400" />}
-                            </button>
-                            <div className="flex-1 min-w-0">
-                              <p className={cn(
-                                "text-xs text-gray-300 leading-relaxed",
-                                q.aprendido && "line-through text-gray-600"
-                              )}>
-                                {q.statement.slice(0, 150)}{q.statement.length > 150 ? "..." : ""}
-                              </p>
-                              <div className="flex flex-wrap items-center gap-2 mt-1.5">
-                                {q.level && (
-                                  <span className={cn("text-[9px] px-1.5 py-0.5 rounded border", LEVEL_STYLE[q.level] ?? "text-gray-500")}>
-                                    {LEVEL_LABEL[q.level] ?? q.level}
-                                  </span>
-                                )}
-                                {q.banca && (
-                                  <span className="text-[9px] text-gray-600">{q.banca}</span>
-                                )}
-                                {q.year && (
-                                  <span className="text-[9px] text-gray-600">{q.year}</span>
-                                )}
-                                <span className="text-[9px] text-rose-500">
-                                  {q.wrongCount}× errou
-                                </span>
-                                {q.lastWrong && (
-                                  <span className="text-[9px] text-gray-700">
-                                    último erro: {fmtDate(q.lastWrong)}
-                                  </span>
-                                )}
-                              </div>
+                        {subj.questions.map(q => {
+                          const isQExp = expandedQ === q.id;
+                          const opts = (["A","B","C","D","E"] as const)
+                            .map(l => ({ l, v: q[`option${l}` as keyof QuestionError] as string | null }))
+                            .filter(o => o.v);
+                          return (
+                            <div key={q.id} className={cn(
+                              "transition-colors",
+                              q.aprendido && !isQExp && "opacity-50"
+                            )}>
+                              {/* Linha de preview — clica para expandir */}
+                              <button
+                                onClick={() => setExpandedQ(isQExp ? null : q.id)}
+                                className="w-full flex items-start gap-3 p-4 text-left hover:bg-white/[0.02] transition-colors"
+                              >
+                                <div className="mt-0.5 flex-shrink-0">
+                                  {q.aprendido
+                                    ? <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                                    : <AlertTriangle className="w-4 h-4 text-amber-500/70 mt-0.5" />}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className={cn(
+                                    "text-xs text-gray-300 leading-relaxed text-left",
+                                    q.aprendido && "text-gray-500"
+                                  )}>
+                                    {q.statement.slice(0, 120)}{q.statement.length > 120 ? "…" : ""}
+                                  </p>
+                                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                                    {q.level && (
+                                      <span className={cn("text-[9px] px-1.5 py-0.5 rounded border", LEVEL_STYLE[q.level] ?? "text-gray-500")}>
+                                        {LEVEL_LABEL[q.level] ?? q.level}
+                                      </span>
+                                    )}
+                                    {q.banca && <span className="text-[9px] text-gray-600">{q.banca}</span>}
+                                    {q.year  && <span className="text-[9px] text-gray-600">{q.year}</span>}
+                                    <span className="text-[9px] text-rose-500">{q.wrongCount}× errou</span>
+                                    {q.lastWrong && (
+                                      <span className="text-[9px] text-gray-700">último erro: {fmtDate(q.lastWrong)}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                {isQExp
+                                  ? <ChevronUp   className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />
+                                  : <ChevronDown className="w-4 h-4 text-gray-600 flex-shrink-0 mt-0.5" />}
+                              </button>
+
+                              {/* Questão expandida */}
+                              {isQExp && (
+                                <div className="px-4 pb-4 space-y-3">
+                                  {/* Enunciado completo */}
+                                  <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+                                    <p className="text-xs text-gray-200 leading-relaxed">{q.statement}</p>
+                                  </div>
+
+                                  {/* Alternativas */}
+                                  {opts.length > 0 && (
+                                    <div className="space-y-2">
+                                      {opts.map(o => {
+                                        const isCorrect = o.l === q.answer;
+                                        return (
+                                          <div
+                                            key={o.l}
+                                            className={cn(
+                                              "flex items-start gap-3 px-4 py-3 rounded-xl border text-xs",
+                                              isCorrect
+                                                ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-200"
+                                                : "bg-white/[0.02] border-white/[0.05] text-gray-400"
+                                            )}
+                                          >
+                                            <span className={cn(
+                                              "font-bold w-4 flex-shrink-0",
+                                              isCorrect ? "text-emerald-400" : "text-gray-600"
+                                            )}>{o.l})</span>
+                                            <span className="flex-1">{o.v}</span>
+                                            {isCorrect && (
+                                              <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
+                                            )}
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  )}
+
+                                  {/* Explicação */}
+                                  {q.explanation && (
+                                    <div className="rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 p-4">
+                                      <p className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wide mb-1.5">
+                                        💡 Explicação
+                                      </p>
+                                      <p className="text-xs text-gray-300 leading-relaxed">{q.explanation}</p>
+                                    </div>
+                                  )}
+
+                                  {/* Ação: marcar como aprendido */}
+                                  <button
+                                    onClick={() => toggleAprendido(subj.id, q.id, q.aprendido)}
+                                    disabled={toggling === q.id}
+                                    className={cn(
+                                      "w-full py-2.5 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center gap-2",
+                                      q.aprendido
+                                        ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-white/[0.03] hover:border-white/10 hover:text-gray-400"
+                                        : "bg-emerald-600 hover:bg-emerald-700 border-transparent text-white"
+                                    )}
+                                  >
+                                    {toggling === q.id ? (
+                                      <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                                    ) : q.aprendido ? (
+                                      <><CheckCircle2 className="w-3.5 h-3.5" /> Marcado como aprendido — desfazer</>
+                                    ) : (
+                                      <><CheckCircle2 className="w-3.5 h-3.5" /> Já aprendi esta questão</>
+                                    )}
+                                  </button>
+                                </div>
+                              )}
                             </div>
-                            {!q.aprendido && (
-                              <div className="flex-shrink-0 text-right">
-                                <AlertTriangle className="w-3.5 h-3.5 text-amber-500/60" />
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </div>

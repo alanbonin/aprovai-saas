@@ -69,12 +69,18 @@ export async function GET() {
   const questionsData: Record<number, {
     id: number; subjectId: string | null; statement: string; answer: string;
     level: string; banca: string | null; year: number | null;
+    optionA: string | null; optionB: string | null; optionC: string | null;
+    optionD: string | null; optionE: string | null; explanation: string | null;
   }> = {};
   for (let i = 0; i < errorIds.length; i += 200) {
     const chunk = errorIds.slice(i, i + 200);
-    let result = await db.from("Question").select("id, subjectId, statement, answer, level, banca, year").in("id", chunk).eq("aprovado", true);
+    let result = await db.from("Question")
+      .select("id, subjectId, statement, answer, level, banca, year, optionA, optionB, optionC, optionD, optionE, explanation")
+      .in("id", chunk).eq("aprovado", true);
     if (result.error && (result.error as { code?: string }).code === "42703") {
-      result = await db.from("Question").select("id, subjectId, statement, answer, level, banca, year").in("id", chunk);
+      result = await db.from("Question")
+        .select("id, subjectId, statement, answer, level, banca, year, optionA, optionB, optionC, optionD, optionE, explanation")
+        .in("id", chunk);
     }
     for (const q of result.data ?? []) questionsData[(q as { id: number }).id] = q as typeof questionsData[number];
   }
@@ -85,6 +91,8 @@ export async function GET() {
     questions: {
       id: number; statement: string; answer: string; level: string;
       banca: string | null; year: number | null;
+      optionA: string | null; optionB: string | null; optionC: string | null;
+      optionD: string | null; optionE: string | null; explanation: string | null;
       wrongCount: number; aprendido: boolean; lastWrong: string;
     }[]
   }> = {};
@@ -101,6 +109,12 @@ export async function GET() {
       level: q.level,
       banca: q.banca,
       year: q.year,
+      optionA: q.optionA,
+      optionB: q.optionB,
+      optionC: q.optionC,
+      optionD: q.optionD,
+      optionE: q.optionE,
+      explanation: q.explanation,
       wrongCount: stats[qid].wrong,
       aprendido: aprendidoSet.has(qid),
       lastWrong: stats[qid].lastWrong,
