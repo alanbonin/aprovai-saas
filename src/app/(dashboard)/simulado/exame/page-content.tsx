@@ -320,9 +320,24 @@ export function SimuladoExameInner() {
           <div className="h-full bg-red-600 rounded-full transition-all"
             style={{ width: `${((current + 1) / questions.length) * 100}%` }} />
         </div>
-        <div className="flex justify-between text-[10px] text-gray-600 mt-0.5">
-          <span>{Object.keys(answers).length} respondidas</span>
+        <div className="flex justify-between text-[10px] text-gray-600 mt-1">
+          <span>{Object.keys(answers).length} respondidas · {flagged.size > 0 && <span className="text-amber-500/80">{flagged.size} com dúvida</span>}</span>
           <span>{pctAnswered}% concluído</span>
+        </div>
+        {/* Legenda das cores dos pontos */}
+        <div className="flex items-center gap-3 mt-1.5">
+          <span className="flex items-center gap-1 text-[9px] text-gray-600">
+            <span className="w-2.5 h-2.5 rounded-sm bg-indigo-600/60 inline-block" />
+            Respondida
+          </span>
+          <span className="flex items-center gap-1 text-[9px] text-gray-600">
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-500/60 inline-block" />
+            Com dúvida
+          </span>
+          <span className="flex items-center gap-1 text-[9px] text-gray-600">
+            <span className="w-2.5 h-2.5 rounded-sm bg-white/10 inline-block" />
+            Não respondida
+          </span>
         </div>
       </div>
 
@@ -371,15 +386,16 @@ export function SimuladoExameInner() {
 
         <button
           onClick={() => toggleFlag(current)}
+          title={flagged.has(current) ? "Remover marcação de dúvida" : "Marcar esta questão para revisar depois"}
           className={cn(
             "flex-1 py-2.5 rounded-xl border text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
             flagged.has(current)
               ? "bg-amber-500/15 border-amber-500/30 text-amber-300"
-              : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-gray-300"
+              : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:text-amber-400 hover:border-amber-500/30"
           )}
         >
           <Flag className="w-3.5 h-3.5" />
-          {flagged.has(current) ? "Marcada" : "Marcar"}
+          {flagged.has(current) ? "⚑ Com dúvida" : "Tenho dúvida"}
         </button>
 
         {current < questions.length - 1 ? (
