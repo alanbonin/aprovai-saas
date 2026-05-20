@@ -19,15 +19,28 @@ export async function GET() {
 
   const subjectIds = (studentSubjects ?? []).map(s => s.subjectId);
 
-  if (subjectIds.length === 0) {
-    return NextResponse.json({ decks: [], totalDueToday: 0 });
-  }
+  // IDs dos admins (para incluir todos os decks criados por admins)
+  const { data: adminUsers } = await db
+    .from("User")
+    .select("id")
+    .eq("role", "ADMIN");
+  const adminIds = (adminUsers ?? []).map(u => u.id as string);
 
-  // Todos os FlashcardSets dessas matérias (admin-created + user-created)
-  const { data: sets } = await db
+  // Busca:
+  // 1. Decks criados pelo próprio aluno
+  // 2. Decks de admins (biblioteca da plataforma)
+  // 3. Decks de qualquer usuário nas matérias do aluno
+  let query = db
     .from("FlashcardSet")
-    .select("id, name, subjectId, cards, updatedAt")
-    .in("subjectId", subjectIds)
+    .select("id, name, subjectId, cards, updatedAt, userId");
+
+  // Monta filtro OR: userId do aluno | userId de admin | subjectId nas matérias do aluno
+  const orParts: string[] = [`userId.eq.${dbUser.id as string}`];
+  if (adminIds.length > 0) orParts.push(`userId.in.(${adminIds.join(",")})`);
+  if (subjectIds.length > 0) orParts.push(`subjectId.in.(${subjectIds.join(",")})`);
+
+  const { data: sets } = await query
+    .or(orParts.join(","))
     .order("updatedAt", { ascending: false });
 
   const nowMs = Date.now();
