@@ -20,20 +20,9 @@ interface SecaoTabela      { tipo: "tabela";          titulo: string; colunas: s
 interface SecaoAtencao     { tipo: "atencao";         texto: string; }
 interface SecaoExempl      { tipo: "exemplificando";  titulo?: string; texto: string; }
 interface SecaoCodigo      { tipo: "codigo";          titulo?: string; codigo: string; }
-interface SecaoQuestao     { tipo: "questao";         banca: string; ano: string; orgao?: string; enunciado: string; gabarito: string; comentario: string; }
 interface SecaoDestaque    { tipo: "destaque";        titulo: string; texto: string; }
 
-type Secao = SecaoTeoria | SecaoLista | SecaoTabela | SecaoAtencao | SecaoExempl | SecaoCodigo | SecaoQuestao | SecaoDestaque;
-
-interface QuestaoFinal {
-  numero: number;
-  banca: string;
-  ano: string;
-  orgao?: string;
-  enunciado: string;
-  gabarito: string;
-  comentario: string;
-}
+type Secao = SecaoTeoria | SecaoLista | SecaoTabela | SecaoAtencao | SecaoExempl | SecaoCodigo | SecaoDestaque;
 
 interface AulaContent {
   titulo: string;
@@ -44,7 +33,6 @@ interface AulaContent {
   numero_aula: string;
   introducao: string;
   secoes: Secao[];
-  questoes_lista?: QuestaoFinal[];
 }
 
 // ── Cores ─────────────────────────────────────────────────────────────────────
@@ -130,30 +118,10 @@ const s = StyleSheet.create({
   codeTitle:        { fontSize: 8, color: "#94a3b8", marginBottom: 8, fontWeight: "bold" },
   codeText:         { fontSize: 9, color: C.codeText, fontFamily: "Courier", lineHeight: 1.65 },
 
-  // Questão inline
-  questaoWrap:      { borderWidth: 1, borderColor: C.border, borderRadius: 4, marginVertical: 10, overflow: "hidden" },
-  questaoBancaBar:  { backgroundColor: C.purpleLight, paddingHorizontal: 10, paddingVertical: 5 },
-  questaoBancaTxt:  { fontSize: 8, color: C.purple, fontWeight: "bold" },
-  questaoEnunc:     { fontSize: 10, color: C.gray, padding: 10, lineHeight: 1.55 },
-  questaoSep:       { height: 1, backgroundColor: C.border, marginHorizontal: 10 },
-  questaoGabRow:    { flexDirection: "row", padding: 10, gap: 6 },
-  questaoGabLabel:  { fontSize: 9, fontWeight: "bold", color: C.purple },
-  questaoGabText:   { fontSize: 9, color: C.gray, flex: 1, lineHeight: 1.4 },
-
   // Destaque
   destacWrap:       { backgroundColor: C.purpleLight, borderLeftWidth: 4, borderLeftColor: C.purple, padding: 12, marginVertical: 10, borderRadius: 3 },
   destacTitle:      { fontSize: 10, fontWeight: "bold", color: C.purple, marginBottom: 5 },
   destacText:       { fontSize: 10, color: C.gray, lineHeight: 1.55 },
-
-  // Seção de questões finais
-  questoesHeader:   { backgroundColor: C.dark, padding: 14, borderRadius: 4, marginTop: 28, marginBottom: 16 },
-  questoesHeaderTx: { fontSize: 14, fontWeight: "bold", color: C.white },
-  questaoFinalBox:  { borderWidth: 1, borderColor: C.border, borderRadius: 4, marginBottom: 14, overflow: "hidden" },
-  questaoFinalNum:  { backgroundColor: C.grayLight, paddingHorizontal: 10, paddingVertical: 5 },
-  questaoFinalNumTx:{ fontSize: 9, fontWeight: "bold", color: C.purple },
-  questaoFinalEnunc:{ fontSize: 10, color: C.gray, padding: 10, lineHeight: 1.55 },
-  questaoFinalGab:  { backgroundColor: C.purpleLight, padding: 10 },
-  questaoFinalGabTx:{ fontSize: 9, color: C.dark, lineHeight: 1.5 },
 
   // Footer
   footer:           { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: C.border, paddingTop: 8 },
@@ -239,23 +207,6 @@ function RenderSecao({ secao, idx }: { secao: Secao; idx: number }) {
         </View>
       );
 
-    case "questao": {
-      const bancaLabel = [secao.banca, secao.ano, secao.orgao].filter(Boolean).join(" - ");
-      return (
-        <View key={idx} style={s.questaoWrap}>
-          <View style={s.questaoBancaBar}>
-            <Text style={s.questaoBancaTxt}>({bancaLabel})</Text>
-          </View>
-          <Text style={s.questaoEnunc}>{secao.enunciado}</Text>
-          <View style={s.questaoSep} />
-          <View style={s.questaoGabRow}>
-            <Text style={s.questaoGabLabel}>Gabarito: {secao.gabarito}</Text>
-            <Text style={s.questaoGabText}>{secao.comentario}</Text>
-          </View>
-        </View>
-      );
-    }
-
     case "destaque":
       return (
         <View key={idx} style={s.destacWrap}>
@@ -339,31 +290,6 @@ function AulaPDF({ content }: { content: AulaContent }) {
           {content.secoes.map((secao, idx) => (
             <RenderSecao key={idx} secao={secao} idx={idx} />
           ))}
-
-          {/* Lista de Questões Final */}
-          {content.questoes_lista && content.questoes_lista.length > 0 ? (
-            <View break>
-              <View style={s.questoesHeader}>
-                <Text style={s.questoesHeaderTx}>Lista de Questoes para Treino</Text>
-              </View>
-              {content.questoes_lista.map((q, i) => {
-                const label = [q.banca, q.ano, q.orgao].filter(Boolean).join(" - ");
-                return (
-                  <View key={i} style={s.questaoFinalBox}>
-                    <View style={s.questaoFinalNum}>
-                      <Text style={s.questaoFinalNumTx}>Questao {q.numero}  |  {label}</Text>
-                    </View>
-                    <Text style={s.questaoFinalEnunc}>{q.enunciado}</Text>
-                    <View style={s.questaoFinalGab}>
-                      <Text style={s.questaoFinalGabTx}>
-                        Gabarito: {q.gabarito}{"  |  "}{q.comentario}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-            </View>
-          ) : null}
         </View>
 
         {/* Footer fixo */}
@@ -401,43 +327,58 @@ export async function POST(req: Request) {
 
   const numAula = numeroAula || "1";
   const cargoLine = cargo ? `\nCargo alvo: ${cargo}` : "";
-  const bancaLine = banca ? `\nBanca de referencia: ${banca} (use o estilo e nivel dessa banca nas questoes)` : "";
+  const bancaLine = banca ? `\nBanca de referencia: ${banca}` : "";
   const topicoLine = topico ? `\nTopico especifico: ${topico}` : "";
 
   // Instrucoes por tipo
   const tipoInstrucao =
     tipo === "resumo"
-      ? "Gere 4 secoes de revisao rapida: 1 teoria principal, 1 lista de pontos-chave, 1 destaque de atencao, 1 tabela comparativa. Sem codigo. 2 questoes_lista."
-      : tipo === "exercicios"
-      ? "Gere 2 secoes de contexto teorico (teoria + lista) e 5 questoes_lista com gabarito comentado detalhado. Inclua 2 questoes inline no corpo."
+      ? `Gere 8 secoes de revisao aprofundada:
+- 2 secoes "teoria" com o conteudo mais cobrado (200 palavras cada)
+- 2 "lista" com pontos-chave detalhados (10 itens cada)
+- 2 "tabela" comparativas com dados reais (4 colunas x 6 linhas)
+- 1 "atencao" com as principais pegadinhas
+- 1 "destaque" de fechamento com resumo dos pontos criticos`
       : tipo === "mapa_conceitos"
-      ? "Gere 5 secoes: 1 teoria de visao geral, 2 listas de conceitos, 1 tabela comparativa, 1 destaque. 2 questoes_lista."
-      : "Gere uma aula completa com 7-8 secoes intercalando: teoria, exemplificando, atencao, lista, tabela, questao inline, destaque. Use 'codigo' se for area de TI. 3 questoes_lista.";
+      ? `Gere 10 secoes mapeando todos os conceitos:
+- 3 "teoria" cobrindo definicoes, classificacoes e aplicacoes (200 palavras cada)
+- 2 "lista" de conceitos organizados por categoria (10 itens cada)
+- 3 "tabela" comparativas e classificatorias (4 colunas x 6 linhas)
+- 1 "exemplificando" com caso pratico
+- 1 "destaque" com mapa mental em texto`
+      : `Gere uma aula COMPLETA E DENSA com 12 a 14 secoes, cobrindo o tema do inicio ao fim:
+- 4 a 5 secoes "teoria" numeradas (ex: "1. Conceito", "2. Classificacao", "3. Aplicacao") — 200 palavras cada, com subpontos numerados dentro do texto (1.1, 1.2...)
+- 2 "lista" com pontos-chave ou classificacoes (10 itens cada)
+- 2 "tabela" com dados reais, comparativos, prazos, valores ou hierarquias (4 colunas x 6 linhas)
+- 2 "atencao" com pegadinhas e erros tipicos de candidatos
+- 2 "exemplificando" com casos praticos e situacoes reais do cargo
+- ${cargo?.toLowerCase().includes("ti") || subjectName.toLowerCase().includes("ti") || subjectName.toLowerCase().includes("inform") || subjectName.toLowerCase().includes("program") ? '1 "codigo" com pseudocodigo ou exemplo de codigo relevante' : '1 "destaque" com ponto critico'}
+- 1 "destaque" final consolidando os pontos mais importantes`;
 
   const prompt = `Voce e um professor especialista em ${subjectName} para concursos publicos brasileiros.
 Gere a Aula ${numAula} sobre: ${topico || subjectName}${cargoLine}${bancaLine}${topicoLine}
 
 ${tipoInstrucao}
 
-TIPOS DE SECAO DISPONIVEIS:
-- {"tipo":"teoria","titulo":"1. Titulo","texto":"..."} - teoria didatica (max 120 palavras)
-- {"tipo":"lista","titulo":"...","itens":["..."]} - lista de pontos (max 7 itens, cada um max 20 palavras)
-- {"tipo":"tabela","titulo":"...","colunas":["A","B"],"linhas":[["v1","v2"]]} - max 3 colunas x 5 linhas, celulas curtas
-- {"tipo":"atencao","texto":"..."} - armadilha comum de prova (max 50 palavras)
-- {"tipo":"exemplificando","titulo":"...","texto":"..."} - exemplo pratico contextualizado (max 80 palavras)
-- {"tipo":"codigo","titulo":"...","codigo":"..."} - pseudocodigo ou codigo (max 12 linhas, so para TI)
-- {"tipo":"questao","banca":"CESPE","ano":"2023","orgao":"TCU","enunciado":"...","gabarito":"Certo","comentario":"..."} - questao real ou no estilo da banca (enunciado max 60 palavras, comentario max 50 palavras)
-- {"tipo":"destaque","titulo":"...","texto":"..."} - ponto critico para memorizar (max 60 palavras)
+TIPOS DE SECAO:
+- {"tipo":"teoria","titulo":"1. Titulo da Secao","texto":"..."} — teoria completa e didatica. MIN 180, MAX 250 palavras. Use paragrafos. Cite artigos de lei, numeros e referencias quando relevante.
+- {"tipo":"lista","titulo":"...","itens":["..."]} — lista organizada. 8 a 10 itens. Cada item: ate 25 palavras, completo e informativo.
+- {"tipo":"tabela","titulo":"...","colunas":["Col A","Col B","Col C","Col D"],"linhas":[["v1","v2","v3","v4"]]} — 4 colunas, 5 a 7 linhas com dados reais e uteis. Celulas: max 25 caracteres.
+- {"tipo":"atencao","texto":"..."} — pegadinha ou erro comum em prova. 60 a 90 palavras. Seja especifico.
+- {"tipo":"exemplificando","titulo":"...","texto":"..."} — caso pratico ou situacao real do cargo. 100 a 140 palavras. Use nomes e situacoes ficticias mas realistas.
+- {"tipo":"codigo","titulo":"...","codigo":"..."} — so para areas de TI/programacao. Pseudocodigo ou codigo real. Max 15 linhas.
+- {"tipo":"destaque","titulo":"...","texto":"..."} — ponto critico ou resumo parcial. 60 a 100 palavras.
 
-REGRAS DE QUALIDADE:
-- Intercale tipos diferentes: nunca duas "teoria" seguidas sem um "exemplificando" ou "atencao" entre elas
-- introducao: frase motivadora conectando o topico com a realidade do cargo (max 50 palavras)
-- questoes_lista: questoes de banca real no estilo ${banca || "CESPE/CEBRASPE"} com comentario didatico
-- Linguagem direta, sem rodeios, focada no que cai em prova
-- Artigos de lei e numeros citados quando relevante
+REGRAS OBRIGATORIAS:
+- NUNCA coloque duas "teoria" seguidas — sempre intercale com exemplificando, atencao, lista ou tabela
+- introducao: 2 a 3 frases conectando o tema com o dia a dia do cargo (50 a 70 palavras)
+- Linguagem clara, tecnica e direta — como um bom professor de cursinho
+- Cite artigos de lei, incisos, prazos e valores reais sempre que aplicavel
+- Cada "teoria" deve ter pelo menos 2 paragrafos distintos
+- O ultimo elemento deve ser um "destaque" consolidando o que nao pode ser esquecido
 
 Retorne APENAS JSON valido sem markdown:
-{"titulo":"...","subtitulo":"...","cargo":"${cargo || "Concursos Publicos"}","materia":"${subjectName}","banca":"${banca || ""}","numero_aula":"${numAula}","introducao":"...","secoes":[...],"questoes_lista":[{"numero":1,"banca":"...","ano":"...","orgao":"...","enunciado":"...","gabarito":"...","comentario":"..."}]}`;
+{"titulo":"...","subtitulo":"...","cargo":"${cargo || "Concursos Publicos"}","materia":"${subjectName}","banca":"${banca || ""}","numero_aula":"${numAula}","introducao":"...","secoes":[]}`;
 
   // ── Gera conteúdo com IA ─────────────────────────────────────────────────────
   let content: AulaContent;
@@ -489,7 +430,7 @@ Retorne APENAS JSON valido sem markdown:
   }
 
   // ── Upload ────────────────────────────────────────────────────────────────────
-  const tipoLabel = tipo === "resumo" ? "resumo" : tipo === "exercicios" ? "exercicios" : tipo === "mapa_conceitos" ? "mapa" : "aula";
+  const tipoLabel = tipo === "resumo" ? "resumo" : tipo === "mapa_conceitos" ? "mapa" : "aula";
   const fileName = `${subjectId}/aula${numAula.padStart(2,"0")}-${tipoLabel}-${Date.now()}.pdf`;
   const { error: uploadError } = await db.storage
     .from(BUCKET)
@@ -504,7 +445,7 @@ Retorne APENAS JSON valido sem markdown:
 
   // ── Salva no banco ────────────────────────────────────────────────────────────
   const title = `${content.titulo} — ${content.subtitulo}`.slice(0, 120);
-  const description = `${tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1)} gerado por IA${cargo ? ` para ${cargo}` : ""}${banca ? ` | ${banca}` : ""}. ${content.secoes.length} secoes + ${content.questoes_lista?.length ?? 0} questoes.`;
+  const description = `${tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1)} gerado por IA${cargo ? ` para ${cargo}` : ""}${banca ? ` | ${banca}` : ""}. ${content.secoes.length} secoes.`;
 
   const { data: material, error: dbError } = await db.from("Material").insert({
     id: crypto.randomUUID(),

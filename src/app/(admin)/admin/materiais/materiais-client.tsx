@@ -25,10 +25,9 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const TIPOS_MATERIAL = [
-  { id: "aula_completa",  label: "Aula Completa",        desc: "Teoria + exemplos + questões de banca" },
-  { id: "resumo",         label: "Resumo Rápido",        desc: "Pontos-chave para revisão" },
-  { id: "mapa_conceitos", label: "Mapa de Conceitos",    desc: "Conceitos interligados e comparativos" },
-  { id: "exercicios",     label: "Lista de Exercícios",  desc: "Questões comentadas por banca" },
+  { id: "aula_completa",  label: "Aula Completa",      desc: "12–14 seções: teoria densa, exemplos, tabelas, destaques" },
+  { id: "resumo",         label: "Resumo Aprofundado", desc: "8 seções focadas no que mais cai em prova" },
+  { id: "mapa_conceitos", label: "Mapa de Conceitos",  desc: "10 seções mapeando todos os conceitos e relações" },
 ];
 
 const BANCAS = ["CESPE/CEBRASPE", "FGV", "VUNESP", "FCC", "IBFC", "CODEPE", "QUADRIX", "IDECAN", "NC-UFPR"];
@@ -272,9 +271,9 @@ export function MateriaisAdmin({ materials: initial, subjects }: Props) {
               <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 p-4 mb-6 flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-indigo-300">
-                  A IA cria uma <strong>aula completa em PDF</strong> no estilo das grandes plataformas de concursos —
-                  com teoria didática, caixas <em>FIQUE ATENTO!</em>, exemplos práticos, pseudocódigo (TI),
-                  questões de banca intercaladas e lista de exercícios no final. Marca Aprovai360.
+                  A IA cria uma <strong>apostila densa em PDF</strong> no estilo das grandes plataformas de concursos —
+                  teoria completa com artigos de lei, tabelas comparativas, caixas <em>FIQUE ATENTO!</em>,
+                  exemplos práticos e destaques dos pontos mais cobrados. Sem questões (use a plataforma de questões).
                 </p>
               </div>
 
