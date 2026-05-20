@@ -86,7 +86,7 @@ Retorne APENAS JSON válido:
 
     try {
       const msg = await createWithCache({
-        model: MODELS.haiku, maxTokens: 800, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+        model: MODELS.haiku, maxTokens: 1200, systemPrompt: CASO_SYSTEM, cacheSystem: false,
         messages: [{ role: "user", content: prompt }],
       });
       const raw = (msg.content[0] as { type: string; text: string }).text.trim();
@@ -107,24 +107,34 @@ Retorne APENAS JSON válido:
 
     const perfilLine = cargo ? `\nCargo alvo: ${cargo}${orgao ? ` | Órgão: ${orgao}` : ""}` : "";
 
-    const prompt = `Gere um estudo de caso realista para o tema "${tema ?? "ética no serviço público"}"${perfilLine}
+    const prompt = `Gere um estudo de caso para concurso público sobre: "${tema ?? "ética no serviço público"}"${perfilLine}
 
-O caso deve ser específico para a área de atuação, com dados concretos (nomes fictícios, datas, valores, procedimentos da área).
+Seja específico para a área. Use nomes fictícios, datas e valores concretos. Contexto com 3 parágrafos objetivos.
 
 Retorne APENAS JSON válido:
-{"titulo":"...","contexto":"3-5 parágrafos detalhados...","pergunta":"pergunta clara e objetiva","dicas":["dica 1","dica 2"],"criterios":["critério 1","critério 2","critério 3","critério 4"]}`;
+{"titulo":"título curto","contexto":"parágrafo1\\n\\nparágrafo2\\n\\nparágrafo3","pergunta":"pergunta objetiva","dicas":["dica 1","dica 2"],"criterios":["critério 1","critério 2","critério 3","critério 4"]}`;
 
     try {
-      const msg = await createWithCache({
-        model: MODELS.sonnet, maxTokens: 1800, systemPrompt: CASO_SYSTEM, cacheSystem: false,
-        messages: [{ role: "user", content: prompt }],
-      });
+      let msg;
+      try {
+        msg = await createWithCache({
+          model: MODELS.haiku, maxTokens: 2500, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          messages: [{ role: "user", content: prompt }],
+        });
+      } catch (haikuErr) {
+        console.error("[caso/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+        msg = await createWithCache({
+          model: MODELS.sonnet, maxTokens: 2500, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          messages: [{ role: "user", content: prompt }],
+        });
+      }
       const raw = (msg.content[0] as { type: string; text: string }).text.trim();
+      console.error("[caso/gerar] raw preview:", raw.slice(0, 120));
       const parsed = extractJSON<{ titulo: string; contexto: string; pergunta: string; dicas: string[]; criterios: string[] }>(raw);
       return NextResponse.json(parsed);
     } catch (e) {
-      console.error("[caso/gerar]", e);
-      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+      console.error("[caso/gerar] erro:", e);
+      return NextResponse.json({ error: `Erro ao gerar caso: ${(e as Error).message}` }, { status: 500 });
     }
   }
 
