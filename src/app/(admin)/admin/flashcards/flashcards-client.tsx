@@ -19,7 +19,7 @@ export function FlashcardsAdmin({ sets: initial, subjects, agents }: Props) {
   const [filterSubject, setFilterSubject] = useState("");
 
   const [showGerarModal, setShowGerarModal] = useState(false);
-  const [gerarForm, setGerarForm] = useState({ subjectId: "", qty: 10, agentId: "" });
+  const [gerarForm, setGerarForm] = useState({ subjectId: "", qty: 10, agentId: "", topico: "" });
   const [gerando, setGerando] = useState(false);
   const [gerarMsg, setGerarMsg] = useState("");
 
@@ -72,7 +72,7 @@ export function FlashcardsAdmin({ sets: initial, subjects, agents }: Props) {
     const subject = subjects.find(s => s.id === gerarForm.subjectId);
     const res = await fetch("/api/admin/flashcards/gerar", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ subjectId: gerarForm.subjectId, subjectName: subject?.name ?? "", qty: gerarForm.qty, agentId: gerarForm.agentId || null }),
+      body: JSON.stringify({ subjectId: gerarForm.subjectId, subjectName: subject?.name ?? "", qty: gerarForm.qty, agentId: gerarForm.agentId || null, topico: gerarForm.topico }),
     });
     const data = await res.json();
     if (!res.ok) { setGerarMsg(data.error ?? "Erro"); setGerando(false); return; }
@@ -204,6 +204,15 @@ export function FlashcardsAdmin({ sets: initial, subjects, agents }: Props) {
                   <option value="">Selecione...</option>
                   {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Tópico <span className="text-gray-700">(opcional — ex: Concordância Verbal, Direito Penal)</span></label>
+                <input
+                  value={gerarForm.topico}
+                  onChange={e => setGerarForm(f => ({ ...f, topico: e.target.value }))}
+                  placeholder="Ex: Concordância Verbal, Crase, Princípios..."
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500 placeholder-gray-700"
+                />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Quantidade de cards</label>

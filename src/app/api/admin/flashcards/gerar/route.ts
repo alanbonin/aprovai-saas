@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { subjectId, subjectName, qty = 10, agentId } = await req.json();
+  const { subjectId, subjectName, qty = 10, agentId, topico } = await req.json();
   if (!subjectId || !subjectName) return NextResponse.json({ error: "subjectId e subjectName são obrigatórios" }, { status: 400 });
 
   const count = Math.min(30, Math.max(1, qty));
@@ -38,10 +38,11 @@ export async function POST(req: Request) {
   }
 
   const bancaLine = resolvedBanca ? `\nBanca de referência: ${resolvedBanca} (adapte exemplos e estilo ao perfil dessa banca)` : "";
+  const topicoLine = topico ? `\nFoco específico neste tópico: ${topico}` : "";
 
   const prompt = `Você é um especialista em didática para concursos públicos brasileiros.${agentContext}${bancaLine}
 
-Gere EXATAMENTE ${count} flashcards sobre: ${subjectName}
+Gere EXATAMENTE ${count} flashcards sobre: ${subjectName}${topicoLine}
 
 Regras:
 - Frente: pergunta objetiva, clara e direta, no estilo de concurso
@@ -94,7 +95,7 @@ Retorne APENAS JSON válido, sem markdown:
     id: crypto.randomUUID(),
     userId: admin.id,
     subjectId,
-    name: `${subjectName}${agentLabel} — IA ${new Date().toLocaleDateString("pt-BR")}`,
+    name: topico ? `${subjectName} — ${topico}${agentLabel}` : `${subjectName}${agentLabel} — IA ${new Date().toLocaleDateString("pt-BR")}`,
     cards,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),

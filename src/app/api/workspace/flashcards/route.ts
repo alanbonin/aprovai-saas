@@ -43,6 +43,19 @@ export async function GET() {
     .or(orParts.join(","))
     .order("updatedAt", { ascending: false });
 
+  // Build subjectName lookup
+  const uniqueSubjectIds = [...new Set((sets ?? []).map(s => s.subjectId as string).filter(Boolean))];
+  const subjectMap: Record<string, string> = {};
+  if (uniqueSubjectIds.length > 0) {
+    const { data: subjectsData } = await db
+      .from("Subject")
+      .select("id, name")
+      .in("id", uniqueSubjectIds);
+    for (const sub of subjectsData ?? []) {
+      subjectMap[sub.id as string] = sub.name as string;
+    }
+  }
+
   const nowMs = Date.now();
 
   type Card = { id: string; nextReview?: string; interval?: number };
@@ -92,6 +105,7 @@ export async function GET() {
       id: s.id,
       name: s.name,
       subjectId: s.subjectId,
+      subjectName: subjectMap[s.subjectId as string] ?? "",
       totalCards: cards.length,
       dueCount,
       updatedAt: s.updatedAt,
