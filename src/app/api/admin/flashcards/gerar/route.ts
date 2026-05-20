@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { createWithCache, MODELS } from "@/lib/anthropic";
+import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 
 
 async function requireAdmin() {
@@ -77,8 +77,7 @@ Retorne APENAS JSON válido, sem markdown:
       });
     }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    const jsonStr = raw.startsWith("{") ? raw : raw.slice(raw.indexOf("{"));
-    generated = JSON.parse(jsonStr);
+    generated = extractJSON<{ cards: { frente: string; verso: string }[] }>(raw);
   } catch (err) {
     console.error("[flashcards/gerar] Erro completo:", err);
     const msg = err instanceof Error ? err.message : String(err);

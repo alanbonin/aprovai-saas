@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import { createWithCache, MODELS } from "@/lib/anthropic";
+import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { defaultAiLimiter } from "@/lib/rate-limit";
 
 const FLASH_SYSTEM =
@@ -75,9 +75,7 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
       });
     }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    const jsonStart = raw.indexOf("{");
-    const jsonEnd = raw.lastIndexOf("}");
-    const parsed = JSON.parse(raw.slice(jsonStart, jsonEnd + 1)) as { cards: { frente: string; verso: string }[] };
+    const parsed = extractJSON<{ cards: { frente: string; verso: string }[] }>(raw);
     cards = (parsed.cards ?? []).map((c, i) => ({
       id: `${Date.now()}-${i}`,
       front: c.frente,
