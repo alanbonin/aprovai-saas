@@ -277,61 +277,52 @@ export async function POST(req: Request) {
   const bancaLine = banca ? `\nBanca: ${banca}` : "";
   const topicoLine = topico ? `\nTópico específico: ${topico}` : "";
 
-  const prompt = `Você é um professor especialista em concursos públicos brasileiros.
+  // Ajusta exigências por tipo para controlar o tamanho da resposta
+  const tipoInstrucao =
+    tipo === "resumo"
+      ? "Crie 3 seções: (1) texto de conceito, (2) lista de pontos-chave, (3) destaque com o que mais cai. Resumo em 2 parágrafos. Sem questões."
+      : tipo === "mapa_conceitos"
+      ? "Crie 4 seções: (1) texto de definição, (2) lista de conceitos interligados, (3) tabela comparativa, (4) destaque de relações importantes. Resumo curto. 2 questões."
+      : tipo === "exercicios"
+      ? "Crie 2 seções de contexto (texto + lista). Gere 5 questões práticas com gabarito comentado. Resumo curto."
+      : "Crie 4 seções variadas: 1 texto de conceito (máx. 120 palavras), 1 lista de pontos-chave (máx. 6 itens), 1 tabela comparativa (máx. 3 colunas × 4 linhas), 1 destaque. Resumo em 2 parágrafos. 3 questões.";
 
-Gere um ${tipoLabel} completo e didático sobre: ${subjectName}${topicoLine}${cargoLine}${bancaLine}
+  const prompt = `Gere um ${tipoLabel} de concurso público sobre: ${subjectName}${topicoLine}${cargoLine}${bancaLine}
 
-O material deve ser ${
-    tipo === "resumo" ? "conciso, direto, com os pontos mais importantes" :
-    tipo === "mapa_conceitos" ? "organizado em conceitos interligados, com definições e relações" :
-    tipo === "exercicios" ? "focado em questões práticas com gabarito comentado" :
-    "completo, progressivo, do básico ao avançado"
-  }.
+${tipoInstrucao}
 
-Gere o conteúdo como JSON com esta estrutura exata:
-{
-  "titulo": "título do material",
-  "subtitulo": "subtítulo descritivo",
-  "cargo": "${cargo ?? "Concursos Públicos"}",
-  "materia": "${subjectName}",
-  "banca": "${banca ?? ""}",
-  "secoes": [
-    {"tipo":"texto","titulo":"1. Conceito","conteudo":"texto explicativo detalhado..."},
-    {"tipo":"lista","titulo":"Pontos-chave","itens":["item 1","item 2","item 3"]},
-    {"tipo":"tabela","titulo":"Comparativo","colunas":["Col A","Col B","Col C"],"linhas":[["val1","val2","val3"]]},
-    {"tipo":"destaque","titulo":"⚠️ Atenção","conteudo":"ponto crítico que mais cai em prova..."}
-  ],
-  "resumo": "resumo final em 3-4 parágrafos para fixação",
-  "questoes": [
-    {"enunciado":"texto da questão...","gabarito":"Certo/Errado ou letra","explicacao":"justificativa..."}
-  ]
-}
+REGRAS DE CONCISÃO (crítico para caber no JSON):
+- Textos de seção: máximo 100 palavras cada
+- Itens de lista: máximo 8 itens, cada um com até 15 palavras
+- Células de tabela: máximo 20 caracteres por célula
+- Resumo: máximo 80 palavras
+- Enunciados de questão: máximo 60 palavras
 
-Regras:
-- Mínimo 6 seções variadas (textos, listas, tabelas, destaques)
-- Tabelas com dados reais e úteis para o cargo
-- Questões práticas no estilo da banca informada
-- Linguagem clara, didática, objetiva
-- Artigos e leis citados quando aplicável
-- Retorne APENAS JSON válido`;
+Retorne APENAS o JSON abaixo, sem markdown:
+{"titulo":"...","subtitulo":"...","cargo":"${cargo ?? "Concursos Públicos"}","materia":"${subjectName}","banca":"${banca ?? ""}","secoes":[{"tipo":"texto","titulo":"1. Conceito","conteudo":"..."},{"tipo":"lista","titulo":"Pontos-chave","itens":["..."]},{"tipo":"tabela","titulo":"Comparativo","colunas":["A","B"],"linhas":[["v1","v2"]]},{"tipo":"destaque","titulo":"⚠️ Atenção","conteudo":"..."}],"resumo":"...","questoes":[{"enunciado":"...","gabarito":"...","explicacao":"..."}]}`;
 
   let content: MaterialContent;
   try {
-    const SYSTEM = "Você é um professor especialista em concursos públicos. Gere apenas JSON válido, sem markdown.";
+    const SYSTEM = "Você é um professor especialista em concursos públicos. Gere apenas JSON válido, sem markdown, sem explicações.";
     let msg;
     try {
       msg = await createWithCache({
-        model: MODELS.sonnet, maxTokens: 6000, systemPrompt: SYSTEM, cacheSystem: false,
+        model: MODELS.sonnet, maxTokens: 8000, systemPrompt: SYSTEM, cacheSystem: false,
         messages: [{ role: "user", content: prompt }],
       });
     } catch (e) {
-      console.error("[materiais/gerar] Sonnet falhou:", e);
+      console.error("[materiais/gerar] Sonnet falhou, tentando Haiku:", e);
       msg = await createWithCache({
-        model: MODELS.haiku, maxTokens: 4000, systemPrompt: SYSTEM, cacheSystem: false,
+        model: MODELS.haiku, maxTokens: 6000, systemPrompt: SYSTEM, cacheSystem: false,
         messages: [{ role: "user", content: prompt }],
       });
     }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
+    // Log parcial para diagnóstico
+    if (process.env.NODE_ENV !== "production") {
+      console.error("[materiais/gerar] stop_reason:", (msg as { stop_reason?: string }).stop_reason, "| chars:", raw.length);
+    }
+    // Se o modelo parou por maxTokens, o JSON estará incompleto — tente extrair o que há
     content = extractJSON<MaterialContent>(raw);
   } catch (e) {
     console.error("[materiais/gerar] Erro IA:", e);
