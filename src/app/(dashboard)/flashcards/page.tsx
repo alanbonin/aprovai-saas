@@ -83,11 +83,12 @@ export default function FlashcardsPage() {
   const [xpFlash, setXpFlash]   = useState(false);
   const [sessionStats, setSessionStats] = useState({ lembrei: 0, dificil: 0, naoLembrei: 0 });
 
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/workspace/flashcards").then(r => r.ok ? r.json() : null),
-      fetch("/api/workspace/flashcards/auto-erro").then(r => r.ok ? r.json() : null),
-    ]).then(([decksData, autoData]) => {
+  const loadDecks = useCallback(async () => {
+    try {
+      const [decksData, autoData] = await Promise.all([
+        fetch("/api/workspace/flashcards").then(r => r.ok ? r.json() : null),
+        fetch("/api/workspace/flashcards/auto-erro").then(r => r.ok ? r.json() : null),
+      ]);
       if (decksData) setDecks(decksData.decks ?? []);
       if (autoData?.cards?.length > 0) {
         const cards: Card[] = (autoData.cards as Array<{id: string; front: string; back: string; nextReview?: string; interval?: number; easeFactor?: number}>).map(c => ({
@@ -107,10 +108,15 @@ export default function FlashcardsPage() {
           dueCount: cards.filter(c => c.dueNow).length,
           totalCards: cards.length,
         });
+      } else {
+        setAutoErroDeck(null);
       }
+    } catch { /* ignore */ } finally {
       setLoading(false);
-    }).catch(() => setLoading(false));
+    }
   }, []);
+
+  useEffect(() => { void loadDecks(); }, [loadDecks]);
 
   async function openDeck(deckId: string) {
     // Deck especial de erros automáticos — já temos os dados em memória
@@ -282,7 +288,7 @@ export default function FlashcardsPage() {
     const acc = total > 0 ? Math.round((sessionStats.lembrei / total) * 100) : 0;
     return (
       <div className="p-4 sm:p-6 max-w-2xl mx-auto text-white">
-        <button onClick={() => setActiveDeck(null)}
+        <button onClick={() => { setActiveDeck(null); void loadDecks(); }}
           className="flex items-center gap-1.5 text-gray-500 hover:text-white text-sm mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Todos os decks
         </button>
@@ -308,7 +314,7 @@ export default function FlashcardsPage() {
             acc >= 70 ? "text-green-400" : acc >= 50 ? "text-yellow-400" : "text-red-400"
           )}>{acc}%</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => setActiveDeck(null)}
+            <button onClick={() => { setActiveDeck(null); void loadDecks(); }}
               className="px-4 py-2 rounded-xl border border-white/10 text-sm text-gray-400 hover:text-white">
               Todos os decks
             </button>
@@ -330,7 +336,7 @@ export default function FlashcardsPage() {
     <div className="p-4 sm:p-6 max-w-xl mx-auto text-white">
       {/* Header */}
       <div className="flex items-center gap-3 mb-4">
-        <button onClick={() => setActiveDeck(null)}
+        <button onClick={() => { setActiveDeck(null); void loadDecks(); }}
           className="text-gray-500 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
