@@ -33,9 +33,9 @@ export function ArtigosInner() {
   const [generating, setGenerating]   = useState(false);
   const [error, setError]             = useState<string | null>(null);
 
-  // Load subjects on mount
+  // Load subjects on mount — apenas as matérias da lista de estudo do aluno
   useEffect(() => {
-    fetch("/api/subjects")
+    fetch("/api/subjects?mine=true")
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         const list: Subject[] = d?.subjects ?? d ?? [];
