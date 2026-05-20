@@ -56,18 +56,33 @@ Retorne APENAS JSON válido, sem markdown:
   let generated;
   try {
     const FLASH_SYSTEM = "Você é um especialista em didática e elaboração de flashcards para concursos públicos brasileiros.";
-    const msg = await createWithCache({
-      model: MODELS.haiku,
-      maxTokens: 6000,
-      systemPrompt: FLASH_SYSTEM,
-      cacheSystem: true,
-      messages: [{ role: "user", content: prompt }],
-    });
+    // Tenta Haiku primeiro; cai para Sonnet se falhar (modelo indisponível, limite, etc.)
+    let msg;
+    try {
+      msg = await createWithCache({
+        model: MODELS.haiku,
+        maxTokens: 6000,
+        systemPrompt: FLASH_SYSTEM,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    } catch (haikuErr) {
+      console.error("[flashcards/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+      msg = await createWithCache({
+        model: MODELS.sonnet,
+        maxTokens: 6000,
+        systemPrompt: FLASH_SYSTEM,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
     const jsonStr = raw.startsWith("{") ? raw : raw.slice(raw.indexOf("{"));
     generated = JSON.parse(jsonStr);
-  } catch {
-    return NextResponse.json({ error: "Erro ao gerar flashcards com IA" }, { status: 500 });
+  } catch (err) {
+    console.error("[flashcards/gerar] Erro completo:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Erro ao gerar flashcards com IA: ${msg}` }, { status: 500 });
   }
 
   const cards = (generated.cards ?? []).map((c: { frente: string; verso: string }, i: number) => ({

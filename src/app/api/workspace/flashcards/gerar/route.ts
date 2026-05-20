@@ -54,13 +54,26 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
 
   let cards: { id: string; front: string; back: string }[];
   try {
-    const msg = await createWithCache({
-      model: MODELS.haiku,
-      maxTokens: 4000,
-      systemPrompt: FLASH_SYSTEM,
-      cacheSystem: true,
-      messages: [{ role: "user", content: prompt }],
-    });
+    // Tenta Haiku primeiro; cai para Sonnet se falhar
+    let msg;
+    try {
+      msg = await createWithCache({
+        model: MODELS.haiku,
+        maxTokens: 4000,
+        systemPrompt: FLASH_SYSTEM,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    } catch (haikuErr) {
+      console.error("[workspace/flashcards/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+      msg = await createWithCache({
+        model: MODELS.sonnet,
+        maxTokens: 4000,
+        systemPrompt: FLASH_SYSTEM,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
     const jsonStart = raw.indexOf("{");
     const jsonEnd = raw.lastIndexOf("}");
@@ -70,8 +83,10 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
       front: c.frente,
       back: c.verso,
     }));
-  } catch {
-    return NextResponse.json({ error: "Erro ao gerar flashcards com IA" }, { status: 500 });
+  } catch (err) {
+    console.error("[workspace/flashcards/gerar] Erro completo:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Erro ao gerar flashcards com IA: ${msg}` }, { status: 500 });
   }
 
   if (cards.length === 0) {
