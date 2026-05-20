@@ -4,41 +4,72 @@ import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 
 const NOTE_PREFIX = "__ARTIGOS_COBRADOS__";
+const MAX_HISTORY = 10; // máximo de gerações salvas por matéria por aluno
 
 const SYSTEM_PROMPT =
   "Você é um especialista em concursos públicos brasileiros com profundo conhecimento sobre quais artigos, leis, súmulas e tópicos são mais cobrados em provas. Responda apenas com JSON válido.";
 
-// GET — retorna artigos cached ou null
+type HistoryEntry = {
+  id: string;
+  generatedAt: string;
+  subjectName: string;
+  artigos: unknown[];
+};
+
+type StoredData = {
+  history: HistoryEntry[];
+};
+
+async function getDbUser(supabaseId: string) {
+  const { data } = await db.from("User").select("id").eq("supabaseId", supabaseId).single();
+  return data;
+}
+
+// GET — retorna histórico completo (ou entrada específica)
 export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
-  if (!dbUser) return NextResponse.json({ artigos: null });
+  const dbUser = await getDbUser(user.id);
+  if (!dbUser) return NextResponse.json({ history: [] });
 
   const { searchParams } = new URL(req.url);
   const subjectId = searchParams.get("subjectId");
-  if (!subjectId) return NextResponse.json({ artigos: null });
+  if (!subjectId) return NextResponse.json({ history: [] });
 
   const cacheKey = `${NOTE_PREFIX}:${subjectId}`;
-  const { data: cached } = await db
+  const { data: note } = await db
     .from("Note")
-    .select("content, updatedAt")
+    .select("content")
     .eq("userId", dbUser.id)
     .eq("subjectId", cacheKey)
     .maybeSingle();
 
-  if (cached?.content) {
-    try {
-      return NextResponse.json({ ...JSON.parse(cached.content), cached: true, updatedAt: cached.updatedAt });
-    } catch { /* regenera */ }
-  }
+  if (!note?.content) return NextResponse.json({ history: [] });
 
-  return NextResponse.json({ artigos: null });
+  try {
+    const stored = JSON.parse(note.content) as StoredData;
+    const history = stored.history ?? [];
+    // Compatibilidade com formato antigo (geração única sem history)
+    if (!Array.isArray(stored.history) && (stored as unknown as { artigos: unknown[] }).artigos) {
+      const old = stored as unknown as { artigos: unknown[]; subjectName: string; generatedAt: string };
+      return NextResponse.json({
+        history: [{
+          id: "legacy",
+          generatedAt: old.generatedAt,
+          subjectName: old.subjectName,
+          artigos: old.artigos,
+        }],
+      });
+    }
+    return NextResponse.json({ history });
+  } catch {
+    return NextResponse.json({ history: [] });
+  }
 }
 
-// POST — gera artigos mais cobrados com IA e faz cache
+// POST — gera artigos com IA e adiciona ao histórico
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -80,45 +111,91 @@ Retorne APENAS JSON válido sem markdown:
 
   let artigos: unknown[];
   try {
-    const msg = await createWithCache({
-      model: MODELS.sonnet,
-      maxTokens: 4000,
-      systemPrompt: SYSTEM_PROMPT,
-      cacheSystem: true,
-      messages: [{ role: "user", content: prompt }],
-    });
+    // Haiku primeiro (mais rápido), cai para Sonnet se falhar
+    let msg;
+    try {
+      msg = await createWithCache({
+        model: MODELS.haiku,
+        maxTokens: 4000,
+        systemPrompt: SYSTEM_PROMPT,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    } catch (haikuErr) {
+      console.error("[artigos] Haiku falhou, tentando Sonnet:", haikuErr);
+      msg = await createWithCache({
+        model: MODELS.sonnet,
+        maxTokens: 4000,
+        systemPrompt: SYSTEM_PROMPT,
+        cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+    }
+
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
     const parsed = extractJSON<{ artigos: unknown[] }>(raw);
     artigos = parsed.artigos ?? [];
-  } catch {
-    return NextResponse.json({ error: "Erro ao gerar artigos com IA" }, { status: 500 });
+
+    if (artigos.length === 0) {
+      console.error("[artigos] IA retornou array vazio. Raw:", raw.slice(0, 200));
+      return NextResponse.json({ error: "IA não retornou artigos" }, { status: 500 });
+    }
+  } catch (err) {
+    console.error("[artigos] Erro completo:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    return NextResponse.json({ error: `Erro ao gerar artigos com IA: ${msg}` }, { status: 500 });
   }
 
-  const result = { artigos, subjectName, generatedAt: new Date().toISOString() };
+  // Monta nova entrada de histórico
+  const newEntry: HistoryEntry = {
+    id: crypto.randomUUID(),
+    generatedAt: new Date().toISOString(),
+    subjectName,
+    artigos,
+  };
 
-  // Cache na Note table (sem expiração — artigos mudam pouco)
+  // Carrega histórico existente
   const cacheKey = `${NOTE_PREFIX}:${subjectId}`;
-  const { data: existing } = await db
+  const { data: existingNote } = await db
     .from("Note")
-    .select("id")
+    .select("id, content")
     .eq("userId", dbUser.id)
     .eq("subjectId", cacheKey)
     .maybeSingle();
 
-  if (existing) {
-    await db.from("Note")
-      .update({ content: JSON.stringify(result), updatedAt: new Date().toISOString() })
-      .eq("id", existing.id);
+  let history: HistoryEntry[] = [];
+  if (existingNote?.content) {
+    try {
+      const stored = JSON.parse(existingNote.content) as StoredData;
+      if (Array.isArray(stored.history)) {
+        history = stored.history;
+      } else {
+        // Migra formato antigo
+        const old = stored as unknown as { artigos: unknown[]; subjectName: string; generatedAt: string };
+        if (old.artigos) {
+          history = [{ id: "legacy", generatedAt: old.generatedAt, subjectName: old.subjectName, artigos: old.artigos }];
+        }
+      }
+    } catch { /* ignora erro de parse */ }
+  }
+
+  // Adiciona nova entrada no topo e limita ao máximo
+  history = [newEntry, ...history].slice(0, MAX_HISTORY);
+  const content = JSON.stringify({ history });
+  const now = new Date().toISOString();
+
+  if (existingNote?.id) {
+    await db.from("Note").update({ content, updatedAt: now }).eq("id", existingNote.id);
   } else {
     await db.from("Note").insert({
       id: crypto.randomUUID(),
       userId: dbUser.id,
       subjectId: cacheKey,
-      content: JSON.stringify(result),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      content,
+      createdAt: now,
+      updatedAt: now,
     });
   }
 
-  return NextResponse.json(result);
+  return NextResponse.json({ entry: newEntry, history });
 }
