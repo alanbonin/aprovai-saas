@@ -45,15 +45,49 @@ export async function GET() {
 
   const nowMs = Date.now();
 
-  type Card = {
-    id: string;
-    nextReview?: string;
-    interval?: number;
-  };
+  type Card = { id: string; nextReview?: string; interval?: number };
+
+  // Para decks do admin, busca progresso pessoal do aluno nas Notes
+  const NOTE_PREFIX = "__FC_PROG__";
+  const adminSetIds = (sets ?? [])
+    .filter(s => s.userId !== dbUser.id)
+    .map(s => s.id as string);
+
+  // Carrega todas as Notes de progresso de uma vez
+  const progressBySet: Record<string, Record<string, { nextReview: string }>> = {};
+  if (adminSetIds.length > 0) {
+    const noteKeys = adminSetIds.map(id => `${NOTE_PREFIX}${id}`);
+    const { data: progNotes } = await db
+      .from("Note")
+      .select("subjectId, content")
+      .eq("userId", dbUser.id)
+      .in("subjectId", noteKeys);
+
+    for (const note of progNotes ?? []) {
+      const setId = (note.subjectId as string).replace(NOTE_PREFIX, "");
+      try {
+        progressBySet[setId] = JSON.parse(note.content as string) as Record<string, { nextReview: string }>;
+      } catch { /* ignore */ }
+    }
+  }
 
   const decks = (sets ?? []).map(s => {
     const cards = (s.cards as Card[]) ?? [];
-    const dueCount = cards.filter(c => !c.nextReview || new Date(c.nextReview).getTime() <= nowMs).length;
+    const isOwn = s.userId === dbUser.id;
+    let dueCount: number;
+
+    if (isOwn) {
+      // Deck do aluno: nextReview está direto no card
+      dueCount = cards.filter(c => !c.nextReview || new Date(c.nextReview).getTime() <= nowMs).length;
+    } else {
+      // Deck do admin: nextReview está na Note pessoal
+      const prog = progressBySet[s.id as string] ?? {};
+      dueCount = cards.filter(c => {
+        const p = prog[c.id];
+        return !p?.nextReview || new Date(p.nextReview).getTime() <= nowMs;
+      }).length;
+    }
+
     return {
       id: s.id,
       name: s.name,
