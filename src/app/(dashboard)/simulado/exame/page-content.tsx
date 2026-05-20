@@ -52,10 +52,39 @@ export function SimuladoExameInner() {
   const [finished, setFinished]   = useState(false);
   const timerRef                  = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs para capturar estado atual sem recriar o finish callback
+  const questionsRef = useRef<Question[]>([]);
+  const answersRef   = useRef<Record<number, string>>({});
+  const presetRef    = useRef(1);
+  const timeLeftRef  = useRef(0);
+  useEffect(() => { questionsRef.current = questions; }, [questions]);
+  useEffect(() => { answersRef.current   = answers;   }, [answers]);
+  useEffect(() => { presetRef.current    = preset;    }, [preset]);
+  useEffect(() => { timeLeftRef.current  = timeLeft;  }, [timeLeft]);
+
   const finish = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
     setFinished(true);
     setPhase("result");
+
+    // Salva no histórico (fire-and-forget)
+    const qs  = questionsRef.current;
+    const ans = answersRef.current;
+    const cfg = PRESETS[presetRef.current];
+    const timeTaken = cfg.minutes * 60 - timeLeftRef.current;
+    const finalCorrect = qs.filter((qq, i) => ans[i] === qq.answer).length;
+    const fullAns = qs.map((q, i) => ({ questionId: q.id, correct: ans[i] === q.answer }));
+
+    void fetch("/api/simulado/salvar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        total: qs.length,
+        correct: finalCorrect,
+        timeSecs: timeTaken,
+        answers: fullAns,
+      }),
+    }).catch(() => {});
   }, []);
 
   useEffect(() => {
