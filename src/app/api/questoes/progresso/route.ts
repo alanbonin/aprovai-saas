@@ -137,7 +137,10 @@ export async function POST(req: Request) {
   // ─────────────────────────────────────────────────────────────────────────
 
   const { questionId, correct, quality } = await req.json();
-  const q = quality ?? (correct ? "ok" : "again");
+  // Normaliza strings do componente QuestoesAdaptativas ("lembrei"/"nao-lembrei")
+  // para os valores esperados pelo SM-2 ("ok"/"again")
+  const rawQ = quality ?? (correct ? "ok" : "again");
+  const q = rawQ === "lembrei" ? "ok" : rawQ === "nao-lembrei" ? "again" : rawQ;
 
   const { data: existing } = await db
     .from("Progress")
