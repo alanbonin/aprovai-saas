@@ -338,10 +338,26 @@ Retorne APENAS o JSON abaixo, sem markdown:
     return NextResponse.json({ error: `Erro ao gerar PDF: ${(e as Error).message}` }, { status: 500 });
   }
 
+  // ── Garante que o bucket existe ──────────────────────────────────────────────
+  const BUCKET = "materiais";
+  const { data: buckets } = await db.storage.listBuckets();
+  const bucketExists = buckets?.some((b) => b.name === BUCKET);
+  if (!bucketExists) {
+    const { error: createErr } = await db.storage.createBucket(BUCKET, {
+      public: true,
+      allowedMimeTypes: ["application/pdf"],
+      fileSizeLimit: 52428800, // 50 MB
+    });
+    if (createErr) {
+      console.error("[materiais/gerar] Erro ao criar bucket:", createErr);
+      return NextResponse.json({ error: `Erro ao criar bucket: ${createErr.message}` }, { status: 500 });
+    }
+  }
+
   // ── Upload para Supabase Storage ─────────────────────────────────────────────
-  const fileName = `materiais/${subjectId}/${Date.now()}-${tipoLabel.toLowerCase().replace(/\s/g, "-")}.pdf`;
+  const fileName = `${subjectId}/${Date.now()}-${tipoLabel.toLowerCase().replace(/\s/g, "-")}.pdf`;
   const { error: uploadError } = await db.storage
-    .from("materiais")
+    .from(BUCKET)
     .upload(fileName, pdfBuffer, { contentType: "application/pdf", upsert: false });
 
   if (uploadError) {
@@ -349,7 +365,7 @@ Retorne APENAS o JSON abaixo, sem markdown:
     return NextResponse.json({ error: `Erro no upload: ${uploadError.message}` }, { status: 500 });
   }
 
-  const { data: { publicUrl } } = db.storage.from("materiais").getPublicUrl(fileName);
+  const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(fileName);
 
   // ── Salva registro no banco ──────────────────────────────────────────────────
   const title = topico
