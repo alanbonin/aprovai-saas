@@ -25,10 +25,10 @@ const TYPE_ICONS: Record<string, React.ReactNode> = {
 };
 
 const TIPOS_MATERIAL = [
-  { id: "apostila",      label: "Apostila Completa",     desc: "Do básico ao avançado, progressivo" },
-  { id: "resumo",        label: "Resumo",                desc: "Pontos principais, conciso" },
-  { id: "mapa_conceitos",label: "Mapa de Conceitos",     desc: "Conceitos interligados com relações" },
-  { id: "exercicios",    label: "Lista de Exercícios",   desc: "Questões com gabarito comentado" },
+  { id: "aula_completa",  label: "Aula Completa",        desc: "Teoria + exemplos + questões de banca" },
+  { id: "resumo",         label: "Resumo Rápido",        desc: "Pontos-chave para revisão" },
+  { id: "mapa_conceitos", label: "Mapa de Conceitos",    desc: "Conceitos interligados e comparativos" },
+  { id: "exercicios",     label: "Lista de Exercícios",  desc: "Questões comentadas por banca" },
 ];
 
 const BANCAS = ["CESPE/CEBRASPE", "FGV", "VUNESP", "FCC", "IBFC", "CODEPE", "QUADRIX", "IDECAN", "NC-UFPR"];
@@ -58,7 +58,8 @@ export function MateriaisAdmin({ materials: initial, subjects }: Props) {
     cargo: "",
     banca: "",
     topico: "",
-    tipo: "apostila",
+    tipo: "aula_completa",
+    numeroAula: "1",
   });
   const [gerando, setGerando] = useState(false);
   const [gerarError, setGerarError] = useState("");
@@ -134,6 +135,7 @@ export function MateriaisAdmin({ materials: initial, subjects }: Props) {
           banca: gerarForm.banca || undefined,
           topico: gerarForm.topico || undefined,
           tipo: gerarForm.tipo,
+          numeroAula: gerarForm.numeroAula || "1",
         }),
       });
 
@@ -270,8 +272,9 @@ export function MateriaisAdmin({ materials: initial, subjects }: Props) {
               <div className="rounded-xl bg-indigo-500/5 border border-indigo-500/20 p-4 mb-6 flex items-start gap-3">
                 <Sparkles className="w-4 h-4 text-indigo-400 flex-shrink-0 mt-0.5" />
                 <p className="text-sm text-indigo-300">
-                  A IA gera um PDF profissional completo com a marca Aprovai360 — incluindo textos, tabelas comparativas,
-                  destaques e questões práticas. Quanto mais detalhes você fornecer, mais personalizado será o material.
+                  A IA cria uma <strong>aula completa em PDF</strong> no estilo das grandes plataformas de concursos —
+                  com teoria didática, caixas <em>FIQUE ATENTO!</em>, exemplos práticos, pseudocódigo (TI),
+                  questões de banca intercaladas e lista de exercícios no final. Marca Aprovai360.
                 </p>
               </div>
 
@@ -289,17 +292,30 @@ export function MateriaisAdmin({ materials: initial, subjects }: Props) {
                   </select>
                 </div>
 
-                {/* Tópico */}
-                <div>
-                  <label className="text-xs text-gray-400 mb-1 block">
-                    Tópico específico <span className="text-gray-600">(opcional — ex: Princípios constitucionais, Lavagem de dinheiro)</span>
-                  </label>
-                  <input
-                    value={gerarForm.topico}
-                    onChange={e => setGerarForm(f => ({ ...f, topico: e.target.value }))}
-                    placeholder="Ex: Princípios da Administração Pública, LGPD — conceitos básicos..."
-                    className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
-                  />
+                {/* Tópico + Nº da Aula */}
+                <div className="grid grid-cols-[1fr_100px] gap-3">
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">
+                      Tópico específico <span className="text-gray-600">(opcional)</span>
+                    </label>
+                    <input
+                      value={gerarForm.topico}
+                      onChange={e => setGerarForm(f => ({ ...f, topico: e.target.value }))}
+                      placeholder="Ex: Princípios da Adm. Pública, LGPD — conceitos básicos..."
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs text-gray-400 mb-1 block">Nº da Aula</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={gerarForm.numeroAula}
+                      onChange={e => setGerarForm(f => ({ ...f, numeroAula: e.target.value }))}
+                      className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
 
                 {/* Tipo de material */}

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
-import { renderToBuffer, Document, Page, Text, View, StyleSheet, Font, Image } from "@react-pdf/renderer";
+import { renderToBuffer, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 async function requireAdmin() {
@@ -13,237 +13,366 @@ async function requireAdmin() {
   return data?.role === "ADMIN" ? data : null;
 }
 
-// ── Tipos de conteúdo do material ────────────────────────────────────────────
-type Secao =
-  | { tipo: "texto";   titulo: string; conteudo: string }
-  | { tipo: "lista";   titulo: string; itens: string[] }
-  | { tipo: "tabela";  titulo: string; colunas: string[]; linhas: string[][] }
-  | { tipo: "destaque"; titulo: string; conteudo: string; cor?: string };
+// ── Tipos ─────────────────────────────────────────────────────────────────────
+interface SecaoTeoria      { tipo: "teoria";         titulo: string; texto: string; }
+interface SecaoLista       { tipo: "lista";           titulo: string; itens: string[]; }
+interface SecaoTabela      { tipo: "tabela";          titulo: string; colunas: string[]; linhas: string[][]; }
+interface SecaoAtencao     { tipo: "atencao";         texto: string; }
+interface SecaoExempl      { tipo: "exemplificando";  titulo?: string; texto: string; }
+interface SecaoCodigo      { tipo: "codigo";          titulo?: string; codigo: string; }
+interface SecaoQuestao     { tipo: "questao";         banca: string; ano: string; orgao?: string; enunciado: string; gabarito: string; comentario: string; }
+interface SecaoDestaque    { tipo: "destaque";        titulo: string; texto: string; }
 
-interface MaterialContent {
+type Secao = SecaoTeoria | SecaoLista | SecaoTabela | SecaoAtencao | SecaoExempl | SecaoCodigo | SecaoQuestao | SecaoDestaque;
+
+interface QuestaoFinal {
+  numero: number;
+  banca: string;
+  ano: string;
+  orgao?: string;
+  enunciado: string;
+  gabarito: string;
+  comentario: string;
+}
+
+interface AulaContent {
   titulo: string;
   subtitulo: string;
   cargo: string;
   materia: string;
   banca: string;
+  numero_aula: string;
+  introducao: string;
   secoes: Secao[];
-  resumo: string;
-  questoes?: { enunciado: string; gabarito: string; explicacao: string }[];
+  questoes_lista?: QuestaoFinal[];
 }
 
-// ── Estilos PDF ──────────────────────────────────────────────────────────────
-Font.register({
-  family: "Helvetica",
-  fonts: [
-    { src: "Helvetica" },
-    { src: "Helvetica-Bold", fontWeight: "bold" },
-  ],
-});
+// ── Cores ─────────────────────────────────────────────────────────────────────
+const C = {
+  dark:        "#1e1b4b",
+  purple:      "#6d28d9",
+  purpleLight: "#ede9fe",
+  amber:       "#d97706",
+  amberLight:  "#fef3c7",
+  teal:        "#0d9488",
+  tealLight:   "#ccfbf1",
+  codeBg:      "#1e293b",
+  codeText:    "#e2e8f0",
+  gray:        "#374151",
+  grayLight:   "#f3f4f6",
+  white:       "#ffffff",
+  border:      "#e5e7eb",
+  muted:       "#9ca3af",
+};
 
-const BRAND_PURPLE = "#6d28d9";
-const BRAND_DARK   = "#1e1b4b";
-const BRAND_LIGHT  = "#ede9fe";
-const GRAY_TEXT    = "#374151";
-const GRAY_LIGHT   = "#f3f4f6";
+// ── Estilos PDF ───────────────────────────────────────────────────────────────
+const s = StyleSheet.create({
+  // Capa
+  cover:            { backgroundColor: C.dark, flex: 1, padding: 50 },
+  coverTopRow:      { flexDirection: "row", justifyContent: "space-between", marginBottom: 60 },
+  coverLogo:        { fontSize: 22, fontWeight: "bold", color: C.white },
+  coverLogoSub:     { fontSize: 9, color: "#a78bfa", marginTop: 3 },
+  coverNumLabel:    { fontSize: 11, color: "#a78bfa", textAlign: "right" },
+  coverNum:         { fontSize: 52, fontWeight: "bold", color: C.white, textAlign: "right", lineHeight: 1.1 },
+  coverTitle:       { fontSize: 24, fontWeight: "bold", color: C.white, marginTop: 60, lineHeight: 1.3 },
+  coverSubtitle:    { fontSize: 13, color: "#c4b5fd", marginTop: 12, lineHeight: 1.4 },
+  coverDivider:     { height: 2, backgroundColor: C.purple, marginTop: 30, marginBottom: 20, width: 80 },
+  coverMeta:        { marginTop: "auto" as unknown as number },
+  coverMetaItem:    { fontSize: 10, color: "#a78bfa", marginBottom: 4 },
+  coverMetaValue:   { fontSize: 12, color: C.white, fontWeight: "bold", marginBottom: 10 },
+  coverDate:        { fontSize: 9, color: "#6d4ed8", marginTop: 20 },
 
-const styles = StyleSheet.create({
-  page: { backgroundColor: "#ffffff", paddingTop: 0, paddingBottom: 60, fontFamily: "Helvetica" },
+  // Páginas de conteúdo
+  page:             { backgroundColor: C.white, paddingBottom: 65 },
+  pageHeader:       { backgroundColor: C.dark, paddingHorizontal: 40, paddingVertical: 9, flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  pageHeaderLeft:   { fontSize: 8, color: "#a78bfa", fontWeight: "bold" },
+  pageHeaderRight:  { fontSize: 8, color: "#6d4ed8" },
+  body:             { paddingHorizontal: 40, paddingTop: 18 },
 
-  // Header
-  header: { backgroundColor: BRAND_DARK, paddingHorizontal: 40, paddingTop: 30, paddingBottom: 20 },
-  headerTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 },
-  logoText: { fontSize: 20, fontWeight: "bold", color: "#ffffff" },
-  logoSub: { fontSize: 9, color: "#a78bfa", marginTop: 2 },
-  headerBadge: { backgroundColor: BRAND_PURPLE, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
-  headerBadgeText: { color: "#ffffff", fontSize: 8, fontWeight: "bold" },
-  headerTitle: { fontSize: 22, fontWeight: "bold", color: "#ffffff", marginBottom: 6, lineHeight: 1.3 },
-  headerSub: { fontSize: 11, color: "#c4b5fd", marginBottom: 12 },
-  headerMeta: { flexDirection: "row", gap: 16 },
-  headerMetaItem: { flexDirection: "row", alignItems: "center", gap: 4 },
-  headerMetaText: { fontSize: 9, color: "#a78bfa" },
-  headerDivider: { height: 2, backgroundColor: BRAND_PURPLE, marginTop: 16, borderRadius: 1 },
+  // Introdução
+  introBox:         { backgroundColor: C.purpleLight, borderLeftWidth: 4, borderLeftColor: C.purple, padding: 14, marginBottom: 18, borderRadius: 3 },
+  introText:        { fontSize: 10, color: C.dark, lineHeight: 1.65, fontStyle: "italic" },
 
-  // Body
-  body: { paddingHorizontal: 40, paddingTop: 24 },
-
-  // Seção
-  sectionTitle: { fontSize: 13, fontWeight: "bold", color: BRAND_DARK, marginBottom: 8, marginTop: 20,
-    paddingBottom: 4, borderBottomWidth: 2, borderBottomColor: BRAND_PURPLE },
-  paragraph: { fontSize: 10, color: GRAY_TEXT, lineHeight: 1.65, marginBottom: 8 },
+  // Teoria
+  sectionTitle:     { fontSize: 13, fontWeight: "bold", color: C.dark, marginBottom: 8, marginTop: 20, paddingBottom: 5, borderBottomWidth: 2, borderBottomColor: C.purple },
+  paragraph:        { fontSize: 10, color: C.gray, lineHeight: 1.68, marginBottom: 8 },
 
   // Lista
-  listItem: { flexDirection: "row", marginBottom: 5, paddingLeft: 4 },
-  listBullet: { fontSize: 10, color: BRAND_PURPLE, marginRight: 8, fontWeight: "bold" },
-  listText: { fontSize: 10, color: GRAY_TEXT, lineHeight: 1.5, flex: 1 },
+  listItem:         { flexDirection: "row", marginBottom: 5, paddingLeft: 4 },
+  listBullet:       { fontSize: 10, color: C.purple, marginRight: 8, fontWeight: "bold" },
+  listText:         { fontSize: 10, color: C.gray, lineHeight: 1.5, flex: 1 },
 
   // Tabela
-  table: { marginBottom: 12, borderWidth: 1, borderColor: "#e5e7eb", borderRadius: 4, overflow: "hidden" },
-  tableRow: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "#e5e7eb" },
-  tableHeader: { backgroundColor: BRAND_DARK },
-  tableHeaderText: { fontSize: 9, fontWeight: "bold", color: "#ffffff", padding: 8, flex: 1 },
-  tableCell: { fontSize: 9, color: GRAY_TEXT, padding: 8, flex: 1 },
-  tableAlt: { backgroundColor: GRAY_LIGHT },
+  table:            { marginBottom: 12, borderWidth: 1, borderColor: C.border, overflow: "hidden" },
+  tableRow:         { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: C.border },
+  tableHead:        { backgroundColor: C.dark },
+  tableHeadCell:    { fontSize: 9, fontWeight: "bold", color: C.white, padding: 8, flex: 1 },
+  tableCell:        { fontSize: 9, color: C.gray, padding: 8, flex: 1, lineHeight: 1.4 },
+  tableAlt:         { backgroundColor: C.grayLight },
+
+  // FIQUE ATENTO
+  atencaoWrap:      { marginVertical: 10, borderWidth: 1, borderColor: C.amber, overflow: "hidden", borderRadius: 4 },
+  atencaoHeader:    { backgroundColor: C.amber, paddingHorizontal: 12, paddingVertical: 5, flexDirection: "row", alignItems: "center", gap: 6 },
+  atencaoHeaderTxt: { fontSize: 9, fontWeight: "bold", color: C.white },
+  atencaoBody:      { backgroundColor: C.amberLight, padding: 12 },
+  atencaoText:      { fontSize: 10, color: "#78350f", lineHeight: 1.55 },
+
+  // EXEMPLIFICANDO
+  exemplWrap:       { marginVertical: 10, borderWidth: 1, borderColor: C.teal, overflow: "hidden", borderRadius: 4 },
+  exemplHeader:     { backgroundColor: C.teal, paddingHorizontal: 12, paddingVertical: 5 },
+  exemplHeaderTxt:  { fontSize: 9, fontWeight: "bold", color: C.white },
+  exemplTitle:      { fontSize: 10, fontWeight: "bold", color: C.teal, paddingHorizontal: 12, paddingTop: 10 },
+  exemplBody:       { backgroundColor: C.tealLight, padding: 12, paddingTop: 6 },
+  exemplText:       { fontSize: 10, color: "#134e4a", lineHeight: 1.55 },
+
+  // Código
+  codeWrap:         { backgroundColor: C.codeBg, borderRadius: 4, marginVertical: 10, padding: 14 },
+  codeTitle:        { fontSize: 8, color: "#94a3b8", marginBottom: 8, fontWeight: "bold" },
+  codeText:         { fontSize: 9, color: C.codeText, fontFamily: "Courier", lineHeight: 1.65 },
+
+  // Questão inline
+  questaoWrap:      { borderWidth: 1, borderColor: C.border, borderRadius: 4, marginVertical: 10, overflow: "hidden" },
+  questaoBancaBar:  { backgroundColor: C.purpleLight, paddingHorizontal: 10, paddingVertical: 5 },
+  questaoBancaTxt:  { fontSize: 8, color: C.purple, fontWeight: "bold" },
+  questaoEnunc:     { fontSize: 10, color: C.gray, padding: 10, lineHeight: 1.55 },
+  questaoSep:       { height: 1, backgroundColor: C.border, marginHorizontal: 10 },
+  questaoGabRow:    { flexDirection: "row", padding: 10, gap: 6 },
+  questaoGabLabel:  { fontSize: 9, fontWeight: "bold", color: C.purple },
+  questaoGabText:   { fontSize: 9, color: C.gray, flex: 1, lineHeight: 1.4 },
 
   // Destaque
-  highlight: { backgroundColor: BRAND_LIGHT, borderLeftWidth: 4, borderLeftColor: BRAND_PURPLE,
-    padding: 12, marginVertical: 10, borderRadius: 4 },
-  highlightTitle: { fontSize: 10, fontWeight: "bold", color: BRAND_PURPLE, marginBottom: 4 },
-  highlightText: { fontSize: 10, color: GRAY_TEXT, lineHeight: 1.5 },
+  destacWrap:       { backgroundColor: C.purpleLight, borderLeftWidth: 4, borderLeftColor: C.purple, padding: 12, marginVertical: 10, borderRadius: 3 },
+  destacTitle:      { fontSize: 10, fontWeight: "bold", color: C.purple, marginBottom: 5 },
+  destacText:       { fontSize: 10, color: C.gray, lineHeight: 1.55 },
 
-  // Resumo
-  resumoBox: { backgroundColor: BRAND_DARK, padding: 16, marginHorizontal: 40, marginTop: 20,
-    borderRadius: 8 },
-  resumoTitle: { fontSize: 12, fontWeight: "bold", color: "#a78bfa", marginBottom: 8 },
-  resumoText: { fontSize: 10, color: "#e5e7eb", lineHeight: 1.6 },
-
-  // Questões
-  questaoBox: { backgroundColor: GRAY_LIGHT, borderRadius: 6, padding: 12, marginBottom: 10 },
-  questaoNum: { fontSize: 9, fontWeight: "bold", color: BRAND_PURPLE, marginBottom: 4 },
-  questaoText: { fontSize: 10, color: GRAY_TEXT, lineHeight: 1.5, marginBottom: 6 },
-  gabarito: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 4 },
-  gabaritoLabel: { fontSize: 9, fontWeight: "bold", color: BRAND_PURPLE },
-  gabaritoText: { fontSize: 9, color: GRAY_TEXT, flex: 1, lineHeight: 1.4 },
+  // Seção de questões finais
+  questoesHeader:   { backgroundColor: C.dark, padding: 14, borderRadius: 4, marginTop: 28, marginBottom: 16 },
+  questoesHeaderTx: { fontSize: 14, fontWeight: "bold", color: C.white },
+  questaoFinalBox:  { borderWidth: 1, borderColor: C.border, borderRadius: 4, marginBottom: 14, overflow: "hidden" },
+  questaoFinalNum:  { backgroundColor: C.grayLight, paddingHorizontal: 10, paddingVertical: 5 },
+  questaoFinalNumTx:{ fontSize: 9, fontWeight: "bold", color: C.purple },
+  questaoFinalEnunc:{ fontSize: 10, color: C.gray, padding: 10, lineHeight: 1.55 },
+  questaoFinalGab:  { backgroundColor: C.purpleLight, padding: 10 },
+  questaoFinalGabTx:{ fontSize: 9, color: C.dark, lineHeight: 1.5 },
 
   // Footer
-  footer: { position: "absolute", bottom: 20, left: 40, right: 40,
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    borderTopWidth: 1, borderTopColor: "#e5e7eb", paddingTop: 8 },
-  footerLeft: { fontSize: 8, color: "#9ca3af" },
-  footerRight: { fontSize: 8, color: "#9ca3af" },
-  pageNumber: { fontSize: 8, color: "#9ca3af" },
+  footer:           { position: "absolute", bottom: 20, left: 40, right: 40, flexDirection: "row", justifyContent: "space-between", alignItems: "center", borderTopWidth: 1, borderTopColor: C.border, paddingTop: 8 },
+  footerLeft:       { fontSize: 8, color: C.muted },
+  footerRight:      { fontSize: 8, color: C.muted },
 });
 
-// ── Renderer do PDF ───────────────────────────────────────────────────────────
-function MaterialPDF({ content }: { content: MaterialContent }) {
-  const geradoEm = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
-
-  return (
-    <Document
-      title={content.titulo}
-      author="Aprovai360"
-      subject={content.materia}
-      creator="Aprovai360 — Plataforma de Concursos"
-    >
-      <Page size="A4" style={styles.page}>
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <View style={styles.headerTop}>
-            <View>
-              <Text style={styles.logoText}>Aprovai360</Text>
-              <Text style={styles.logoSub}>Plataforma de Preparação para Concursos</Text>
-            </View>
-            {content.banca ? (
-              <View style={styles.headerBadge}>
-                <Text style={styles.headerBadgeText}>{content.banca}</Text>
-              </View>
-            ) : null}
-          </View>
-          <Text style={styles.headerTitle}>{content.titulo}</Text>
-          <Text style={styles.headerSub}>{content.subtitulo}</Text>
-          <View style={styles.headerMeta}>
-            {content.cargo ? (
-              <View style={styles.headerMetaItem}>
-                <Text style={styles.headerMetaText}>👤 {content.cargo}</Text>
-              </View>
-            ) : null}
-            {content.materia ? (
-              <View style={styles.headerMetaItem}>
-                <Text style={styles.headerMetaText}>📚 {content.materia}</Text>
-              </View>
-            ) : null}
-            <View style={styles.headerMetaItem}>
-              <Text style={styles.headerMetaText}>📅 {geradoEm}</Text>
-            </View>
-          </View>
-          <View style={styles.headerDivider} />
+// ── Renderizador de seções ────────────────────────────────────────────────────
+function RenderSecao({ secao, idx }: { secao: Secao; idx: number }) {
+  switch (secao.tipo) {
+    case "teoria":
+      return (
+        <View key={idx}>
+          <Text style={s.sectionTitle}>{secao.titulo}</Text>
+          <Text style={s.paragraph}>{secao.texto}</Text>
         </View>
+      );
 
-        {/* ── Seções ── */}
-        <View style={styles.body}>
-          {content.secoes.map((secao, idx) => {
-            if (secao.tipo === "texto") {
-              return (
-                <View key={idx}>
-                  <Text style={styles.sectionTitle}>{secao.titulo}</Text>
-                  <Text style={styles.paragraph}>{secao.conteudo}</Text>
-                </View>
-              );
-            }
-            if (secao.tipo === "lista") {
-              return (
-                <View key={idx}>
-                  <Text style={styles.sectionTitle}>{secao.titulo}</Text>
-                  {secao.itens.map((item, i) => (
-                    <View key={i} style={styles.listItem}>
-                      <Text style={styles.listBullet}>▸</Text>
-                      <Text style={styles.listText}>{item}</Text>
-                    </View>
-                  ))}
-                </View>
-              );
-            }
-            if (secao.tipo === "tabela") {
-              return (
-                <View key={idx}>
-                  <Text style={styles.sectionTitle}>{secao.titulo}</Text>
-                  <View style={styles.table}>
-                    <View style={[styles.tableRow, styles.tableHeader]}>
-                      {secao.colunas.map((col, c) => (
-                        <Text key={c} style={styles.tableHeaderText}>{col}</Text>
-                      ))}
-                    </View>
-                    {secao.linhas.map((linha, r) => (
-                      <View key={r} style={[styles.tableRow, r % 2 === 1 ? styles.tableAlt : {}]}>
-                        {linha.map((cel, c) => (
-                          <Text key={c} style={styles.tableCell}>{cel}</Text>
-                        ))}
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              );
-            }
-            if (secao.tipo === "destaque") {
-              return (
-                <View key={idx} style={styles.highlight}>
-                  <Text style={styles.highlightTitle}>{secao.titulo}</Text>
-                  <Text style={styles.highlightText}>{secao.conteudo}</Text>
-                </View>
-              );
-            }
-            return null;
-          })}
+    case "lista":
+      return (
+        <View key={idx}>
+          <Text style={s.sectionTitle}>{secao.titulo}</Text>
+          {secao.itens.map((item, i) => (
+            <View key={i} style={s.listItem}>
+              <Text style={s.listBullet}>{">"}</Text>
+              <Text style={s.listText}>{item}</Text>
+            </View>
+          ))}
         </View>
+      );
 
-        {/* ── Resumo ── */}
-        {content.resumo ? (
-          <View style={styles.resumoBox}>
-            <Text style={styles.resumoTitle}>📌 Resumo para Fixação</Text>
-            <Text style={styles.resumoText}>{content.resumo}</Text>
-          </View>
-        ) : null}
-
-        {/* ── Questões ── */}
-        {content.questoes && content.questoes.length > 0 ? (
-          <View style={[styles.body, { marginTop: 16 }]}>
-            <Text style={[styles.sectionTitle, { marginTop: 0 }]}>✏️ Questões Práticas</Text>
-            {content.questoes.map((q, i) => (
-              <View key={i} style={styles.questaoBox}>
-                <Text style={styles.questaoNum}>Questão {i + 1}</Text>
-                <Text style={styles.questaoText}>{q.enunciado}</Text>
-                <View style={styles.gabarito}>
-                  <Text style={styles.gabaritoLabel}>Gabarito:</Text>
-                  <Text style={styles.gabaritoText}>{q.gabarito} — {q.explicacao}</Text>
-                </View>
+    case "tabela":
+      return (
+        <View key={idx}>
+          <Text style={s.sectionTitle}>{secao.titulo}</Text>
+          <View style={s.table}>
+            <View style={[s.tableRow, s.tableHead]}>
+              {secao.colunas.map((col, c) => (
+                <Text key={c} style={s.tableHeadCell}>{col}</Text>
+              ))}
+            </View>
+            {secao.linhas.map((linha, r) => (
+              <View key={r} style={[s.tableRow, r % 2 === 1 ? s.tableAlt : {}]}>
+                {linha.map((cel, c) => (
+                  <Text key={c} style={s.tableCell}>{cel}</Text>
+                ))}
               </View>
             ))}
           </View>
-        ) : null}
+        </View>
+      );
 
-        {/* ── Footer ── */}
-        <View style={styles.footer} fixed>
-          <Text style={styles.footerLeft}>Aprovai360 — Material gerado por IA em {geradoEm}</Text>
-          <Text style={styles.footerRight} render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`} />
+    case "atencao":
+      return (
+        <View key={idx} style={s.atencaoWrap}>
+          <View style={s.atencaoHeader}>
+            <Text style={s.atencaoHeaderTxt}>! FIQUE ATENTO !</Text>
+          </View>
+          <View style={s.atencaoBody}>
+            <Text style={s.atencaoText}>{secao.texto}</Text>
+          </View>
+        </View>
+      );
+
+    case "exemplificando":
+      return (
+        <View key={idx} style={s.exemplWrap}>
+          <View style={s.exemplHeader}>
+            <Text style={s.exemplHeaderTxt}>EXEMPLIFICANDO</Text>
+          </View>
+          <View style={s.exemplBody}>
+            {secao.titulo ? <Text style={s.exemplTitle}>{secao.titulo}</Text> : null}
+            <Text style={s.exemplText}>{secao.texto}</Text>
+          </View>
+        </View>
+      );
+
+    case "codigo":
+      return (
+        <View key={idx} style={s.codeWrap}>
+          {secao.titulo ? <Text style={s.codeTitle}>{secao.titulo}</Text> : null}
+          <Text style={s.codeText}>{secao.codigo}</Text>
+        </View>
+      );
+
+    case "questao": {
+      const bancaLabel = [secao.banca, secao.ano, secao.orgao].filter(Boolean).join(" - ");
+      return (
+        <View key={idx} style={s.questaoWrap}>
+          <View style={s.questaoBancaBar}>
+            <Text style={s.questaoBancaTxt}>({bancaLabel})</Text>
+          </View>
+          <Text style={s.questaoEnunc}>{secao.enunciado}</Text>
+          <View style={s.questaoSep} />
+          <View style={s.questaoGabRow}>
+            <Text style={s.questaoGabLabel}>Gabarito: {secao.gabarito}</Text>
+            <Text style={s.questaoGabText}>{secao.comentario}</Text>
+          </View>
+        </View>
+      );
+    }
+
+    case "destaque":
+      return (
+        <View key={idx} style={s.destacWrap}>
+          <Text style={s.destacTitle}>{secao.titulo}</Text>
+          <Text style={s.destacText}>{secao.texto}</Text>
+        </View>
+      );
+
+    default:
+      return null;
+  }
+}
+
+// ── Componente PDF ────────────────────────────────────────────────────────────
+function AulaPDF({ content }: { content: AulaContent }) {
+  const hoje = new Date().toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
+  const aulaLabel = `Aula ${content.numero_aula.padStart(2, "0")}`;
+  const bancaStr = content.banca || "Concursos Públicos";
+  const pageHeaderLeft = `Aprovai360  |  ${content.materia}  |  ${aulaLabel}`;
+
+  return (
+    <Document title={content.titulo} author="Aprovai360" subject={content.materia}>
+
+      {/* ── Capa ── */}
+      <Page size="A4" style={s.cover}>
+        {/* Topo */}
+        <View style={s.coverTopRow}>
+          <View>
+            <Text style={s.coverLogo}>Aprovai360</Text>
+            <Text style={s.coverLogoSub}>Plataforma de Preparacao para Concursos</Text>
+          </View>
+          <View>
+            <Text style={s.coverNumLabel}>{aulaLabel}</Text>
+            <Text style={s.coverNum}>{content.numero_aula.padStart(2, "0")}</Text>
+          </View>
+        </View>
+
+        {/* Título */}
+        <Text style={s.coverTitle}>{content.titulo}</Text>
+        <Text style={s.coverSubtitle}>{content.subtitulo}</Text>
+        <View style={s.coverDivider} />
+
+        {/* Meta */}
+        <View style={s.coverMeta}>
+          {content.cargo ? (
+            <>
+              <Text style={s.coverMetaItem}>Cargo</Text>
+              <Text style={s.coverMetaValue}>{content.cargo}</Text>
+            </>
+          ) : null}
+          <Text style={s.coverMetaItem}>Materia</Text>
+          <Text style={s.coverMetaValue}>{content.materia}</Text>
+          {content.banca ? (
+            <>
+              <Text style={s.coverMetaItem}>Banca de referencia</Text>
+              <Text style={s.coverMetaValue}>{content.banca}</Text>
+            </>
+          ) : null}
+          <Text style={s.coverDate}>{hoje}</Text>
+        </View>
+      </Page>
+
+      {/* ── Conteúdo ── */}
+      <Page size="A4" style={s.page}>
+        {/* Header fixo */}
+        <View style={s.pageHeader} fixed>
+          <Text style={s.pageHeaderLeft}>{pageHeaderLeft}</Text>
+          <Text style={s.pageHeaderRight}>{bancaStr}</Text>
+        </View>
+
+        {/* Body */}
+        <View style={s.body}>
+          {/* Introdução */}
+          {content.introducao ? (
+            <View style={s.introBox}>
+              <Text style={s.introText}>{content.introducao}</Text>
+            </View>
+          ) : null}
+
+          {/* Seções */}
+          {content.secoes.map((secao, idx) => (
+            <RenderSecao key={idx} secao={secao} idx={idx} />
+          ))}
+
+          {/* Lista de Questões Final */}
+          {content.questoes_lista && content.questoes_lista.length > 0 ? (
+            <View break>
+              <View style={s.questoesHeader}>
+                <Text style={s.questoesHeaderTx}>Lista de Questoes para Treino</Text>
+              </View>
+              {content.questoes_lista.map((q, i) => {
+                const label = [q.banca, q.ano, q.orgao].filter(Boolean).join(" - ");
+                return (
+                  <View key={i} style={s.questaoFinalBox}>
+                    <View style={s.questaoFinalNum}>
+                      <Text style={s.questaoFinalNumTx}>Questao {q.numero}  |  {label}</Text>
+                    </View>
+                    <Text style={s.questaoFinalEnunc}>{q.enunciado}</Text>
+                    <View style={s.questaoFinalGab}>
+                      <Text style={s.questaoFinalGabTx}>
+                        Gabarito: {q.gabarito}{"  |  "}{q.comentario}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+            </View>
+          ) : null}
+        </View>
+
+        {/* Footer fixo */}
+        <View style={s.footer} fixed>
+          <Text style={s.footerLeft}>Aprovai360 — Material gerado por IA em {hoje}</Text>
+          <Text
+            style={s.footerRight}
+            render={({ pageNumber, totalPages }) => `${pageNumber} / ${totalPages}`}
+          />
         </View>
       </Page>
     </Document>
@@ -253,57 +382,67 @@ function MaterialPDF({ content }: { content: MaterialContent }) {
 // ── POST /api/admin/materiais/gerar ──────────────────────────────────────────
 export async function POST(req: Request) {
   const admin = await requireAdmin();
-  if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  if (!admin) return NextResponse.json({ error: "Sem permissao" }, { status: 403 });
 
-  const { subjectId, subjectName, cargo, banca, topico, tipo } =
+  const { subjectId, subjectName, cargo, banca, topico, tipo, numeroAula } =
     await req.json() as {
       subjectId: string;
       subjectName: string;
       cargo?: string;
       banca?: string;
       topico?: string;
-      tipo?: string; // "apostila" | "resumo" | "mapa_conceitos" | "exercicios"
+      tipo?: string;
+      numeroAula?: string;
     };
 
   if (!subjectId || !subjectName) {
-    return NextResponse.json({ error: "subjectId e subjectName são obrigatórios" }, { status: 400 });
+    return NextResponse.json({ error: "subjectId e subjectName sao obrigatorios" }, { status: 400 });
   }
 
-  const tipoLabel = tipo === "resumo" ? "Resumo" :
-                    tipo === "mapa_conceitos" ? "Mapa de Conceitos" :
-                    tipo === "exercicios" ? "Lista de Exercícios" : "Apostila";
-
+  const numAula = numeroAula || "1";
   const cargoLine = cargo ? `\nCargo alvo: ${cargo}` : "";
-  const bancaLine = banca ? `\nBanca: ${banca}` : "";
-  const topicoLine = topico ? `\nTópico específico: ${topico}` : "";
+  const bancaLine = banca ? `\nBanca de referencia: ${banca} (use o estilo e nivel dessa banca nas questoes)` : "";
+  const topicoLine = topico ? `\nTopico especifico: ${topico}` : "";
 
-  // Ajusta exigências por tipo para controlar o tamanho da resposta
+  // Instrucoes por tipo
   const tipoInstrucao =
     tipo === "resumo"
-      ? "Crie 3 seções: (1) texto de conceito, (2) lista de pontos-chave, (3) destaque com o que mais cai. Resumo em 2 parágrafos. Sem questões."
-      : tipo === "mapa_conceitos"
-      ? "Crie 4 seções: (1) texto de definição, (2) lista de conceitos interligados, (3) tabela comparativa, (4) destaque de relações importantes. Resumo curto. 2 questões."
+      ? "Gere 4 secoes de revisao rapida: 1 teoria principal, 1 lista de pontos-chave, 1 destaque de atencao, 1 tabela comparativa. Sem codigo. 2 questoes_lista."
       : tipo === "exercicios"
-      ? "Crie 2 seções de contexto (texto + lista). Gere 5 questões práticas com gabarito comentado. Resumo curto."
-      : "Crie 4 seções variadas: 1 texto de conceito (máx. 120 palavras), 1 lista de pontos-chave (máx. 6 itens), 1 tabela comparativa (máx. 3 colunas × 4 linhas), 1 destaque. Resumo em 2 parágrafos. 3 questões.";
+      ? "Gere 2 secoes de contexto teorico (teoria + lista) e 5 questoes_lista com gabarito comentado detalhado. Inclua 2 questoes inline no corpo."
+      : tipo === "mapa_conceitos"
+      ? "Gere 5 secoes: 1 teoria de visao geral, 2 listas de conceitos, 1 tabela comparativa, 1 destaque. 2 questoes_lista."
+      : "Gere uma aula completa com 7-8 secoes intercalando: teoria, exemplificando, atencao, lista, tabela, questao inline, destaque. Use 'codigo' se for area de TI. 3 questoes_lista.";
 
-  const prompt = `Gere um ${tipoLabel} de concurso público sobre: ${subjectName}${topicoLine}${cargoLine}${bancaLine}
+  const prompt = `Voce e um professor especialista em ${subjectName} para concursos publicos brasileiros.
+Gere a Aula ${numAula} sobre: ${topico || subjectName}${cargoLine}${bancaLine}${topicoLine}
 
 ${tipoInstrucao}
 
-REGRAS DE CONCISÃO (crítico para caber no JSON):
-- Textos de seção: máximo 100 palavras cada
-- Itens de lista: máximo 8 itens, cada um com até 15 palavras
-- Células de tabela: máximo 20 caracteres por célula
-- Resumo: máximo 80 palavras
-- Enunciados de questão: máximo 60 palavras
+TIPOS DE SECAO DISPONIVEIS:
+- {"tipo":"teoria","titulo":"1. Titulo","texto":"..."} - teoria didatica (max 120 palavras)
+- {"tipo":"lista","titulo":"...","itens":["..."]} - lista de pontos (max 7 itens, cada um max 20 palavras)
+- {"tipo":"tabela","titulo":"...","colunas":["A","B"],"linhas":[["v1","v2"]]} - max 3 colunas x 5 linhas, celulas curtas
+- {"tipo":"atencao","texto":"..."} - armadilha comum de prova (max 50 palavras)
+- {"tipo":"exemplificando","titulo":"...","texto":"..."} - exemplo pratico contextualizado (max 80 palavras)
+- {"tipo":"codigo","titulo":"...","codigo":"..."} - pseudocodigo ou codigo (max 12 linhas, so para TI)
+- {"tipo":"questao","banca":"CESPE","ano":"2023","orgao":"TCU","enunciado":"...","gabarito":"Certo","comentario":"..."} - questao real ou no estilo da banca (enunciado max 60 palavras, comentario max 50 palavras)
+- {"tipo":"destaque","titulo":"...","texto":"..."} - ponto critico para memorizar (max 60 palavras)
 
-Retorne APENAS o JSON abaixo, sem markdown:
-{"titulo":"...","subtitulo":"...","cargo":"${cargo ?? "Concursos Públicos"}","materia":"${subjectName}","banca":"${banca ?? ""}","secoes":[{"tipo":"texto","titulo":"1. Conceito","conteudo":"..."},{"tipo":"lista","titulo":"Pontos-chave","itens":["..."]},{"tipo":"tabela","titulo":"Comparativo","colunas":["A","B"],"linhas":[["v1","v2"]]},{"tipo":"destaque","titulo":"⚠️ Atenção","conteudo":"..."}],"resumo":"...","questoes":[{"enunciado":"...","gabarito":"...","explicacao":"..."}]}`;
+REGRAS DE QUALIDADE:
+- Intercale tipos diferentes: nunca duas "teoria" seguidas sem um "exemplificando" ou "atencao" entre elas
+- introducao: frase motivadora conectando o topico com a realidade do cargo (max 50 palavras)
+- questoes_lista: questoes de banca real no estilo ${banca || "CESPE/CEBRASPE"} com comentario didatico
+- Linguagem direta, sem rodeios, focada no que cai em prova
+- Artigos de lei e numeros citados quando relevante
 
-  let content: MaterialContent;
+Retorne APENAS JSON valido sem markdown:
+{"titulo":"...","subtitulo":"...","cargo":"${cargo || "Concursos Publicos"}","materia":"${subjectName}","banca":"${banca || ""}","numero_aula":"${numAula}","introducao":"...","secoes":[...],"questoes_lista":[{"numero":1,"banca":"...","ano":"...","orgao":"...","enunciado":"...","gabarito":"...","comentario":"..."}]}`;
+
+  // ── Gera conteúdo com IA ─────────────────────────────────────────────────────
+  let content: AulaContent;
   try {
-    const SYSTEM = "Você é um professor especialista em concursos públicos. Gere apenas JSON válido, sem markdown, sem explicações.";
+    const SYSTEM = "Voce e um professor especialista em concursos publicos brasileiros. Gere apenas JSON valido, sem markdown, sem comentarios.";
     let msg;
     try {
       msg = await createWithCache({
@@ -318,27 +457,23 @@ Retorne APENAS o JSON abaixo, sem markdown:
       });
     }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    // Log parcial para diagnóstico
-    if (process.env.NODE_ENV !== "production") {
-      console.error("[materiais/gerar] stop_reason:", (msg as { stop_reason?: string }).stop_reason, "| chars:", raw.length);
-    }
-    // Se o modelo parou por maxTokens, o JSON estará incompleto — tente extrair o que há
-    content = extractJSON<MaterialContent>(raw);
+    console.error("[materiais/gerar] stop_reason:", (msg as { stop_reason?: string }).stop_reason, "| chars:", raw.length);
+    content = extractJSON<AulaContent>(raw);
   } catch (e) {
     console.error("[materiais/gerar] Erro IA:", e);
-    return NextResponse.json({ error: `Erro ao gerar conteúdo: ${(e as Error).message}` }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao gerar conteudo: ${(e as Error).message}` }, { status: 500 });
   }
 
-  // ── Gera o PDF ───────────────────────────────────────────────────────────────
+  // ── Renderiza PDF ─────────────────────────────────────────────────────────────
   let pdfBuffer: Buffer;
   try {
-    pdfBuffer = await renderToBuffer(<MaterialPDF content={content} />);
+    pdfBuffer = await renderToBuffer(<AulaPDF content={content} />);
   } catch (e) {
     console.error("[materiais/gerar] Erro PDF:", e);
-    return NextResponse.json({ error: `Erro ao gerar PDF: ${(e as Error).message}` }, { status: 500 });
+    return NextResponse.json({ error: `Erro ao renderizar PDF: ${(e as Error).message}` }, { status: 500 });
   }
 
-  // ── Garante que o bucket existe ──────────────────────────────────────────────
+  // ── Garante bucket ────────────────────────────────────────────────────────────
   const BUCKET = "materiais";
   const { data: buckets } = await db.storage.listBuckets();
   const bucketExists = buckets?.some((b) => b.name === BUCKET);
@@ -346,16 +481,16 @@ Retorne APENAS o JSON abaixo, sem markdown:
     const { error: createErr } = await db.storage.createBucket(BUCKET, {
       public: true,
       allowedMimeTypes: ["application/pdf"],
-      fileSizeLimit: 52428800, // 50 MB
+      fileSizeLimit: 52428800,
     });
     if (createErr) {
-      console.error("[materiais/gerar] Erro ao criar bucket:", createErr);
       return NextResponse.json({ error: `Erro ao criar bucket: ${createErr.message}` }, { status: 500 });
     }
   }
 
-  // ── Upload para Supabase Storage ─────────────────────────────────────────────
-  const fileName = `${subjectId}/${Date.now()}-${tipoLabel.toLowerCase().replace(/\s/g, "-")}.pdf`;
+  // ── Upload ────────────────────────────────────────────────────────────────────
+  const tipoLabel = tipo === "resumo" ? "resumo" : tipo === "exercicios" ? "exercicios" : tipo === "mapa_conceitos" ? "mapa" : "aula";
+  const fileName = `${subjectId}/aula${numAula.padStart(2,"0")}-${tipoLabel}-${Date.now()}.pdf`;
   const { error: uploadError } = await db.storage
     .from(BUCKET)
     .upload(fileName, pdfBuffer, { contentType: "application/pdf", upsert: false });
@@ -367,15 +502,14 @@ Retorne APENAS o JSON abaixo, sem markdown:
 
   const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(fileName);
 
-  // ── Salva registro no banco ──────────────────────────────────────────────────
-  const title = topico
-    ? `${subjectName} — ${topico} (${tipoLabel})`
-    : `${subjectName} — ${tipoLabel}${banca ? ` · ${banca}` : ""}`;
+  // ── Salva no banco ────────────────────────────────────────────────────────────
+  const title = `${content.titulo} — ${content.subtitulo}`.slice(0, 120);
+  const description = `${tipoLabel.charAt(0).toUpperCase() + tipoLabel.slice(1)} gerado por IA${cargo ? ` para ${cargo}` : ""}${banca ? ` | ${banca}` : ""}. ${content.secoes.length} secoes + ${content.questoes_lista?.length ?? 0} questoes.`;
 
   const { data: material, error: dbError } = await db.from("Material").insert({
     id: crypto.randomUUID(),
     title,
-    description: `${tipoLabel} gerado por IA${cargo ? ` para ${cargo}` : ""}${banca ? ` · ${banca}` : ""}. ${content.secoes.length} seções.`,
+    description,
     type: "PDF",
     subjectId,
     banca: banca ?? null,
