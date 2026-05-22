@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { redirect } from "next/navigation";
 import { MentorChat } from "@/components/mentor/mentor-chat";
 import { CATEGORIAS, BANCAS } from "@/lib/agents";
@@ -12,9 +13,18 @@ export default async function MentorPage() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
 
+  // Resolve o perfil ativo para filtrar agentes por perfil
+  const activeProfile = await getActiveProfile(dbUser.id);
+
+  // Busca agentes do perfil ativo — se profileId estiver disponível filtra por ele;
+  // caso contrário (pré-migration) usa todos os UserAgent do usuário
+  const userAgentsQuery = activeProfile
+    ? db.from("UserAgent").select("agentId").eq("userId", dbUser.id).eq("profileId", activeProfile.id)
+    : db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
+
   const [{ data: agents }, { data: userAgents }] = await Promise.all([
     db.from("Agent").select("*").eq("active", true).order("name"),
-    db.from("UserAgent").select("agentId").eq("userId", dbUser.id),
+    userAgentsQuery,
   ]);
 
   const weekStart = new Date();

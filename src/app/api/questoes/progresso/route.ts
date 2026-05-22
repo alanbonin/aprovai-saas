@@ -106,6 +106,11 @@ export async function POST(req: Request) {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).maybeSingle();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  // Resolve perfil ativo (multi-perfil)
+  const { getActiveProfile } = await import("@/lib/get-active-profile");
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   // ── Limite trial: 20 questões/dia ────────────────────────────────────────
   const { data: subRow } = await db
     .from("Subscription")
@@ -142,25 +147,28 @@ export async function POST(req: Request) {
   const rawQ = quality ?? (correct ? "ok" : "again");
   const q = rawQ === "lembrei" ? "ok" : rawQ === "nao-lembrei" ? "again" : rawQ;
 
-  const { data: existing } = await db
+  // Busca progresso existente para este perfil (ou legado sem profileId)
+  const existingQuery = db
     .from("Progress")
     .select("id, interval, easeFactor")
     .eq("userId", dbUser.id)
-    .eq("questionId", questionId)
-    .maybeSingle();
+    .eq("questionId", questionId);
+
+  const { data: existing } = profileId
+    ? await existingQuery.or(`profileId.eq.${profileId},profileId.is.null`).maybeSingle()
+    : await existingQuery.is("profileId", null).maybeSingle();
 
   const { interval, easeFactor, nextReview, correct: isCorrect } = calcNextReview(existing, q);
 
   if (existing) {
     await db.from("Progress").update({
       correct: isCorrect, interval, easeFactor,
-      nextReview,
+      nextReview, profileId,
       reviewedAt: new Date().toISOString(),
     }).eq("id", existing.id);
   } else {
     await db.from("Progress").insert({
-      id: crypto.randomUUID(),
-      userId: dbUser.id, questionId, correct: isCorrect,
+      userId: dbUser.id, profileId, questionId, correct: isCorrect,
       interval, easeFactor, nextReview,
       reviewedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),

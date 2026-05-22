@@ -52,9 +52,10 @@ export default function PomodoroPage() {
   const [completed, setCompleted] = useState(0); // pomodoros this session
   const [xpFlash, setXpFlash]  = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startTimeRef = useRef<number>(0);
+  const startTimeRef = useRef<number>(0);       // timestamp real de início (ms)
   const modeRef      = useRef<Mode>("work");
 
   // Load sessions
@@ -70,27 +71,38 @@ export default function PomodoroPage() {
     if (!running) setTimeLeft(customMin[mode] * 60);
   }, [mode, customMin, running]);
 
-  const finishSession = useCallback(async (dur: number, isWork: boolean) => {
+  const finishSession = useCallback(async (isWork: boolean) => {
     if (!isWork) return;
     setCompleted(c => c + 1);
     setXpFlash(true);
     setTimeout(() => setXpFlash(false), 2000);
-    // Save to API
-    const now = new Date();
-    const startedAt = new Date(now.getTime() - dur * 1000).toISOString();
-    const res = await fetch("/api/workspace/pomodoro", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ startedAt, durMin: dur / 60, label: sessionLabel2 || undefined }),
-    }).catch(() => null);
-    if (res?.ok) {
-      // Refresh data
+    setSaveError(null);
+
+    // Usa o tempo real decorrido desde startTimeRef (evita imprecisão do setInterval)
+    const elapsedMs = startTimeRef.current > 0 ? Date.now() - startTimeRef.current : 0;
+    const durMin = elapsedMs > 0 ? +(elapsedMs / 60_000).toFixed(2) : customMin[modeRef.current];
+    const startedAt = new Date(Date.now() - elapsedMs).toISOString();
+
+    try {
+      const res = await fetch("/api/workspace/pomodoro", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startedAt, durMin, label: sessionLabel2 || undefined }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({})) as { error?: string };
+        setSaveError(body.error ?? `Erro ${res.status} ao salvar sessão`);
+        return;
+      }
+      // Atualiza histórico
       fetch("/api/workspace/pomodoro")
         .then(r => r.ok ? r.json() : null)
         .then(d => { if (d) setData(d); })
         .catch(() => {});
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : "Erro de rede ao salvar sessão");
     }
-  }, [sessionLabel2]);
+  }, [sessionLabel2, customMin]);
 
   const stopTimer = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
@@ -108,7 +120,7 @@ export default function PomodoroPage() {
         if (t <= 1) {
           clearInterval(intervalRef.current!);
           setRunning(false);
-          void finishSession(customMin[modeRef.current] * 60, modeRef.current === "work");
+          void finishSession(modeRef.current === "work");
           // Auto-suggest break after work
           if (modeRef.current === "work") {
             setMode("short_break");
@@ -158,6 +170,15 @@ export default function PomodoroPage() {
       {xpFlash && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-600 text-white font-bold text-sm shadow-xl animate-bounce pointer-events-none">
           +5 XP · Pomodoro concluído! 🍅
+        </div>
+      )}
+
+      {/* Save Error */}
+      {saveError && (
+        <div className="fixed top-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-xl bg-red-900/90 border border-red-500/40 text-red-200 text-sm shadow-xl max-w-sm">
+          <span className="text-base">⚠️</span>
+          <span className="flex-1">{saveError}</span>
+          <button onClick={() => setSaveError(null)} className="ml-2 text-red-400 hover:text-red-200 font-bold">✕</button>
         </div>
       )}
 
@@ -279,7 +300,10 @@ export default function PomodoroPage() {
           }
         </button>
         <button
-          onClick={() => finishSession(customMin[mode] * 60, mode === "work")}
+          onClick={() => {
+            startTimeRef.current = startTimeRef.current || (Date.now() - customMin[mode] * 60_000);
+            void finishSession(mode === "work");
+          }}
           className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-gray-400 hover:text-green-400 transition-colors"
           title="Registrar sessão manualmente"
         >

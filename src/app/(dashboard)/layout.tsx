@@ -15,12 +15,14 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (dbUser.role === "ADMIN") redirect("/admin");
 
   // Verifica onboarding — alunos sem perfil completo vão para /onboarding
-  const { data: profile } = await db
+  // Usa limit(1) para suportar múltiplos perfis (maybeSingle() falha com N>1 linhas)
+  const { data: profileRows } = await db
     .from("StudentProfile")
-    .select("onboardingDone")
+    .select("id")
     .eq("userId", dbUser.id)
-    .maybeSingle();
-  if (!profile?.onboardingDone) redirect("/onboarding");
+    .eq("onboardingDone", true)
+    .limit(1);
+  if (!profileRows || profileRows.length === 0) redirect("/onboarding");
 
   // Busca créditos de IA da semana
   const aiCreditsTotal = 10;

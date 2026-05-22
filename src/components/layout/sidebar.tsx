@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Sun, Moon } from "lucide-react";
+import { ProfileSwitcher } from "@/components/layout/profile-switcher";
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
 interface NavItem { href: string; label: string; icon: string; badge?: boolean }
@@ -78,6 +79,7 @@ const SECTIONS_STUDENT: NavSection[] = [
     id: "social", title: "Social", color: "#f97316", defaultOpen: false,
     items: [
       { href: "/ranking",      label: "Ranking",        icon: "🏆" },
+      { href: "/arena",        label: "Arena",          icon: "⚔️" },
       { href: "/grupos",       label: "Grupos",         icon: "👥" },
       { href: "/conquistas",   label: "Conquistas",     icon: "🎖️" },
       { href: "/timeline",     label: "Linha do Tempo", icon: "🕐" },
@@ -118,6 +120,7 @@ const SECTIONS_ADMIN: NavSection[] = [
       { href: "/admin/materias",          label: "Matérias",    icon: "📚" },
       { href: "/admin/materiais",         label: "Materiais",   icon: "📄" },
       { href: "/admin/simulados",         label: "Simulados",   icon: "🎯" },
+      { href: "/admin/editais",           label: "Editais",     icon: "📡" },
     ],
   },
   {
@@ -349,6 +352,9 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
           </Link>
         )}
       </div>
+
+      {/* ── Seletor de Perfil (apenas alunos) ─────────────────── */}
+      {!isAdmin && <ProfileSwitcher />}
 
       {/* ── Nav com seções recolhíveis ─────────────────────────── */}
       <nav className="flex-1 p-2 overflow-y-auto">

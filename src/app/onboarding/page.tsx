@@ -14,14 +14,16 @@ export default async function OnboardingPage() {
   // Admin → painel admin
   if (dbUser.role === "ADMIN") redirect("/admin");
 
-  // Se onboarding já foi feito → workspace
-  const { data: profile } = await db
+  // Se qualquer perfil do usuário já tem onboarding feito → workspace
+  // Usa limit(1) em vez de maybeSingle() para não quebrar com múltiplos perfis
+  const { data: doneProfiles } = await db
     .from("StudentProfile")
-    .select("onboardingDone")
+    .select("id")
     .eq("userId", dbUser.id)
-    .maybeSingle();
+    .eq("onboardingDone", true)
+    .limit(1);
 
-  if (profile?.onboardingDone) redirect("/workspace");
+  if (doneProfiles && doneProfiles.length > 0) redirect("/workspace");
 
   // maxAgents do plano do aluno (Trial = 1, planos maiores = mais)
   const maxConcursos = (dbUser as { subscription?: { plan?: { maxAgents?: number } } })

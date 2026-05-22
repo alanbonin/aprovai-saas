@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────────
 export interface DaySchedule {
@@ -42,8 +43,8 @@ function getWeekStart(): string {
   return monday.toISOString().split("T")[0];
 }
 
-async function getPlanNote(userId: string): Promise<{ id: string; data: PlanNoteData } | null> {
-  const { data: notes } = await db
+async function getPlanNote(userId: string, profileId: string | null): Promise<{ id: string; data: PlanNoteData } | null> {
+  const query = db
     .from("Note")
     .select("id, content")
     .eq("userId", userId)
@@ -51,24 +52,45 @@ async function getPlanNote(userId: string): Promise<{ id: string; data: PlanNote
     .order("updatedAt", { ascending: false })
     .limit(10);
 
-  if (!notes) return null;
-  for (const note of notes) {
-    try {
-      const parsed = JSON.parse(note.content as string) as PlanNoteData;
-      if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
-    } catch { /* skip */ }
+  // Busca nota do perfil ativo; também verifica legadas (profileId=null) como fallback
+  const { data: notes } = profileId
+    ? await query.eq("profileId", profileId)
+    : await query.is("profileId", null);
+
+  if (notes) {
+    for (const note of notes) {
+      try {
+        const parsed = JSON.parse(note.content as string) as PlanNoteData;
+        if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
+      } catch { /* skip */ }
+    }
   }
+
+  // Fallback: notas legadas sem profileId
+  if (profileId) {
+    const { data: legacy } = await db
+      .from("Note").select("id, content")
+      .eq("userId", userId).is("subjectId", null).is("profileId", null)
+      .order("updatedAt", { ascending: false }).limit(5);
+    for (const note of legacy ?? []) {
+      try {
+        const parsed = JSON.parse(note.content as string) as PlanNoteData;
+        if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
+      } catch { /* skip */ }
+    }
+  }
+
   return null;
 }
 
-async function savePlanNote(userId: string, data: PlanNoteData, existingId?: string) {
+async function savePlanNote(userId: string, profileId: string | null, data: PlanNoteData, existingId?: string) {
   const now = new Date().toISOString();
   if (existingId) {
     await db.from("Note").update({ content: JSON.stringify(data), updatedAt: now }).eq("id", existingId);
   } else {
     await db.from("Note").insert({
-      id: crypto.randomUUID(),
       userId,
+      profileId,
       subjectId: null,
       content: JSON.stringify(data),
       createdAt: now,
@@ -78,13 +100,11 @@ async function savePlanNote(userId: string, data: PlanNoteData, existingId?: str
 }
 
 async function getProfileAndSubjects(userId: string) {
-  const [profileRes, subjectsRes] = await Promise.all([
-    db.from("StudentProfile")
-      .select("cargo, orgao, dataProva, dificuldades, horasEstudo, banca")
-      .eq("userId", userId)
-      .single(),
+  const [profileRow, subjectsRes] = await Promise.all([
+    getActiveProfile(userId),
     db.from("StudentSubject").select("Subject(id, name)").eq("userId", userId),
   ]);
+  const profileRes = { data: profileRow };
 
   const profile = profileRes.data;
   const materias = ((subjectsRes.data ?? []) as { Subject: { name: string }[] | { name: string } | null }[])
@@ -114,7 +134,10 @@ export async function GET() {
     const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
     if (!dbUser) return NextResponse.json({ cronograma: null, ajustes: [] });
 
-    const note = await getPlanNote(dbUser.id);
+    const activeProfile = await getActiveProfile(dbUser.id);
+    const profileId = activeProfile?.id ?? null;
+
+    const note = await getPlanNote(dbUser.id, profileId);
     if (!note) return NextResponse.json({ cronograma: null, ajustes: [] });
 
     return NextResponse.json({
@@ -146,6 +169,9 @@ export async function POST(req: Request) {
       motivo?: string;
     };
 
+    const activeProfile = await getActiveProfile(dbUser.id);
+    const profileId = activeProfile?.id ?? null;
+
     const { profile, materias, diasProva } = await getProfileAndSubjects(dbUser.id);
 
     // ── AJUSTAR ───────────────────────────────────────────────────────────────
@@ -154,7 +180,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Motivo do ajuste é obrigatório" }, { status: 400 });
       }
 
-      const note = await getPlanNote(dbUser.id);
+      const note = await getPlanNote(dbUser.id, profileId);
       if (!note?.data.cronograma) {
         return NextResponse.json({ error: "Nenhum plano encontrado para ajustar. Gere um plano primeiro." }, { status: 400 });
       }
@@ -210,7 +236,7 @@ Retorne APENAS JSON válido:
         ajustes: [...historicoAjustes, novoAjuste].slice(-10),
       };
 
-      await savePlanNote(dbUser.id, planData, note.id);
+      await savePlanNote(dbUser.id, profileId, planData, note.id);
 
       return NextResponse.json({
         cronograma: result.cronograma,
@@ -263,7 +289,7 @@ Retorne APENAS JSON (sem texto antes ou depois):
     cronograma.geradoEm = new Date().toISOString();
 
     const currentWeek = getWeekStart();
-    const existingNote = await getPlanNote(dbUser.id);
+    const existingNote = await getPlanNote(dbUser.id, profileId);
     const planData: PlanNoteData = {
       __key: "plano_semanal",
       weekStart: currentWeek,
@@ -272,7 +298,7 @@ Retorne APENAS JSON (sem texto antes ou depois):
         ? (existingNote.data.ajustes ?? [])
         : [],
     };
-    await savePlanNote(dbUser.id, planData, existingNote?.id);
+    await savePlanNote(dbUser.id, profileId, planData, existingNote?.id);
 
     return NextResponse.json({ cronograma, ajustes: planData.ajustes });
   } catch (err) {

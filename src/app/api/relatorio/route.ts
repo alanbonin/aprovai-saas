@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 const LEVELS = [
   { name: "Calouro",   min: 0,    max: 200,  color: "text-gray-400" },
@@ -41,23 +42,34 @@ export async function GET() {
   const since = new Date();
   since.setDate(since.getDate() - 112);
 
+  // Perfil ativo (suporta multi-perfil)
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  // Filtro de perfil: registros do perfil ativo OU legados (null)
+  const pf = profileId
+    ? `profileId.eq.${profileId},profileId.is.null`
+    : "profileId.is.null";
+
   // Busca paralela de todos os dados
-  const [progressRes, subjectProgressRes, simuladosRes, flashcardSetsRes, profileRes] = await Promise.all([
+  const [progressRes, subjectProgressRes, simuladosRes, flashcardSetsRes] = await Promise.all([
     db.from("Progress").select("correct, createdAt, questionId")
       .eq("userId", dbUser.id)
-      .gte("createdAt", since.toISOString()),
+      .gte("createdAt", since.toISOString())
+      .or(pf),
     db.from("Progress").select("correct, questionId, createdAt")
-      .eq("userId", dbUser.id),
+      .eq("userId", dbUser.id)
+      .or(pf),
     db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt")
       .eq("userId", dbUser.id)
       .order("createdAt", { ascending: false })
-      .limit(50),
+      .limit(50)
+      .or(pf),
     db.from("FlashcardSet").select("id, subjectId, cards, updatedAt")
       .eq("userId", dbUser.id),
-    db.from("StudentProfile").select("dataProva, cargo, orgao")
-      .eq("userId", dbUser.id)
-      .single(),
   ]);
+
+  const profileRes = { data: activeProfile };
 
   const records = progressRes.data ?? [];
   const allRecords = subjectProgressRes.data ?? [];

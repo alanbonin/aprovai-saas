@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
 
@@ -14,48 +15,76 @@ export default async function WorkspacePage() {
   // Admin não tem workspace de aluno — vai para o painel admin
   if (dbUser.role === "ADMIN") redirect("/admin");
 
-  // Perfil de estudo (buscado antes para decidir quais agentes carregar)
-  const { data: profile } = await db
-    .from("StudentProfile")
-    .select("*")
-    .eq("userId", dbUser.id)
-    .single();
+  // Perfil ATIVO do aluno (respeita activeProfileId → isDefault → primeiro)
+  let activeProfile = await getActiveProfile(dbUser.id);
+
+  // Fallback: se o perfil ativo não tem onboardingDone (ex: perfil novo sem onboarding),
+  // busca qualquer perfil do usuário que já tenha onboarding completo
+  if (!activeProfile?.onboardingDone) {
+    const { data: fallback } = await db
+      .from("StudentProfile")
+      .select("*")
+      .eq("userId", dbUser.id)
+      .eq("onboardingDone", true)
+      .order("isDefault", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (fallback) activeProfile = fallback as typeof activeProfile;
+  }
+
+  const profile = activeProfile;
+
+  // Primeiro acesso sem onboarding → redireciona para a experiência de onboarding
+  if (!profile?.onboardingDone) redirect("/onboarding");
 
   // Todos os agentes ativos (para o seletor do mentor)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: allAgentsRaw } = await db.from("Agent").select("*").eq("active", true).order("name");
   const allAgents: any[] = allAgentsRaw ?? [];
 
-  // IDs dos agentes atualmente ativos para este aluno
-  const { data: userAgentRows } = await db
-    .from("UserAgent")
-    .select("agentId")
-    .eq("userId", dbUser.id);
+  // IDs dos agentes do perfil ativo (filtra por profileId se disponível)
+  const userAgentQuery = activeProfile
+    ? db.from("UserAgent").select("agentId").eq("userId", dbUser.id).eq("profileId", activeProfile.id)
+    : db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
+
+  const { data: userAgentRows } = await userAgentQuery;
   const activeAgentIds = (userAgentRows ?? []).map((ua: { agentId: string }) => ua.agentId);
 
-  // Agentes usados no onboarding/chat
+  // Agentes do perfil ativo
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let agents: any[] = [];
-  if (!profile?.onboardingDone) {
-    agents = allAgents;
-  } else if (activeAgentIds.length > 0) {
+  if (activeAgentIds.length > 0) {
     agents = allAgents.filter((a: { id: string }) => activeAgentIds.includes(a.id));
   }
 
-  // Matérias do aluno (se onboarding completo)
+  // Matérias do perfil ativo (filtra por profileId)
   let subjects: { id: string; name: string; slug: string }[] = [];
-  if (profile?.onboardingDone) {
+  if (profile?.onboardingDone && activeProfile) {
     const { data: studentSubjects } = await db
       .from("StudentSubject")
       .select("subjectId, Subject(id, name, slug, description)")
-      .eq("userId", dbUser.id);
+      .eq("userId", dbUser.id)
+      .eq("profileId", activeProfile.id);
 
-    subjects = (studentSubjects ?? [])
+    // Também inclui matérias legadas (sem profileId) para compatibilidade
+    const { data: legacySubjects } = await db
+      .from("StudentSubject")
+      .select("subjectId, Subject(id, name, slug, description)")
+      .eq("userId", dbUser.id)
+      .is("profileId", null);
+
+    const allSubs = [...(studentSubjects ?? []), ...(legacySubjects ?? [])];
+    const seen = new Set<string>();
+    subjects = allSubs
       .map((ss: { subjectId: string; Subject: unknown }) => {
         const s = ss.Subject as { id: string; name: string; slug: string; description: string }[] | null;
         return Array.isArray(s) ? s[0] : s;
       })
-      .filter(Boolean) as { id: string; name: string; slug: string }[];
+      .filter((s): s is NonNullable<typeof s> => {
+        if (!s || seen.has(s.id)) return false;
+        seen.add(s.id);
+        return true;
+      }) as { id: string; name: string; slug: string }[];
   }
 
   // Verifica expiração em tempo real (o cron roda às 6h, pode haver atraso)

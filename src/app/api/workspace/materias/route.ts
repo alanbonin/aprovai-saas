@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
@@ -10,8 +11,9 @@ export async function GET(req: Request) {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Buscar perfil para saber a categoria
-  const { data: profile } = await db.from("StudentProfile").select("*").eq("userId", dbUser.id).single();
+  // Busca perfil ativo (suporta multi-perfil)
+  const profile = await getActiveProfile(dbUser.id);
+  const profileId = profile?.id ?? null;
 
   // Buscar agentes do aluno para pegar categorias/areas
   const { data: userAgents } = await db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
@@ -27,20 +29,43 @@ export async function GET(req: Request) {
       .filter(Boolean)
   )];
 
-  // Matérias da categoria/area dos agentes selecionados
-  // — se não houver filtro, usa os StudentSubject existentes para não retornar tudo
-  if (categorias.length === 0) {
-    const { data: studentSubjects } = await db
+  // Matérias do perfil ativo (profileId) + legadas sem profileId
+  const buildSubjectList = async () => {
+    const baseQuery = db
       .from("StudentSubject")
       .select("subjectId, Subject(id, name, slug, description)")
       .eq("userId", dbUser.id);
-    const subjects = (studentSubjects ?? [])
-      .map((ss: { subjectId: string; Subject: unknown }) => {
+
+    let rows: { subjectId: string; Subject: unknown }[] = [];
+
+    if (profileId) {
+      const { data: withProfile } = await baseQuery.eq("profileId", profileId);
+      const { data: legacy } = await db
+        .from("StudentSubject")
+        .select("subjectId, Subject(id, name, slug, description)")
+        .eq("userId", dbUser.id)
+        .is("profileId", null);
+
+      const seen = new Set<string>();
+      for (const r of [...(withProfile ?? []), ...(legacy ?? [])]) {
+        if (!seen.has(r.subjectId)) { seen.add(r.subjectId); rows.push(r); }
+      }
+    } else {
+      const { data } = await baseQuery.is("profileId", null);
+      rows = data ?? [];
+    }
+
+    return rows
+      .map(ss => {
         const s = ss.Subject as { id: string; name: string; slug: string; description: string }[] | null;
         return Array.isArray(s) ? s[0] : s;
       })
       .filter(Boolean);
-    return NextResponse.json({ subjects });
+  };
+
+  if (categorias.length === 0) {
+    const subjects = await buildSubjectList();
+    return NextResponse.json({ subjects, profileId });
   }
 
   const { data: subjects } = await db
@@ -49,7 +74,7 @@ export async function GET(req: Request) {
     .in("categoria", categorias as string[])
     .order("ordem");
 
-  return NextResponse.json({ subjects: subjects ?? [] });
+  return NextResponse.json({ subjects: subjects ?? [], profileId });
 }
 
 export async function POST(req: Request) {
@@ -60,17 +85,24 @@ export async function POST(req: Request) {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const profile = await getActiveProfile(dbUser.id);
+  const profileId = profile?.id ?? null;
+
   const { subjectIds } = await req.json();
 
-  // Remover antigas e inserir novas
-  await db.from("StudentSubject").delete().eq("userId", dbUser.id);
+  // Remove matérias do perfil ativo
+  if (profileId) {
+    await db.from("StudentSubject").delete().eq("userId", dbUser.id).eq("profileId", profileId);
+  } else {
+    await db.from("StudentSubject").delete().eq("userId", dbUser.id).is("profileId", null);
+  }
 
   if (subjectIds && subjectIds.length > 0) {
     const now = new Date().toISOString();
     await db.from("StudentSubject").insert(
       subjectIds.map((id: string) => ({
-        id: crypto.randomUUID(),
         userId: dbUser.id,
+        profileId,
         subjectId: id,
         fromEdital: false,
         createdAt: now,

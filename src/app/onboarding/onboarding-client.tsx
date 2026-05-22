@@ -156,91 +156,98 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
   }, []);
 
   return (
-    <div className={`flex-1 flex flex-col transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
-      style={{ transform: visible ? "none" : "translateY(16px)" }}>
+    <div style={{
+      flex: 1, display: "flex", flexDirection: "column",
+      minHeight: 0,               /* ← obrigatório para flex+scroll funcionar */
+      transition: "opacity 0.7s, transform 0.7s",
+      opacity: visible ? 1 : 0,
+      transform: visible ? "none" : "translateY(16px)",
+    }}>
       {/* Plano scrollável */}
-      <div className="flex-1 overflow-y-auto" style={{ paddingBottom: 100 }}>
-      <div className="max-w-lg mx-auto px-5 py-8 space-y-5">
+      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
+      <div style={{ maxWidth: 512, margin: "0 auto", padding: "32px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
         {/* Hero */}
-        <div className="text-center space-y-2 mb-8">
-          <div className="text-5xl mb-3" style={{ animation: "obPulse 3s ease-in-out infinite" }}>🚀</div>
-          <h1 className="text-xl font-bold text-white">{plan ? "Seu plano está pronto!" : "Perfil criado com sucesso!"}</h1>
-          <p className="text-sm text-slate-200">
+        <div style={{ textAlign: "center", marginBottom: 12 }}>
+          <div style={{ fontSize: 48, marginBottom: 12, animation: "obPulse 3s ease-in-out infinite" }}>🚀</div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>
+            {plan ? "Seu plano está pronto!" : "Perfil criado com sucesso!"}
+          </h1>
+          <p style={{ fontSize: 14, color: "#cbd5e1", lineHeight: 1.5 }}>
             {plan ? "Personalizado exclusivamente para você conquistar sua aprovação." : "Seu workspace foi configurado. O plano detalhado ficará disponível dentro da plataforma."}
           </p>
         </div>
 
-        {/* Fallback quando plano não carregou — mostra mentores e CTA de entrada */}
+        {/* Fallback quando plano não carregou */}
         {!plan && agents.length > 0 && (
-          <div className="rounded-2xl p-5 text-center space-y-3" style={{ background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.2)" }}>
-            <p className="text-sm text-slate-200">Seus mentores IA foram selecionados e suas matérias foram configuradas.</p>
-            <p className="text-xs text-slate-300">Dentro do workspace você poderá ver seu plano completo, estudar questões e conversar com seus mentores.</p>
+          <div style={{ borderRadius: 16, padding: 20, textAlign: "center", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.2)" }}>
+            <p style={{ fontSize: 14, color: "#cbd5e1", marginBottom: 8 }}>Seus mentores IA foram selecionados e suas matérias foram configuradas.</p>
+            <p style={{ fontSize: 12, color: "#94a3b8" }}>Dentro do workspace você poderá ver seu plano completo, estudar questões e conversar com seus mentores.</p>
           </div>
         )}
 
         {/* Cargo card */}
         {plan && (
-          <div className="rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, rgba(10,181,189,0.15), rgba(10,181,189,0.05))", border: "1px solid rgba(10,181,189,0.3)" }}>
-            <div className="px-5 py-4">
-              <div className="flex items-center gap-2 mb-1">
-                <Target size={14} className="text-teal-400" />
-                <span className="text-xs font-semibold text-teal-400 uppercase tracking-wider">Seu objetivo</span>
+          <div style={{ borderRadius: 16, overflow: "hidden", background: "linear-gradient(135deg, rgba(10,181,189,0.15), rgba(10,181,189,0.05))", border: "1px solid rgba(10,181,189,0.3)" }}>
+            <div style={{ padding: "16px 20px" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <Target size={14} color="#2dd4bf" />
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#2dd4bf", textTransform: "uppercase", letterSpacing: "0.06em" }}>Seu objetivo</span>
               </div>
-              <p className="font-bold text-white text-base">{plan.titulo}</p>
-              <p className="text-xs text-slate-200 mt-1">{plan.foco}</p>
+              <p style={{ fontWeight: 700, color: "#ffffff", fontSize: 15, marginBottom: 4 }}>{plan.titulo}</p>
+              <p style={{ fontSize: 12, color: "#cbd5e1" }}>{plan.foco}</p>
             </div>
           </div>
         )}
 
         {/* Stats */}
         {plan && (
-          <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <Clock size={16} className="text-teal-400 mb-1" />
-              <div className="text-2xl font-bold text-white">{plan.horasPorDia}h</div>
-              <div className="text-xs text-slate-300">por dia recomendadas</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ borderRadius: 14, padding: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <Clock size={16} color="#2dd4bf" style={{ marginBottom: 6 }} />
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.1 }}>{plan.horasPorDia}h</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>por dia recomendadas</div>
             </div>
-            <div className="rounded-xl p-4 space-y-1" style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-              <BookOpen size={16} className="text-amber-400 mb-1" />
-              <div className="text-2xl font-bold text-white">{(plan.matérias ?? []).length}</div>
-              <div className="text-xs text-slate-300">matérias prioritárias</div>
+            <div style={{ borderRadius: 14, padding: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
+              <BookOpen size={16} color="#f59e0b" style={{ marginBottom: 6 }} />
+              <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.1 }}>{(plan.matérias ?? []).length}</div>
+              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>matérias prioritárias</div>
             </div>
           </div>
         )}
 
         {/* Rotina Diária */}
         {plan?.rotinaDiaria && (
-          <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
-              <Brain size={14} className="text-teal-400" />
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Rotina diária recomendada</span>
+          <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Brain size={14} color="#2dd4bf" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rotina diária recomendada</span>
             </div>
-            <div className="px-5 py-4 grid grid-cols-2 gap-3">
+            <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
               {[
                 { icon: "🎯", label: "Questões/dia", value: `${plan.rotinaDiaria.questoes} questões` },
                 { icon: "🃏", label: "Flashcards/dia", value: `${plan.rotinaDiaria.flashcards} cards` },
                 { icon: "📖", label: "Leitura", value: `${plan.rotinaDiaria.leituraMin} min` },
                 { icon: "🔁", label: "Revisão", value: `${plan.rotinaDiaria.revisaoMin} min` },
               ].map(item => (
-                <div key={item.label} className="flex items-center gap-2.5 rounded-xl p-3" style={{ background: "rgba(10,181,189,0.06)", border: "1px solid rgba(10,181,189,0.15)" }}>
-                  <span className="text-lg flex-shrink-0">{item.icon}</span>
-                  <div className="min-w-0">
-                    <div className="text-[10px] text-slate-300 uppercase tracking-wide">{item.label}</div>
-                    <div className="text-sm font-bold text-white">{item.value}</div>
+                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 12, padding: "10px 12px", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.18)" }}>
+                  <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{item.label}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>{item.value}</div>
                   </div>
                 </div>
               ))}
             </div>
-            <div className="px-5 pb-4 flex items-center gap-2.5 rounded-xl">
-              <span className="text-lg">📋</span>
+            <div style={{ padding: "0 20px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>📋</span>
               <div>
-                <span className="text-[10px] text-slate-300 uppercase tracking-wide">Simulado</span>
-                <div className="text-sm font-semibold text-white capitalize">{plan.rotinaDiaria.simulado}</div>
+                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Simulado</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#ffffff", textTransform: "capitalize" }}>{plan.rotinaDiaria.simulado}</div>
               </div>
             </div>
             {plan.rotinaDiaria.dica && (
-              <div className="px-5 pb-4">
-                <div className="px-4 py-2.5 rounded-xl text-xs text-teal-300 italic" style={{ background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.15)" }}>
+              <div style={{ padding: "0 20px 16px" }}>
+                <div style={{ padding: "10px 14px", borderRadius: 12, fontSize: 12, color: "#5eead4", fontStyle: "italic", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.15)" }}>
                   💡 {plan.rotinaDiaria.dica}
                 </div>
               </div>
@@ -250,15 +257,14 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
 
         {/* Matérias */}
         {plan && (plan.matérias ?? []).length > 0 && (
-          <div className="rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
-              <BookOpen size={14} className="text-amber-400" />
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Matérias prioritárias</span>
+          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+              <BookOpen size={14} color="#f59e0b" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Matérias prioritárias</span>
             </div>
-            <div className="px-5 py-4 flex flex-wrap gap-2">
+            <div style={{ padding: "16px 20px", display: "flex", flexWrap: "wrap", gap: 8 }}>
               {(plan.matérias ?? []).map((m, i) => (
-                <span key={i} className="px-3 py-1 rounded-full text-xs font-medium"
-                  style={{ background: "rgba(10,181,189,0.12)", border: "1px solid rgba(10,181,189,0.25)", color: "#7ae8ed" }}>
+                <span key={i} style={{ padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 500, background: "rgba(10,181,189,0.12)", border: "1px solid rgba(10,181,189,0.25)", color: "#7ae8ed" }}>
                   {m}
                 </span>
               ))}
@@ -268,38 +274,34 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
 
         {/* Cronograma completo */}
         {plan && plan.cronograma.length > 0 && (
-          <div className="rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="px-5 py-3 border-b border-white/5 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Calendar size={14} className="text-violet-400" />
-                <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Cronograma de Estudos</span>
+          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <Calendar size={14} color="#a78bfa" />
+                <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Cronograma de Estudos</span>
               </div>
-              <span className="text-xs text-slate-300">{plan.cronograma.length} semanas</span>
+              <span style={{ fontSize: 11, color: "#64748b" }}>{plan.cronograma.length} semanas</span>
             </div>
-            {/* Status do edital */}
             {plan.editalStatus && (
-              <div className="px-5 py-2 border-b border-white/5">
-                <span className="text-xs px-2 py-1 rounded-full"
-                  style={plan.editalStatus === "com_edital"
+              <div style={{ padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99,
+                  ...(plan.editalStatus === "com_edital"
                     ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#86efac" }
-                    : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fde68a" }}>
+                    : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fde68a" }) }}>
                   {plan.editalStatus === "com_edital" ? "✓ Baseado no edital fornecido" : "⚡ Baseado em editais históricos desta banca/cargo"}
                 </span>
               </div>
             )}
-            <div className="divide-y divide-white/5">
+            <div>
               {plan.cronograma.map((c: { semana: string; tema: string }, i: number) => {
-                // Separa dias mesclados pelo delimitador "|"
                 const dias = c.tema.split("|").map(d => d.trim()).filter(Boolean);
                 return (
-                  <div key={i} className="px-5 py-3 flex items-start gap-4">
-                    <div className="w-16 flex-shrink-0 text-xs font-bold text-violet-400 pt-0.5">{c.semana}</div>
-                    <div className="flex-1 space-y-1">
+                  <div key={i} style={{ padding: "12px 20px", display: "flex", alignItems: "flex-start", gap: 16, borderBottom: i < plan.cronograma.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                    <div style={{ width: 56, flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>{c.semana}</div>
+                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
                       {dias.map((dia, j) => (
-                        <div key={j} className="text-sm text-slate-300 flex items-start gap-2">
-                          {dias.length > 1 && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400/40 flex-shrink-0 mt-2" />
-                          )}
+                        <div key={j} style={{ fontSize: 13, color: "#cbd5e1", display: "flex", alignItems: "flex-start", gap: 8 }}>
+                          {dias.length > 1 && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(167,139,250,0.4)", flexShrink: 0, marginTop: 6 }} />}
                           <span>{dia}</span>
                         </div>
                       ))}
@@ -313,41 +315,52 @@ function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents:
 
         {/* Mentores */}
         {agents.length > 0 && (
-          <div className="rounded-2xl" style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="px-5 py-3 border-b border-white/5 flex items-center gap-2">
-              <Zap size={14} className="text-pink-400" />
-              <span className="text-xs font-semibold text-slate-300 uppercase tracking-wider">Seus mentores IA</span>
+          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
+            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
+              <Zap size={14} color="#f472b6" />
+              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Seus mentores IA</span>
             </div>
-            <div className="px-5 py-4 space-y-3">
+            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
               {agents.map(a => (
-                <div key={a.id} className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl flex items-center justify-center text-sm font-bold flex-shrink-0"
-                    style={{ background: a.color ? `${a.color}22` : "rgba(10,181,189,0.15)", border: `1px solid ${a.color ?? "#0ab5bd"}44`, color: a.color ?? "#0ab5bd" }}>
+                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, flexShrink: 0, background: a.color ? `${a.color}22` : "rgba(10,181,189,0.15)", border: `1px solid ${a.color ?? "#0ab5bd"}44`, color: a.color ?? "#0ab5bd" }}>
                     {a.name.charAt(0)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-white">{a.name}</p>
-                    {a.description && <p className="text-xs text-slate-300 truncate">{a.description}</p>}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontSize: 14, fontWeight: 600, color: "#ffffff", marginBottom: 2 }}>{a.name}</p>
+                    {a.description && <p style={{ fontSize: 12, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.description}</p>}
                   </div>
-                  <CheckCircle size={14} className="text-teal-400 flex-shrink-0" />
+                  <CheckCircle size={14} color="#2dd4bf" style={{ flexShrink: 0 }} />
                 </div>
               ))}
             </div>
           </div>
         )}
 
-      </div>
-      </div>
+        {/* ── BOTÃO PRINCIPAL — dentro do scroll, sempre acessível ── */}
+        <div style={{ paddingTop: 8, paddingBottom: 24 }}>
+          <button
+            onClick={onEnter}
+            style={{
+              width: "100%", padding: "18px 24px", borderRadius: 18, border: "none", cursor: "pointer",
+              background: "linear-gradient(135deg, #0ab5bd, #0891b2)",
+              color: "#ffffff", fontSize: 16, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              boxShadow: "0 0 40px rgba(10,181,189,0.5), 0 4px 20px rgba(0,0,0,0.4)",
+              transition: "transform 0.15s, box-shadow 0.15s",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.02)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
+          >
+            🚀 Entrar no workspace
+            <ArrowRight size={18} />
+          </button>
+          <p style={{ textAlign: "center", fontSize: 12, color: "#475569", marginTop: 10 }}>
+            Você pode ajustar seu plano a qualquer momento dentro da plataforma.
+          </p>
+        </div>
 
-      {/* CTA fixo na parte inferior — sempre visível */}
-      <div className="flex-shrink-0 px-5 py-4 border-t border-white/5"
-        style={{ background: "rgba(5,5,17,0.95)", backdropFilter: "blur(12px)" }}>
-        <button onClick={onEnter}
-          className="w-full max-w-lg mx-auto py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]"
-          style={{ background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: "0 0 30px rgba(10,181,189,0.4)", display: "flex" }}>
-          Entrar no workspace <ArrowRight size={16} />
-        </button>
-        <p className="text-center text-xs text-slate-300 mt-2">Você pode ajustar seu plano a qualquer momento no workspace.</p>
+      </div>
       </div>
     </div>
   );
@@ -792,7 +805,7 @@ const send = useCallback(async (customMsg?: string) => {
         </div>
 
         {/* Main content */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", position: "relative", zIndex: 10 }}>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, position: "relative", zIndex: 10 }}>
           {/* Welcome */}
           {stage === "welcome" && (
             <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
@@ -835,7 +848,7 @@ const send = useCallback(async (customMsg?: string) => {
 
           {/* Plan reveal */}
           {stage === "plan" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
               <PlanReveal plan={studyPlan} agents={selectedAgents.length ? selectedAgents : agents.slice(0, 2)} onEnter={handleEnterWorkspace} />
             </div>
           )}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { updateXP, XP_SIMULADO_PER_ACERTO } from "@/lib/xp";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 // ── SM-2 simplificado (mesmo algoritmo do adaptativo) ────────────────────────
 function calcNextReview(
@@ -41,11 +42,15 @@ export async function POST(req: NextRequest) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const { total, correct, timeSecs, subjectIds, answers } = await req.json();
 
   // ── 1. Salva no histórico ─────────────────────────────────────────────────
   const { error } = await db.from("SimuladoHistory").insert({
     userId:     dbUser.id,
+    profileId,
     total:      total      ?? 0,
     correct:    correct    ?? 0,
     timeSecs:   timeSecs   ?? 0,
@@ -108,12 +113,13 @@ export async function POST(req: NextRequest) {
             easeFactor: sm2.easeFactor,
             nextReview: sm2.nextReview,
             reviewedAt: now,
+            profileId,
           },
         });
       } else {
         toInsert.push({
-          id:         crypto.randomUUID(),
           userId:     dbUser.id,
+          profileId,
           questionId: a.questionId,
           correct:    sm2.correct,
           interval:   sm2.interval,
