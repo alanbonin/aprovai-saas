@@ -52,21 +52,42 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: dbErr.message }, { status: 500 });
   }
 
-  // Atribui plano se informado
-  if (planId && dbUser?.id) {
-    const endDate = new Date();
-    endDate.setFullYear(endDate.getFullYear() + 1);
+  // Atribui plano se informado; caso contrário ativa trial de 7 dias automaticamente
+  if (dbUser?.id) {
     const subNow = new Date().toISOString();
-    await db.from("Subscription").insert({
-      id: crypto.randomUUID(),
-      userId: dbUser.id,
-      planId,
-      status: "ACTIVE",
-      startDate: subNow,
-      endDate: endDate.toISOString(),
-      createdAt: subNow,
-      updatedAt: subNow,
-    });
+
+    let resolvedPlanId = planId;
+    let endDate = new Date();
+
+    if (planId) {
+      // Plano escolhido pelo admin → 1 ano
+      endDate.setFullYear(endDate.getFullYear() + 1);
+    } else {
+      // Sem plano selecionado → busca trial e concede 7 dias
+      const { data: trialPlan } = await db
+        .from("Plan")
+        .select("id")
+        .eq("slug", "trial")
+        .eq("active", true)
+        .maybeSingle();
+      if (trialPlan) {
+        resolvedPlanId = trialPlan.id;
+        endDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      }
+    }
+
+    if (resolvedPlanId) {
+      await db.from("Subscription").insert({
+        id: crypto.randomUUID(),
+        userId: dbUser.id,
+        planId: resolvedPlanId,
+        status: "ACTIVE",
+        startDate: subNow,
+        endDate: endDate.toISOString(),
+        createdAt: subNow,
+        updatedAt: subNow,
+      });
+    }
   }
 
   // Retorna o usuário completo para o frontend adicionar na lista sem reload
@@ -82,32 +103,136 @@ export async function POST(req: Request) {
   });
 }
 
-// PATCH — atribui/muda plano de um aluno
+// PATCH — atribui/muda plano OU edita dados do aluno OU exclusão em lote
 export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { userId, planId } = await req.json();
-  if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
+  const body = await req.json();
 
-  // Cancela subscrições ativas anteriores
-  await db.from("Subscription").update({ status: "CANCELLED" }).eq("userId", userId).eq("status", "ACTIVE");
+  // ── Editar dados do usuário ────────────────────────────────────────────
+  if (body.action === "editUser") {
+    const { userId, name, email, newPassword } = body as {
+      userId: string; name?: string; email?: string; newPassword?: string;
+    };
+    if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
 
-  if (planId) {
-    const endDate = new Date();
-    endDate.setFullYear(endDate.getFullYear() + 1);
-    const subNow = new Date().toISOString();
-    await db.from("Subscription").insert({
-      id: crypto.randomUUID(),
-      userId,
-      planId,
-      status: "ACTIVE",
-      startDate: subNow,
-      endDate: endDate.toISOString(),
-      createdAt: subNow,
-      updatedAt: subNow,
-    });
+    const { data: u } = await db.from("User").select("supabaseId").eq("id", userId).maybeSingle();
+    if (!u?.supabaseId) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
+    const now = new Date().toISOString();
+    const dbUpdates: Record<string, unknown> = { updatedAt: now };
+    if (name?.trim()) dbUpdates.name = name.trim();
+    if (email?.trim()) dbUpdates.email = email.trim().toLowerCase();
+
+    if (Object.keys(dbUpdates).length > 1) {
+      const { error: dbErr } = await db.from("User").update(dbUpdates).eq("id", userId);
+      if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
+    }
+
+    const authUpdates: Record<string, unknown> = {};
+    if (email?.trim()) authUpdates.email = email.trim().toLowerCase();
+    if (newPassword?.trim() && newPassword.trim().length >= 6) authUpdates.password = newPassword.trim();
+
+    if (Object.keys(authUpdates).length > 0) {
+      const { error: authErr } = await db.auth.admin.updateUserById(u.supabaseId, authUpdates);
+      if (authErr) return NextResponse.json({ error: `Auth: ${authErr.message}` }, { status: 500 });
+    }
+
+    return NextResponse.json({ ok: true, name: dbUpdates.name ?? null, email: dbUpdates.email ?? null });
   }
 
+  // ── Exclusão em lote ──────────────────────────────────────────────────
+  if (body.action === "bulkDelete") {
+    const { userIds } = body as { userIds: string[] };
+    if (!Array.isArray(userIds) || userIds.length === 0)
+      return NextResponse.json({ error: "userIds obrigatório" }, { status: 400 });
+
+    const errors: string[] = [];
+    for (const uid of userIds) {
+      const { data: u } = await db.from("User").select("supabaseId, role").eq("id", uid).maybeSingle();
+      if (!u || u.role === "ADMIN") continue;
+      await db.from("UserAgent").delete().eq("userId", uid);
+      await db.from("StudentSubject").delete().eq("userId", uid);
+      await db.from("StudentProfile").delete().eq("userId", uid);
+      await db.from("Progress").delete().eq("userId", uid);
+      await db.from("SimuladoHistory").delete().eq("userId", uid);
+      await db.from("Note").delete().eq("userId", uid);
+      await db.from("FlashcardSet").delete().eq("userId", uid);
+      await db.from("AiUsage").delete().eq("userId", uid);
+      await db.from("Subscription").delete().eq("userId", uid);
+      const { error: delErr } = await db.from("User").delete().eq("id", uid);
+      if (delErr) { errors.push(uid); continue; }
+      if (u.supabaseId) {
+        await db.auth.admin.deleteUser(u.supabaseId).catch(() => {});
+      }
+    }
+    return NextResponse.json({ ok: true, errors });
+  }
+
+  const { userId, planId } = body;
+  if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
+
+  // Subscription tem userId @unique — sempre há no máximo 1 linha por usuário.
+  // Estratégia: verificar se já existe e fazer UPDATE; caso não exista, fazer INSERT.
+  const { data: existing } = await db.from("Subscription")
+    .select("id")
+    .eq("userId", userId)
+    .maybeSingle();
+
+  if (planId) {
+    // Valida se o plano existe
+    const { data: planExists } = await db.from("Plan").select("id").eq("id", planId).maybeSingle();
+    if (!planExists) {
+      console.error("[admin/alunos PATCH] planId não encontrado:", planId);
+      return NextResponse.json({ error: `Plano não encontrado: ${planId}` }, { status: 400 });
+    }
+
+    const endDate = new Date();
+    endDate.setFullYear(endDate.getFullYear() + 1);
+    const now = new Date().toISOString();
+
+    if (existing) {
+      // Atualiza a assinatura existente
+      const { error: updateErr } = await db.from("Subscription")
+        .update({
+          planId,
+          status: "ACTIVE",
+          startDate: now,
+          endDate: endDate.toISOString(),
+          updatedAt: now,
+        })
+        .eq("userId", userId);
+
+      if (updateErr) {
+        console.error("[admin/alunos PATCH] update error:", updateErr.message);
+        return NextResponse.json({ error: `Erro ao atualizar assinatura: ${updateErr.message}` }, { status: 500 });
+      }
+    } else {
+      // Cria nova assinatura (usuário sem assinatura prévia)
+      const { error: insertErr } = await db.from("Subscription").insert({
+        id: crypto.randomUUID(),
+        userId,
+        planId,
+        status: "ACTIVE",
+        startDate: now,
+        endDate: endDate.toISOString(),
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      if (insertErr) {
+        console.error("[admin/alunos PATCH] insert error:", insertErr.message);
+        return NextResponse.json({ error: `Erro ao criar assinatura: ${insertErr.message}` }, { status: 500 });
+      }
+    }
+  } else if (existing) {
+    // Plano removido (Gratuito) — marca como EXPIRED
+    await db.from("Subscription")
+      .update({ status: "EXPIRED", updatedAt: new Date().toISOString() })
+      .eq("userId", userId);
+  }
+
+  console.log("[admin/alunos PATCH] ok — userId:", userId, "planId:", planId || "(removido)");
   return NextResponse.json({ ok: true });
 }
 
