@@ -1,172 +1,173 @@
 "use client";
 import { useState } from "react";
-import { Check, Zap, Star, Trophy, Lock } from "lucide-react";
+import { Check, Zap, Star, Trophy, Clock, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CheckoutButton } from "./checkout-button";
 
 interface Plan {
   id: string; name: string; slug: string;
   price: number; intervalDays: number;
-  aiCreditsPerWeek: number;
+  aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number;
+  maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number;
+  maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number;
+  hasEditalDecoder?: boolean; hasPdfLibrary?: boolean;
+  hasGroupStudy?: boolean; hasLongTermMemory?: boolean;
   features: string[]; active: boolean;
 }
 
-interface Props {
-  plans: Plan[];
-  currentPlanId: string | null;
-}
+interface Props { plans: Plan[]; currentPlanId: string | null; }
 
-const SLUG_CONFIG: Record<string, { icon: typeof Zap; tagline: string; highlight: string; popular: boolean }> = {
-  "focado":        { icon: Zap,    tagline: "1 concurso, foco total",       highlight: "",                    popular: false },
-  "aprovacao":     { icon: Star,   tagline: "Até 2 trilhas simultâneas",    highlight: "Mais popular",        popular: true  },
-  "elite":         { icon: Trophy, tagline: "Sem limites, ponto.",           highlight: "Melhor custo-benefício", popular: false },
-  "prova-marcada": { icon: Lock,   tagline: "Pagamento único, 12 meses",    highlight: "",                    popular: false },
-  // variantes anuais herdam do slug-base
-  "focado-anual":       { icon: Zap,    tagline: "1 concurso, foco total",    highlight: "Economize 20%",      popular: false },
-  "aprovacao-anual":    { icon: Star,   tagline: "Até 2 trilhas simultâneas", highlight: "Mais popular",       popular: true  },
-  "elite-anual":        { icon: Trophy, tagline: "Sem limites, ponto.",        highlight: "Melhor custo-benefício", popular: false },
+const SLUG_CONFIG: Record<string, {
+  icon: typeof Zap; tagline: string; highlight: string;
+  popular: boolean; color: string; accentColor: string;
+}> = {
+  "trial":    { icon: Clock,   tagline: "7 dias grátis, sem cartão",       highlight: "",             popular: false, color: "border-white/10",     accentColor: "text-gray-400"   },
+  "focado":   { icon: Zap,     tagline: "1 concurso em foco total",        highlight: "",             popular: false, color: "border-blue-500/30",  accentColor: "text-blue-400"   },
+  "aprovacao":{ icon: Star,    tagline: "Até 2 concursos simultâneos",     highlight: "Mais popular", popular: true,  color: "border-indigo-500",   accentColor: "text-indigo-400" },
+  "elite":    { icon: Trophy,  tagline: "Sem limites, máxima performance", highlight: "Completo",     popular: false, color: "border-amber-500/40", accentColor: "text-amber-400"  },
 };
 
 function getSlugConfig(slug: string) {
   return SLUG_CONFIG[slug] ?? SLUG_CONFIG["focado"];
 }
 
-function isOneTime(plan: Plan) {
-  return plan.intervalDays >= 365 || plan.slug === "prova-marcada";
+function fmtLimit(n?: number, suffix = "") {
+  if (n === undefined || n === null) return "—";
+  if (n === -1) return `Ilimitado${suffix ? " " + suffix : ""}`;
+  if (n === 0) return "Bloqueado";
+  return `${n}${suffix ? " " + suffix : ""}`;
 }
 
-function isAnual(plan: Plan) {
-  return plan.intervalDays >= 360 && plan.intervalDays < 3650 && plan.slug !== "prova-marcada";
-}
-
-function isMensal(plan: Plan) {
-  return !isOneTime(plan) && !isAnual(plan);
-}
+function isOneTime(plan: Plan) { return plan.intervalDays >= 365 || plan.slug === "prova-marcada"; }
+function isAnual(plan: Plan) { return plan.intervalDays >= 360 && plan.intervalDays < 3650 && plan.slug !== "prova-marcada"; }
+function isMensal(plan: Plan) { return !isOneTime(plan) && !isAnual(plan); }
 
 export function PlanosClient({ plans, currentPlanId }: Props) {
-  const mensais = plans.filter(isMensal);
-  const anuais = plans.filter(isAnual);
-  const provaMarcada = plans.find(p => isOneTime(p) && !isAnual(p));
-
-  // Só mostra toggle se houver planos anuais além do prova-marcada
+  const mensais  = plans.filter(isMensal);
+  const anuais   = plans.filter(isAnual);
   const temAnuais = anuais.length > 0;
   const [periodo, setPeriodo] = useState<"mensal" | "anual">("mensal");
-
   const recorrentes = periodo === "anual" && temAnuais ? anuais : mensais;
 
-  return (
-    <div className="min-h-screen text-white p-8 max-w-5xl mx-auto">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-bold mb-3">Escolha seu plano</h1>
-        <p className="text-gray-400">
-          Todos os planos incluem workspace personalizado, matérias, questões e flashcards.
-        </p>
+  const colsClass =
+    recorrentes.length <= 2 ? "md:grid-cols-2" :
+    recorrentes.length === 3 ? "md:grid-cols-3" : "md:grid-cols-4";
 
-        {/* Toggle Mensal / Anual */}
+  return (
+    <div className="min-h-screen text-white p-6 max-w-6xl mx-auto">
+      <div className="text-center mb-10">
+        <h1 className="text-3xl font-bold mb-2">Escolha seu plano</h1>
+        <p className="text-gray-400 text-sm">Do trial gratuito ao Elite — evolua no seu ritmo.</p>
+
         {temAnuais && (
           <div className="inline-flex items-center mt-6 rounded-xl border border-white/10 bg-white/5 p-1 gap-1">
-            <button
-              onClick={() => setPeriodo("mensal")}
-              className={cn(
-                "px-5 py-2 rounded-lg text-sm font-medium transition-all",
-                periodo === "mensal"
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-gray-400 hover:text-white"
-              )}
-            >
+            <button onClick={() => setPeriodo("mensal")}
+              className={cn("px-5 py-2 rounded-lg text-sm font-medium transition-all",
+                periodo === "mensal" ? "bg-indigo-600 text-white shadow" : "text-gray-400 hover:text-white")}>
               Mensal
             </button>
-            <button
-              onClick={() => setPeriodo("anual")}
-              className={cn(
-                "px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5",
-                periodo === "anual"
-                  ? "bg-indigo-600 text-white shadow"
-                  : "text-gray-400 hover:text-white"
-              )}
-            >
+            <button onClick={() => setPeriodo("anual")}
+              className={cn("px-5 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5",
+                periodo === "anual" ? "bg-indigo-600 text-white shadow" : "text-gray-400 hover:text-white")}>
               Anual
-              <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-semibold">
-                -20%
-              </span>
+              <span className="text-xs bg-green-500/20 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full font-semibold">-20%</span>
             </button>
           </div>
         )}
       </div>
 
-      {/* Cards principais */}
-      <div className={cn(
-        "grid grid-cols-1 gap-5 mb-8",
-        recorrentes.length === 2 ? "md:grid-cols-2" :
-        recorrentes.length === 3 ? "md:grid-cols-3" : "md:grid-cols-2"
-      )}>
+      <div className={cn("grid grid-cols-1 gap-5 mb-8", colsClass)}>
         {recorrentes.map(plan => {
-          const config = getSlugConfig(plan.slug);
-          const Icon = config.icon;
+          const cfg = getSlugConfig(plan.slug);
+          const Icon = cfg.icon;
           const isCurrent = plan.id === currentPlanId;
-
-          // Preço por mês (para anuais, divide pelos 12 meses)
           const monthsDuration = plan.intervalDays / 30;
-          const priceMonth = monthsDuration > 0
-            ? (plan.price / monthsDuration).toFixed(0)
-            : plan.price.toFixed(0);
+          const priceMonth = monthsDuration > 0 ? (plan.price / monthsDuration).toFixed(0) : plan.price.toFixed(0);
+          const isFree = plan.price === 0;
 
           return (
-            <div
-              key={plan.id}
-              className={cn(
-                "relative rounded-2xl border flex flex-col p-6 transition-all",
-                config.popular
-                  ? "border-orange-500 bg-orange-500/5 shadow-lg shadow-orange-500/10"
-                  : "border-white/10 bg-white/3"
-              )}
-            >
-              {config.highlight && (
+            <div key={plan.id} className={cn(
+              "relative rounded-2xl border flex flex-col p-6 transition-all",
+              cfg.popular ? "border-indigo-500 bg-indigo-500/5 shadow-lg shadow-indigo-500/10" : cn("bg-white/3", cfg.color)
+            )}>
+              {cfg.highlight && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2">
-                  <span className={cn(
-                    "text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap",
-                    config.popular ? "bg-orange-500 text-white" : "bg-purple-600 text-white"
-                  )}>
+                  <span className={cn("text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1 whitespace-nowrap",
+                    cfg.popular ? "bg-indigo-600 text-white" : "bg-amber-500 text-white")}>
                     <Icon className="w-3 h-3" />
-                    {config.highlight}
+                    {cfg.highlight}
                   </span>
                 </div>
               )}
 
+              {/* Cabeçalho */}
               <div className="mb-5">
-                <h2 className="text-lg font-bold mb-0.5">{plan.name}</h2>
-                <p className="text-xs text-gray-500 mb-5">{config.tagline}</p>
-
-                <div className="flex items-baseline gap-1 mb-0.5">
-                  <span className="text-4xl font-black">R$ {priceMonth}</span>
-                  <span className="text-gray-500 text-sm">/mês</span>
+                <div className="flex items-center gap-2 mb-1">
+                  <Icon className={cn("w-5 h-5", cfg.accentColor)} />
+                  <h2 className="text-lg font-bold">{plan.name}</h2>
                 </div>
-                {plan.intervalDays > 30 && (
-                  <p className="text-xs text-gray-600">
-                    R$ {plan.price.toFixed(0)} cobrado{" "}
-                    {plan.intervalDays >= 360
-                      ? "anualmente"
-                      : `a cada ${Math.round(plan.intervalDays / 30)} meses`}
+                <p className="text-xs text-gray-500 mb-5">{cfg.tagline}</p>
+
+                <div className="flex items-baseline gap-1">
+                  {isFree ? (
+                    <span className="text-4xl font-black">Grátis</span>
+                  ) : (
+                    <>
+                      <span className="text-4xl font-black">R$ {priceMonth}</span>
+                      <span className="text-gray-500 text-sm">/mês</span>
+                    </>
+                  )}
+                </div>
+                {!isFree && plan.intervalDays > 30 && (
+                  <p className="text-xs text-gray-600 mt-0.5">
+                    R$ {plan.price.toFixed(0)} cobrado anualmente
                   </p>
                 )}
               </div>
 
-              <div className={cn(
-                "rounded-xl p-3 mb-5 text-center border",
-                config.popular
-                  ? "bg-orange-500/10 border-orange-500/20"
-                  : "bg-indigo-600/10 border-indigo-500/20"
-              )}>
-                <p className={cn("text-sm font-semibold", config.popular ? "text-orange-400" : "text-indigo-400")}>
-                  {plan.aiCreditsPerWeek >= 9999 ? "Mensagens ilimitadas" : `${plan.aiCreditsPerWeek} mensagens/semana`}
+              {/* Destaque: mentores + msgs */}
+              <div className={cn("rounded-xl p-3 mb-5 border text-center",
+                cfg.popular ? "bg-indigo-500/10 border-indigo-500/20" : "bg-white/5 border-white/8")}>
+                <p className={cn("text-sm font-semibold", cfg.accentColor)}>
+                  {plan.aiCreditsPerWeek === -1 ? "Mensagens ilimitadas" : `${plan.aiCreditsPerWeek} msgs/semana`}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">com seu mentor IA</p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  {plan.maxAgents} mentor{plan.maxAgents !== 1 ? "es" : ""} IA ·{" "}
+                  {plan.maxProfiles} concurso{plan.maxProfiles !== 1 ? "s" : ""}
+                </p>
               </div>
 
-              <ul className="space-y-2.5 mb-6 flex-1">
+              {/* Limites por semana */}
+              <div className="space-y-1.5 mb-5">
+                {[
+                  { label: "Questões/semana",  val: plan.maxQuestionsPerWeek  },
+                  { label: "Flashcards/semana",val: plan.maxFlashcardsPerWeek },
+                  { label: "Simulados/semana", val: plan.maxSimuladosPerWeek  },
+                  { label: "Redações/semana",  val: plan.maxRedacoesPerWeek   },
+                  { label: "Casos práticos/sem",val: plan.maxCasosPerWeek     },
+                ].map(({ label, val }) => {
+                  const blocked = val === 0;
+                  const unlimited = val === -1;
+                  return (
+                    <div key={label} className={cn(
+                      "flex items-center justify-between text-xs rounded-lg px-3 py-1.5",
+                      blocked ? "text-gray-600 bg-white/2" : "text-gray-300 bg-white/4"
+                    )}>
+                      <span className={blocked ? "line-through" : ""}>{label}</span>
+                      <span className={cn("font-semibold",
+                        unlimited ? "text-green-400" : blocked ? "text-gray-600" : cfg.accentColor)}>
+                        {fmtLimit(val)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Recursos extras */}
+              <ul className="space-y-2 mb-6 flex-1">
                 {plan.features.map((f: string) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-gray-300">
-                    <Check className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                  <li key={f} className="flex items-start gap-2 text-xs text-gray-400">
+                    <Check className="w-3.5 h-3.5 text-green-400 flex-shrink-0 mt-0.5" />
                     {f}
                   </li>
                 ))}
@@ -177,58 +178,12 @@ export function PlanosClient({ plans, currentPlanId }: Props) {
                   Plano atual ✓
                 </div>
               ) : (
-                <CheckoutButton planId={plan.id} planName={plan.name} isPopular={config.popular} isFree={plan.price === 0} />
+                <CheckoutButton planId={plan.id} planName={plan.name} isPopular={cfg.popular} isFree={isFree} />
               )}
             </div>
           );
         })}
       </div>
-
-      {/* Prova Marcada */}
-      {provaMarcada && (
-        <div className="rounded-2xl border border-white/10 bg-white/3 p-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-1">
-                <Lock className="w-4 h-4 text-yellow-400" />
-                <h3 className="font-bold text-lg">{provaMarcada.name}</h3>
-                <span className="text-xs bg-yellow-500/10 border border-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">
-                  Pagamento único
-                </span>
-              </div>
-              <p className="text-gray-400 text-sm mb-3">
-                Edital saiu e você precisa focar agora. Pague uma vez, estude por 12 meses. Sem renovação automática.
-              </p>
-              <ul className="flex flex-wrap gap-3 text-xs text-gray-500">
-                {provaMarcada.features.map(f => (
-                  <li key={f} className="flex items-center gap-1">
-                    <Check className="w-3 h-3 text-green-400" />{f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="flex flex-col items-center md:items-end gap-3">
-              <div className="text-center md:text-right">
-                <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-black">R$ {provaMarcada.price.toFixed(0)}</span>
-                  <span className="text-gray-500 text-sm">à vista</span>
-                </div>
-                <p className="text-xs text-green-400 font-medium">
-                  ≈ R$ {(provaMarcada.price / 12).toFixed(0)}/mês — sem renovação
-                </p>
-              </div>
-              {provaMarcada.id === currentPlanId ? (
-                <div className="px-6 py-2.5 rounded-xl border border-green-500/30 text-green-400 text-sm font-medium">
-                  Plano atual ✓
-                </div>
-              ) : (
-                <CheckoutButton planId={provaMarcada.id} planName={provaMarcada.name} isPopular={false} />
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       <p className="text-center text-gray-600 text-xs mt-8">
         Planos recorrentes podem ser cancelados a qualquer momento. Sem multa.

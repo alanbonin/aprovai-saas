@@ -6,8 +6,20 @@ import { UpgradeUI } from "@/components/upgrade-ui";
 import { RedacaoClient } from "./redacao-client";
 
 export default async function RedacaoPage() {
-  const { isPremium } = await getAccessLevel();
-  if (!isPremium) return <UpgradeUI recurso="Redação com IA" desc="Treine redações e receba correção detalhada por IA especializada em concursos. Disponível nos planos pagos." icon="✍️" />;
+  const access = await getAccessLevel();
+  if (access.maxRedacoesPerWeek === 0) {
+    return (
+      <UpgradeUI
+        recurso="Redação com IA"
+        desc={
+          access.planSlug === "trial"
+            ? "Redações com correção por IA estão disponíveis a partir do plano Focado."
+            : "Treine redações e receba correção detalhada por IA especializada em concursos. Disponível nos planos pagos."
+        }
+        icon="✍️"
+      />
+    );
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

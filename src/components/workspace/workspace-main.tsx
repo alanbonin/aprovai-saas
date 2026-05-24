@@ -298,7 +298,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
   } | null>(null);
   const [editingMetas, setEditingMetas] = useState(false);
   const [simuladoHistory, setSimuladoHistory] = useState<{ id: number; total: number; correct: number; timeSecs: number; createdAt: string }[]>([]);
-  const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; features: string[]; active: boolean }[]>([]);
+  const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number; maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number; maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number; hasEditalDecoder?: boolean; hasPdfLibrary?: boolean; hasGroupStudy?: boolean; hasLongTermMemory?: boolean; features: string[]; active: boolean }[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
 
   const daysLeft = daysUntil(subscriptionEndDate);

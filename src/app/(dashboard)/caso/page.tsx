@@ -6,8 +6,20 @@ import { UpgradeUI } from "@/components/upgrade-ui";
 import { CasoClient } from "./caso-client";
 
 export default async function CasoPage() {
-  const { isPremium } = await getAccessLevel();
-  if (!isPremium) return <UpgradeUI recurso="Estudo de Caso" desc="Resolva casos práticos com avaliação detalhada por IA. Disponível nos planos pagos." icon="🔍" />;
+  const access = await getAccessLevel();
+  if (access.maxCasosPerWeek === 0) {
+    return (
+      <UpgradeUI
+        recurso="Estudo de Caso"
+        desc={
+          access.planSlug === "trial"
+            ? "Casos práticos com avaliação por IA estão disponíveis a partir do plano Focado."
+            : "Resolva casos práticos com avaliação detalhada por IA. Disponível nos planos pagos."
+        }
+        icon="🔍"
+      />
+    );
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

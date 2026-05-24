@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 // ─── Planos ────────────────────────────────────────────────
@@ -13,8 +13,18 @@ model Plan {
   slug            String   @unique
   price           Float
   intervalDays    Int      @default(30)
-  aiCreditsPerWeek Int     @default(10)  // perguntas de mentor por semana
-  maxAgents       Int      @default(1)   // mentores simultâneos permitidos
+  aiCreditsPerWeek     Int @default(10)   // msgs de mentor/semana (-1 = ilimitado)
+  maxAgents            Int @default(2)    // mentores simultâneos
+  maxProfiles          Int @default(1)    // concursos/perfis simultâneos
+  maxQuestionsPerWeek  Int @default(10)   // questões/semana (-1 = ilimitado)
+  maxFlashcardsPerWeek Int @default(10)   // flashcards/semana (-1 = ilimitado)
+  maxSimuladosPerWeek  Int @default(0)    // simulados/semana (0 = bloqueado)
+  maxRedacoesPerWeek   Int @default(0)    // redações/semana (0 = bloqueado)
+  maxCasosPerWeek      Int @default(0)    // casos práticos/semana (0 = bloqueado)
+  hasEditalDecoder     Boolean @default(false) // decodificador de edital
+  hasPdfLibrary        Boolean @default(false) // biblioteca de PDFs
+  hasGroupStudy        Boolean @default(false) // grupos de estudo
+  hasLongTermMemory    Boolean @default(false) // memória de longo prazo do mentor
   features        String[] @default([])
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
@@ -33,15 +43,18 @@ model User {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  subscription    Subscription?
-  progress        Progress[]
-  simulados       SimuladoHistory[]
-  aiUsage         AiUsage[]
-  notes           Note[]
-  flashcardSets   FlashcardSet[]
-  profile         StudentProfile?
-  studentSubjects StudentSubject[]
-  userAgents      UserAgent[]
+  activeProfileId   String?
+
+  subscription      Subscription?
+  progress          Progress[]
+  simulados         SimuladoHistory[]
+  aiUsage           AiUsage[]
+  notes             Note[]
+  flashcardSets     FlashcardSet[]
+  profiles          StudentProfile[]
+  studentSubjects   StudentSubject[]
+  userAgents        UserAgent[]
+  editalFavoritos   EditalFavorito[]
 }
 
 enum Role {
@@ -134,6 +147,7 @@ model Question {
 model Progress {
   id              String   @id @default(cuid())
   userId          String
+  profileId       String?  // null = dados legados (aparecem em todos os perfis)
   questionId      Int
   correct         Boolean
   reviewedAt      DateTime?
@@ -144,14 +158,14 @@ model Progress {
 
   user            User     @relation(fields: [userId], references: [id])
   question        Question @relation(fields: [questionId], references: [id])
-
-  @@unique([userId, questionId])
+  // @@unique gerenciado via índices parciais no DB (ver migration-multiprofile.sql)
 }
 
 // ─── Histórico de Simulados ────────────────────────────────
 model SimuladoHistory {
   id              Int      @id @default(autoincrement())
   userId          String
+  profileId       String?  // null = dados legados
   total           Int
   correct         Int
   timeSecs        Int
@@ -165,6 +179,7 @@ model SimuladoHistory {
 model Note {
   id              String   @id @default(cuid())
   userId          String
+  profileId       String?  // null = nota global (plano semanal, pomodoro, grupos)
   subjectId       String
   content         String   @db.Text
   createdAt       DateTime @default(now())
@@ -223,9 +238,12 @@ model Subject {
 }
 
 // ─── Perfil de Estudo do Aluno ──────────────────────────────
+// Um usuário pode ter N perfis (ex: Auditor + Policia Federal)
 model StudentProfile {
   id              String   @id @default(cuid())
-  userId          String   @unique
+  userId          String   // sem @unique — agora é 1:N
+  label           String?  // nome do perfil, ex: "Auditor SEFAZ-BA"
+  isDefault       Boolean  @default(false)
   cargo           String?
   orgao           String?
   dataProva       String?
@@ -234,6 +252,11 @@ model StudentProfile {
   horasEstudo     Int?     // horas disponíveis por dia para estudar
   nivelAtual      String?  // iniciante | intermediario | avancado
   disponibilidade String?  // manha | tarde | noite | variado
+  modalidade      String   @default("CONCURSO_PUBLICO") // CONCURSO_PUBLICO | ENEM | VESTIBULAR | OAB | REVALIDA | CFC
+  vestibular      String?  // FUVEST | UNICAMP | UNESP | UERJ (vestibular only)
+  trilha          String?  // Medicina | Direito | Engenharia (vestibular / general)
+  oabFase         String?  // primeira | segunda (OAB only)
+  banca           String?  // banca explícita
   onboardingDone  Boolean  @default(false)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -245,13 +268,57 @@ model StudentProfile {
 model StudentSubject {
   id              String   @id @default(cuid())
   userId          String
+  profileId       String?  // null = matéria global (legado)
   subjectId       String
   fromEdital      Boolean  @default(false)
   createdAt       DateTime @default(now())
 
   user            User     @relation(fields: [userId], references: [id])
+  // @@unique gerenciado via índices parciais no DB (ver migration-multiprofile.sql)
+}
 
-  @@unique([userId, subjectId])
+// ─── Radar de Editais ───────────────────────────────────────
+model Edital {
+  id                  String    @id @default(cuid())
+  titulo              String
+  orgao               String
+  cargo               String
+  area                String?   // "administrativa","ti","juridico","saude","policial","fiscal","educacao"
+  vagas               Int?
+  salario             Float?
+  salarioMax          Float?
+  banca               String?
+  estado              String?   // "Federal","SP","BA","MG"...
+  nivel               String    @default("federal") // "federal","estadual","municipal"
+  escolaridade        String?   // "fundamental","medio","superior","pos"
+  status              String    @default("previsto") // "previsto","aberto","encerrado","suspenso","resultado"
+  descricao           String?   @db.Text
+  dataPublicacao      DateTime?
+  dataInscricaoInicio DateTime?
+  dataInscricaoFim    DateTime?
+  dataProva           DateTime?
+  link                String?
+  editalUrl           String?
+  source              String    @default("manual") // "manual","querido_diario"
+  sourceRef           String?
+  isPremium           Boolean   @default(false)
+  active              Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  favoritos           EditalFavorito[]
+}
+
+model EditalFavorito {
+  id        String   @id @default(cuid())
+  userId    String
+  editalId  String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  edital    Edital   @relation(fields: [editalId], references: [id])
+
+  @@unique([userId, editalId])
 }
 
 // ─── Agentes selecionados pelo Aluno ────────────────────────
