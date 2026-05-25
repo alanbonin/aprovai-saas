@@ -1,8 +1,67 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2, Sparkles } from "lucide-react";
+import { Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+// ── Mapa de action cards [[IR:X]] ────────────────────────────────────────────
+const ACTION_MAP: Record<string, { label: string; icon: string; nav: string; color: string }> = {
+  questoes:   { label: "Resolver Questões",   icon: "🎯", nav: "estudar",   color: "#6366f1" },
+  flashcards: { label: "Revisão Flashcards",  icon: "🃏", nav: "flash",     color: "#0ab5bd" },
+  simulado:   { label: "Fazer Simulado",      icon: "🎮", nav: "simulado",  color: "#f59e0b" },
+  redacao:    { label: "Treinar Redação",      icon: "✍️", nav: "redacao",   color: "#ec4899" },
+  relatorio:  { label: "Ver Desempenho",       icon: "📊", nav: "relatorio", color: "#10b981" },
+  plano:      { label: "Meu Plano de Estudos", icon: "🗺️", nav: "estrategia",color: "#8b5cf6" },
+  edital:     { label: "Analisar Edital",      icon: "📄", nav: "edital",    color: "#f97316" },
+  desafio:    { label: "Desafio Diário",       icon: "⚡", nav: "estudar",   color: "#eab308" },
+  revisao:    { label: "Revisão Espaçada",     icon: "🔄", nav: "flash",     color: "#0ab5bd" },
+};
+
+// Barra de atalhos rápidos (sticky dentro do chat)
+const QUICK_ACTIONS = [
+  { key: "questoes",   label: "Questões",   icon: "🎯" },
+  { key: "flashcards", label: "Flashcards", icon: "🃏" },
+  { key: "simulado",   label: "Simulado",   icon: "🎮" },
+  { key: "redacao",    label: "Redação",    icon: "✍️" },
+  { key: "relatorio",  label: "Relatório",  icon: "📊" },
+  { key: "plano",      label: "Plano",      icon: "🗺️" },
+];
+
+function navigate(key: string) {
+  const action = ACTION_MAP[key];
+  if (!action) return;
+  window.dispatchEvent(new CustomEvent("aprovai:navigate", { detail: { nav: action.nav } }));
+}
+
+// ── Renderiza texto com [[IR:X]] convertidos em action cards inline ───────────
+function renderWithActions(text: string) {
+  // Divide o texto pelos marcadores [[IR:X]]
+  const parts = text.split(/(\[\[IR:[a-z-]+\]\])/g);
+  return parts.map((part, i) => {
+    const match = part.match(/^\[\[IR:([a-z-]+)\]\]$/);
+    if (!match) return <span key={i}>{part}</span>;
+    const key = match[1];
+    const action = ACTION_MAP[key];
+    if (!action) return null;
+    return (
+      <button
+        key={i}
+        onClick={() => navigate(key)}
+        className="inline-flex items-center gap-1.5 mx-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+        style={{
+          background: `${action.color}18`,
+          border: `1px solid ${action.color}44`,
+          color: action.color,
+          verticalAlign: "middle",
+        }}
+      >
+        <span>{action.icon}</span>
+        {action.label}
+        <ExternalLink size={9} style={{ opacity: 0.7 }} />
+      </button>
+    );
+  });
+}
 import { MentorAvatar, getPersonaName, getPersonaGreeting } from "@/components/mentor/mentor-avatar";
 
 interface Agent {
@@ -511,6 +570,24 @@ export function MentorChat({
           <>
             <ChatHeader />
 
+            {/* ── Barra de atalhos rápidos (sticky, sempre visível) ── */}
+            <div className="flex-shrink-0 px-4 py-2 border-b border-white/5 overflow-x-auto"
+              style={{ background: "rgba(13,17,23,0.95)", scrollbarWidth: "none" }}>
+              <div className="flex gap-1.5 min-w-max">
+                <span className="text-[10px] text-gray-600 self-center mr-0.5 flex-shrink-0 font-medium uppercase tracking-wide">Ir para:</span>
+                {QUICK_ACTIONS.map(a => (
+                  <button
+                    key={a.key}
+                    onClick={() => navigate(a.key)}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-gray-400 hover:text-white border border-white/6 hover:border-white/15 bg-white/[0.03] hover:bg-white/[0.07] transition-all flex-shrink-0"
+                  >
+                    <span>{a.icon}</span>
+                    <span>{a.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Mensagens */}
             <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
 
@@ -588,7 +665,7 @@ export function MentorChat({
                           : respAgent ? getPersonaName(respAgent) : "Mentor"}
                       </p>
                       <div className={cn(
-                        "px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed whitespace-pre-wrap",
+                        "px-4 py-3 rounded-2xl rounded-bl-sm text-sm leading-relaxed",
                         "bg-white/[0.06] border border-white/[0.07] text-gray-200",
                       )}>
                         {isTyping ? (
@@ -602,7 +679,9 @@ export function MentorChat({
                             digitando...
                           </span>
                         ) : (
-                          msg.content || <span className="text-gray-600">...</span>
+                          msg.content
+                            ? <span style={{ whiteSpace: "pre-wrap" }}>{renderWithActions(msg.content)}</span>
+                            : <span className="text-gray-600">...</span>
                         )}
                       </div>
                     </div>

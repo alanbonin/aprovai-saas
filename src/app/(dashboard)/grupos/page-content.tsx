@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Users, Plus, Trash2, Copy, Check, Link2, RefreshCw } from "lucide-react";
+import { Users, Plus, Trash2, Copy, Check, Link2, RefreshCw, PlayCircle } from "lucide-react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface Grupo {
@@ -281,6 +282,13 @@ export function GruposInner() {
 
               {/* Actions */}
               <div className="flex items-center gap-1 flex-shrink-0">
+                <Link
+                  href={`/grupos/sala/${g.code}`}
+                  title="Entrar na sala ao vivo"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition-colors"
+                >
+                  <PlayCircle className="w-3.5 h-3.5" /> Entrar
+                </Link>
                 <button
                   onClick={() => copyCode(g.code)}
                   title="Copiar código"

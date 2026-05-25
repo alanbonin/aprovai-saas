@@ -1,270 +1,374 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Radar, Plus, X, RefreshCw, AlertCircle, Clock, Building2, Users, DollarSign } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import {
+  Radar, Star, Search, Filter, MapPin, Users, DollarSign,
+  Calendar, ExternalLink, FileText, Clock, Loader2, ChevronDown, X, Bookmark
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-interface EditalAlerta {
-  orgao: string;
-  status: "provavelmente_aberto" | "previsto" | "em_andamento" | "sem_info";
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface Edital {
+  id: string;
   titulo: string;
-  descricao: string;
+  orgao: string;
+  cargo: string;
+  area?: string | null;
+  vagas?: number | null;
+  salario?: number | null;
+  salarioMax?: number | null;
   banca?: string | null;
-  vagas?: string | null;
-  prazo?: string | null;
-  salario?: string | null;
-  fonte: string;
+  estado?: string | null;
+  nivel: string;
+  escolaridade?: string | null;
+  status: string;
+  descricao?: string | null;
+  dataPublicacao?: string | null;
+  dataInscricaoInicio?: string | null;
+  dataInscricaoFim?: string | null;
+  dataProva?: string | null;
+  link?: string | null;
+  editalUrl?: string | null;
+  isPremium: boolean;
+  isFavorito: boolean;
+  relevante: boolean;
 }
 
-const STATUS_CONFIG = {
-  em_andamento:         { label: "Em andamento",          color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-400 animate-pulse" },
-  provavelmente_aberto: { label: "Provavelmente aberto",  color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20",       dot: "bg-blue-400" },
-  previsto:             { label: "Previsto",               color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",     dot: "bg-amber-400" },
-  sem_info:             { label: "Sem informação",         color: "text-gray-500",    bg: "bg-white/[0.03] border-white/[0.06]",    dot: "bg-gray-600" },
+// ─── Constants ─────────────────────────────────────────────────────────────────
+const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; dot: string }> = {
+  previsto:  { label: "Previsto",  color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20",     dot: "bg-amber-400" },
+  aberto:    { label: "Aberto",    color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20", dot: "bg-emerald-400 animate-pulse" },
+  encerrado: { label: "Encerrado", color: "text-gray-500",    bg: "bg-white/5 border-white/10",              dot: "bg-gray-600" },
+  suspenso:  { label: "Suspenso",  color: "text-red-400",     bg: "bg-red-500/10 border-red-500/20",         dot: "bg-red-400" },
+  resultado: { label: "Resultado", color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20",       dot: "bg-blue-400" },
 };
 
-export function EditalWatchInner() {
-  const [orgaos, setOrgaos]         = useState<string[]>([]);
-  const [alertas, setAlertas]       = useState<EditalAlerta[]>([]);
-  const [loading, setLoading]       = useState(true);
-  const [checking, setChecking]     = useState(false);
-  const [newOrgao, setNewOrgao]     = useState("");
-  const [adding, setAdding]         = useState(false);
-  const [verificadoEm, setVerificadoEm] = useState<string | null>(null);
-  const [error, setError]           = useState<string | null>(null);
+const AREAS = ["administrativa","ti","juridico","saude","policial","fiscal","educacao","engenharia","outros"];
+const NIVEIS = ["federal","estadual","municipal"];
+const ESCOLARIDADES = ["fundamental","medio","tecnico","superior","pos"];
+const STATUSES = ["previsto","aberto","encerrado","suspenso","resultado"];
 
-  useEffect(() => {
-    fetch("/api/workspace/edital-watch")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setOrgaos(d.orgaos ?? []); setLoading(false); })
-      .catch(() => setLoading(false));
-  }, []);
+function fmt(val?: string | null) {
+  if (!val) return null;
+  return new Date(val).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+}
 
-  async function addOrgao() {
-    const nome = newOrgao.trim();
-    if (!nome) return;
-    setAdding(true);
-    const res = await fetch("/api/workspace/edital-watch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "add", orgao: nome }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      setOrgaos(d.orgaos ?? []);
-      setNewOrgao("");
-    }
-    setAdding(false);
-  }
+function fmtSalario(s?: number | null, max?: number | null) {
+  if (!s) return null;
+  const f = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return max && max > s ? `${f(s)} – ${f(max)}` : f(s);
+}
 
-  async function removeOrgao(orgao: string) {
-    const res = await fetch("/api/workspace/edital-watch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "remove", orgao }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      setOrgaos(d.orgaos ?? []);
-      setAlertas(prev => prev.filter(a => a.orgao !== orgao));
-    }
-  }
-
-  async function verificar() {
-    setChecking(true);
-    setError(null);
-    const res = await fetch("/api/workspace/edital-watch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "verificar" }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      setAlertas(d.alertas ?? []);
-      setVerificadoEm(d.verificadoEm ?? null);
-    } else {
-      const d = await res.json().catch(() => ({}));
-      setError((d as { error?: string }).error ?? "Erro ao verificar editais");
-    }
-    setChecking(false);
-  }
-
-  if (loading) {
-    return (
-      <div className="flex-1 flex items-center justify-center min-h-screen">
-        <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  // Sort alertas: em_andamento > provavelmente_aberto > previsto > sem_info
-  const ORDER = ["em_andamento", "provavelmente_aberto", "previsto", "sem_info"];
-  const sorted = [...alertas].sort((a, b) => ORDER.indexOf(a.status) - ORDER.indexOf(b.status));
+// ─── Edital Card ───────────────────────────────────────────────────────────────
+function EditalCard({ edital, onFavoritar }: { edital: Edital; onFavoritar: (id: string) => void }) {
+  const s = STATUS_CONFIG[edital.status] ?? STATUS_CONFIG.previsto;
+  const salario = fmtSalario(edital.salario, edital.salarioMax);
+  const diasFim = edital.dataInscricaoFim
+    ? Math.ceil((new Date(edital.dataInscricaoFim).getTime() - Date.now()) / 86400000)
+    : null;
 
   return (
-    <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Radar className="w-6 h-6 text-indigo-400" />
-            Radar de Concursos
-          </h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Monitore órgãos e verifique status de editais com IA
-          </p>
+    <div className={cn(
+      "bg-white/[0.03] border rounded-xl p-5 hover:bg-white/[0.05] transition-all relative",
+      edital.relevante ? "border-indigo-500/30" : "border-white/[0.08]"
+    )}>
+      {edital.relevante && (
+        <div className="absolute top-3 right-3">
+          <span className="text-[10px] font-semibold tracking-wider uppercase bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 rounded-full px-2 py-0.5">
+            Relevante
+          </span>
         </div>
-        {orgaos.length > 0 && (
-          <button
-            onClick={verificar}
-            disabled={checking}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 rounded-xl text-sm font-semibold transition-colors flex-shrink-0"
-          >
-            <RefreshCw className={cn("w-4 h-4", checking && "animate-spin")} />
-            {checking ? "Verificando..." : "Verificar agora"}
-          </button>
+      )}
+
+      <div className="flex items-start gap-3 pr-20">
+        <div className={cn("w-2 h-2 rounded-full shrink-0 mt-2", s.dot)} />
+        <div className="min-w-0">
+          <h3 className="font-semibold text-white text-sm leading-snug line-clamp-2">{edital.titulo}</h3>
+          <p className="text-xs text-gray-400 mt-1">{edital.orgao}</p>
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mt-3">
+        <span className={cn("text-xs px-2 py-0.5 rounded-full border", s.color, s.bg)}>{s.label}</span>
+        {edital.area && (
+          <span className="text-xs px-2 py-0.5 rounded-full border border-white/10 text-gray-400 capitalize">{edital.area}</span>
+        )}
+        {edital.banca && (
+          <span className="text-xs px-2 py-0.5 rounded-full border border-white/10 text-gray-400 uppercase">{edital.banca}</span>
+        )}
+        {edital.isPremium && (
+          <span className="text-xs px-2 py-0.5 rounded-full border border-amber-500/30 text-amber-400 bg-amber-500/10">Premium</span>
         )}
       </div>
 
-      {/* Add org */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4 mb-5">
-        <p className="text-xs text-gray-500 mb-2">Adicionar órgão ao radar</p>
-        <div className="flex gap-2">
-          <input
-            value={newOrgao}
-            onChange={e => setNewOrgao(e.target.value)}
-            onKeyDown={e => e.key === "Enter" && addOrgao()}
-            placeholder="Ex: STJ, PGE-SP, INSS, Receita Federal..."
-            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500/50"
-          />
-          <button
-            onClick={addOrgao}
-            disabled={adding || !newOrgao.trim()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl text-sm font-semibold transition-colors"
+      <p className="text-xs text-gray-300 mt-3 line-clamp-2">{edital.cargo}</p>
+
+      <div className="grid grid-cols-2 gap-2 mt-4">
+        {edital.vagas && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <Users className="w-3 h-3 text-gray-500" />
+            <span>{edital.vagas.toLocaleString("pt-BR")} vagas</span>
+          </div>
+        )}
+        {salario && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <DollarSign className="w-3 h-3 text-gray-500" />
+            <span className="truncate">{salario}</span>
+          </div>
+        )}
+        {edital.estado && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <MapPin className="w-3 h-3 text-gray-500" />
+            <span>{edital.estado}</span>
+          </div>
+        )}
+        {edital.dataProva && (
+          <div className="flex items-center gap-1.5 text-xs text-gray-400">
+            <Calendar className="w-3 h-3 text-gray-500" />
+            <span>Prova: {fmt(edital.dataProva)}</span>
+          </div>
+        )}
+      </div>
+
+      {edital.dataInscricaoFim && edital.status === "aberto" && (
+        <div className={cn(
+          "mt-3 text-xs px-3 py-1.5 rounded-lg flex items-center gap-2",
+          diasFim !== null && diasFim <= 5  ? "bg-red-500/10 text-red-400" :
+          diasFim !== null && diasFim <= 15 ? "bg-amber-500/10 text-amber-400" :
+          "bg-white/5 text-gray-400"
+        )}>
+          <Clock className="w-3 h-3" />
+          {diasFim !== null && diasFim > 0
+            ? `Inscrições até ${fmt(edital.dataInscricaoFim)} (${diasFim}d)`
+            : `Inscrições encerradas em ${fmt(edital.dataInscricaoFim)}`}
+        </div>
+      )}
+
+      {edital.descricao && (
+        <p className="text-xs text-gray-500 mt-3 line-clamp-2">{edital.descricao}</p>
+      )}
+
+      <div className="flex items-center gap-2 mt-4 pt-3 border-t border-white/[0.06]">
+        <button
+          onClick={() => onFavoritar(edital.id)}
+          className={cn(
+            "flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-all",
+            edital.isFavorito
+              ? "border-amber-500/30 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+              : "border-white/10 text-gray-400 hover:text-white hover:bg-white/5"
+          )}
+        >
+          <Star className={cn("w-3 h-3", edital.isFavorito && "fill-current")} />
+          {edital.isFavorito ? "Favoritado" : "Favoritar"}
+        </button>
+
+        {edital.link && (
+          <a
+            href={edital.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
           >
-            <Plus className="w-4 h-4" />
-            Adicionar
-          </button>
+            <ExternalLink className="w-3 h-3" />
+            Site oficial
+          </a>
+        )}
+        {edital.editalUrl && (
+          <a
+            href={edital.editalUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white hover:bg-white/5 transition-all"
+          >
+            <FileText className="w-3 h-3" />
+            PDF
+          </a>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+export function EditalWatchInner() {
+  const [editais, setEditais]           = useState<Edital[]>([]);
+  const [loading, setLoading]           = useState(true);
+  const [total, setTotal]               = useState(0);
+  const [page, setPage]                 = useState(1);
+  const [totalPages, setTotalPages]     = useState(1);
+
+  const [search, setSearch]             = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
+  const [filterArea, setFilterArea]     = useState("");
+  const [filterNivel, setFilterNivel]   = useState("");
+  const [filterEscol, setFilterEscol]   = useState("");
+  const [soFavoritos, setSoFavoritos]   = useState(false);
+  const [showFilters, setShowFilters]   = useState(false);
+
+  const load = useCallback(async (p = 1, reset = false) => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({ page: String(p), limit: "18" });
+      if (search)       params.set("search", search);
+      if (filterStatus) params.set("status", filterStatus);
+      if (filterArea)   params.set("area", filterArea);
+      if (filterNivel)  params.set("nivel", filterNivel);
+      if (filterEscol)  params.set("escolaridade", filterEscol);
+      if (soFavoritos)  params.set("favoritos", "1");
+
+      const res = await fetch(`/api/editais?${params}`);
+      if (!res.ok) throw new Error("Falha");
+      const data = await res.json();
+
+      setEditais(prev => reset || p === 1 ? (data.editais ?? []) : [...prev, ...(data.editais ?? [])]);
+      setTotal(data.total ?? 0);
+      setTotalPages(data.totalPages ?? 1);
+      setPage(p);
+    } finally {
+      setLoading(false);
+    }
+  }, [search, filterStatus, filterArea, filterNivel, filterEscol, soFavoritos]);
+
+  useEffect(() => { load(1, true); }, [load]);
+
+  async function toggleFavorito(editalId: string) {
+    const res = await fetch(`/api/editais/${editalId}/favoritar`, { method: "POST" });
+    if (res.ok) {
+      const { favoritado } = await res.json();
+      setEditais(prev => prev.map(e => e.id === editalId ? { ...e, isFavorito: favoritado } : e));
+    }
+  }
+
+  const activeFilters = [filterStatus, filterArea, filterNivel, filterEscol].filter(Boolean).length;
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+          <Radar className="w-5 h-5 text-indigo-400" />
+        </div>
+        <div>
+          <h1 className="text-xl font-bold text-white">Radar de Editais</h1>
+          <p className="text-sm text-gray-400 mt-0.5">
+            {loading && editais.length === 0 ? "Carregando..." : `${total} concurso${total !== 1 ? "s" : ""} publicado${total !== 1 ? "s" : ""}`}
+          </p>
         </div>
       </div>
 
-      {/* Watchlist chips */}
-      {orgaos.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-6">
-          {orgaos.map(o => (
-            <div key={o} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-sm text-gray-300">
-              <Building2 className="w-3 h-3 text-gray-500" />
-              {o}
-              <button
-                onClick={() => removeOrgao(o)}
-                className="text-gray-600 hover:text-red-400 transition-colors ml-0.5"
+      {/* Toolbar */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && load(1, true)}
+            placeholder="Buscar por cargo, órgão..."
+            className="w-full bg-white/5 border border-white/10 rounded-xl pl-9 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-indigo-500 transition-colors"
+          />
+        </div>
+
+        <button
+          onClick={() => setSoFavoritos(v => !v)}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border transition-colors",
+            soFavoritos
+              ? "bg-amber-500/10 border-amber-500/30 text-amber-400"
+              : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+          )}
+        >
+          <Bookmark className="w-4 h-4" />
+          Favoritos
+        </button>
+
+        <button
+          onClick={() => setShowFilters(v => !v)}
+          className={cn(
+            "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm border transition-colors",
+            showFilters || activeFilters > 0
+              ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-400"
+              : "bg-white/5 border-white/10 text-gray-400 hover:text-white"
+          )}
+        >
+          <Filter className="w-4 h-4" />
+          Filtros
+          {activeFilters > 0 && (
+            <span className="bg-indigo-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
+              {activeFilters}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {/* Filters */}
+      {showFilters && (
+        <div className="bg-white/[0.03] border border-white/10 rounded-xl p-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+          {[
+            { label: "Status",       value: filterStatus, setter: setFilterStatus, opts: STATUSES.map(s => ({ v: s, l: STATUS_CONFIG[s]?.label ?? s })) },
+            { label: "Área",         value: filterArea,   setter: setFilterArea,   opts: AREAS.map(a => ({ v: a, l: a })) },
+            { label: "Nível",        value: filterNivel,  setter: setFilterNivel,  opts: NIVEIS.map(n => ({ v: n, l: n })) },
+            { label: "Escolaridade", value: filterEscol,  setter: setFilterEscol,  opts: ESCOLARIDADES.map(e => ({ v: e, l: e })) },
+          ].map(({ label, value, setter, opts }) => (
+            <div key={label}>
+              <label className="block text-xs text-gray-500 mb-1">{label}</label>
+              <select
+                value={value}
+                onChange={e => setter(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 capitalize"
               >
-                <X className="w-3 h-3" />
-              </button>
+                <option value="">Todos</option>
+                {opts.map(o => <option key={o.v} value={o.v} className="capitalize">{o.l}</option>)}
+              </select>
             </div>
           ))}
-        </div>
-      )}
 
-      {/* Error */}
-      {error && (
-        <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-4 mb-4 flex items-start gap-3">
-          <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
-          <p className="text-sm text-red-300">{error}</p>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {orgaos.length === 0 && (
-        <div className="text-center py-14">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-            <Radar className="w-8 h-8 text-indigo-400" />
-          </div>
-          <h2 className="text-lg font-bold text-gray-300 mb-2">Nenhum órgão monitorado</h2>
-          <p className="text-gray-600 text-sm max-w-xs mx-auto">
-            Adicione órgãos ao radar e receba alertas sobre abertura de editais.
-          </p>
-        </div>
-      )}
-
-      {/* Checking */}
-      {checking && (
-        <div className="text-center py-10">
-          <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-gray-400 text-sm">Consultando base de conhecimento da IA...</p>
-          <p className="text-gray-600 text-xs mt-1">Pode levar alguns segundos</p>
-        </div>
-      )}
-
-      {/* Prompt to verify */}
-      {orgaos.length > 0 && alertas.length === 0 && !checking && (
-        <div className="text-center py-10 rounded-xl bg-white/[0.02] border border-white/[0.04]">
-          <Radar className="w-10 h-10 text-gray-700 mx-auto mb-3" />
-          <p className="text-gray-400 text-sm font-medium">Clique em "Verificar agora" para checar os editais</p>
-          <p className="text-gray-600 text-xs mt-1">A IA analisa {orgaos.length} órgão{orgaos.length !== 1 ? "s" : ""} monitorado{orgaos.length !== 1 ? "s" : ""}</p>
-        </div>
-      )}
-
-      {/* Results */}
-      {sorted.length > 0 && !checking && (
-        <div className="space-y-3">
-          {verificadoEm && (
-            <p className="text-[11px] text-gray-600 flex items-center gap-1 mb-2">
-              <Clock className="w-3 h-3" />
-              Verificado em {new Date(verificadoEm).toLocaleString("pt-BR")} · dados baseados no conhecimento da IA
-            </p>
+          {activeFilters > 0 && (
+            <div className="col-span-2 md:col-span-4 flex justify-end">
+              <button
+                onClick={() => { setFilterStatus(""); setFilterArea(""); setFilterNivel(""); setFilterEscol(""); }}
+                className="text-xs text-gray-400 hover:text-white flex items-center gap-1 transition-colors"
+              >
+                <X className="w-3 h-3" /> Limpar filtros
+              </button>
+            </div>
           )}
-          {sorted.map(a => {
-            const cfg = STATUS_CONFIG[a.status] ?? STATUS_CONFIG.sem_info;
-            return (
-              <div key={a.orgao} className={cn("rounded-xl border p-5", cfg.bg)}>
-                <div className="flex items-start gap-3 mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap mb-1">
-                      <span className="font-bold text-white text-sm">{a.orgao}</span>
-                      <span className={cn(
-                        "text-[10px] font-semibold px-2 py-0.5 rounded-full flex items-center gap-1.5 border",
-                        cfg.bg, cfg.color
-                      )}>
-                        <span className={cn("w-1.5 h-1.5 rounded-full", cfg.dot)} />
-                        {cfg.label}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-200 font-medium">{a.titulo}</p>
-                  </div>
-                </div>
+        </div>
+      )}
 
-                <p className="text-xs text-gray-400 leading-relaxed mb-3">{a.descricao}</p>
-
-                <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-                  {a.banca && (
-                    <span className="flex items-center gap-1">
-                      <Building2 className="w-3 h-3" /> {a.banca}
-                    </span>
-                  )}
-                  {a.vagas && (
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3" /> {a.vagas} vagas
-                    </span>
-                  )}
-                  {a.salario && (
-                    <span className="flex items-center gap-1">
-                      <DollarSign className="w-3 h-3" /> {a.salario}
-                    </span>
-                  )}
-                  {a.prazo && (
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {a.prazo}
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-
-          <p className="text-[10px] text-gray-700 text-center pt-1">
-            ⚠️ Informações baseadas no conhecimento da IA — confirme sempre no site oficial do órgão.
+      {/* Content */}
+      {loading && editais.length === 0 ? (
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+        </div>
+      ) : editais.length === 0 ? (
+        <div className="text-center py-24">
+          <Radar className="w-10 h-10 text-gray-600 mx-auto mb-3" />
+          <p className="text-gray-400 font-medium">Nenhum edital encontrado</p>
+          <p className="text-sm text-gray-600 mt-1">
+            {soFavoritos ? "Você ainda não favoritou nenhum edital" : "Tente ajustar os filtros ou aguarde novas publicações"}
           </p>
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {editais.map(e => (
+              <EditalCard key={e.id} edital={e} onFavoritar={toggleFavorito} />
+            ))}
+          </div>
+
+          {page < totalPages && (
+            <div className="flex justify-center pt-2">
+              <button
+                onClick={() => load(page + 1)}
+                disabled={loading}
+                className="flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/10 transition-colors disabled:opacity-50"
+              >
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
+                Carregar mais
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

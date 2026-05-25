@@ -5,6 +5,9 @@ import {
   AlertTriangle, CheckCircle2, XCircle, Flag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSessionState, useTimerSession } from "@/lib/use-session-state";
+
+const SESSION_KEY = "simulado:exame";
 
 interface Question {
   id: number;
@@ -38,18 +41,25 @@ function formatTime(secs: number) {
 }
 
 export function SimuladoExameInner() {
-  const [preset, setPreset]       = useState(1); // index into PRESETS
-  const [phase, setPhase]         = useState<Phase>("config");
-  const [questions, setQuestions] = useState<Question[]>([]);
+  const timer = useTimerSession(SESSION_KEY);
+
+  // Estado persistido em sessionStorage
+  const [preset, setPreset]       = useSessionState<number>(`${SESSION_KEY}:preset`, 1);
+  const [phase, setPhase]         = useSessionState<Phase>(`${SESSION_KEY}:phase`, "config");
+  const [questions, setQuestions] = useSessionState<Question[]>(`${SESSION_KEY}:questions`, []);
+  const [current, setCurrent]     = useSessionState<number>(`${SESSION_KEY}:current`, 0);
+  const [answers, setAnswers]     = useSessionState<Record<number, string>>(`${SESSION_KEY}:answers`, {});
+  const [flaggedArr, setFlaggedArr] = useSessionState<number[]>(`${SESSION_KEY}:flagged`, []);
+  const flagged = new Set(flaggedArr);
+  const setFlagged = (fn: Set<number> | ((p: Set<number>) => Set<number>)) => {
+    const next = typeof fn === "function" ? fn(flagged) : fn;
+    setFlaggedArr(Array.from(next));
+  };
+  const [finished, setFinished]   = useSessionState<boolean>(`${SESSION_KEY}:finished`, false);
+
   const [loading, setLoading]     = useState(false);
   const [error, setError]         = useState("");
-
-  // Exam state
-  const [current, setCurrent]     = useState(0);
-  const [answers, setAnswers]     = useState<Record<number, string>>({});
-  const [flagged, setFlagged]     = useState<Set<number>>(new Set());
-  const [timeLeft, setTimeLeft]   = useState(0);
-  const [finished, setFinished]   = useState(false);
+  const [timeLeft, setTimeLeft]   = useState(() => phase === "running" ? timer.getTimeLeft() : 0);
   const timerRef                  = useRef<NodeJS.Timeout | null>(null);
 
   // Refs para capturar estado atual sem recriar o finish callback
@@ -64,6 +74,7 @@ export function SimuladoExameInner() {
 
   const finish = useCallback(() => {
     if (timerRef.current) clearInterval(timerRef.current);
+    timer.clearTimer();
     setFinished(true);
     setPhase("result");
 
@@ -89,16 +100,18 @@ export function SimuladoExameInner() {
 
   useEffect(() => {
     if (phase !== "running") return;
+    // Ao montar (ou ao voltar para a página), sincroniza o tempo real restante
+    const realLeft = timer.getTimeLeft();
+    if (realLeft <= 0) { finish(); return; }
+    setTimeLeft(realLeft);
+
     timerRef.current = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          finish();
-          return 0;
-        }
-        return t - 1;
-      });
+      const left = timer.getTimeLeft();
+      setTimeLeft(left);
+      if (left <= 0) { finish(); }
     }, 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase, finish]);
 
   async function startExam() {
@@ -118,12 +131,14 @@ export function SimuladoExameInner() {
         setLoading(false);
         return;
       }
+      const totalSecs = cfg.minutes * 60;
       setQuestions(qs);
       setAnswers({});
       setFlagged(new Set());
       setCurrent(0);
-      setTimeLeft(cfg.minutes * 60);
       setFinished(false);
+      timer.startTimer(totalSecs);
+      setTimeLeft(totalSecs);
       setPhase("running");
     } else {
       const d = await res.json();
@@ -282,7 +297,7 @@ export function SimuladoExameInner() {
 
           <div className="flex gap-3 justify-center">
             <button
-              onClick={() => setPhase("config")}
+              onClick={() => { timer.clearTimer(); setQuestions([]); setAnswers({}); setFlaggedArr([]); setCurrent(0); setFinished(false); setPhase("config"); }}
               className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm font-medium transition-colors"
             >
               <Clock className="w-4 h-4" />

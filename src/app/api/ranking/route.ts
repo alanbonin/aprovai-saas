@@ -76,11 +76,9 @@ export async function GET(req: Request) {
     userMap[u.id] = u.name ?? "Aluno";
   }
 
-  // Anonymize: show first name + last initial
+  // Privacidade: exibe apenas o primeiro nome
   function anonymize(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0];
-    return `${parts[0]} ${parts[parts.length - 1][0]}.`;
+    return name.trim().split(/\s+/)[0];
   }
 
   const leaderboard = top50.map((e, i) => ({

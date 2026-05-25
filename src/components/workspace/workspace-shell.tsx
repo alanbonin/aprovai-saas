@@ -1,8 +1,8 @@
 "use client";
 import { useState } from "react";
-import { OnboardingChat } from "./onboarding-chat";
 import { SubjectSelector } from "./subject-selector";
 import { WorkspaceMain } from "./workspace-main";
+import { MentorProativo } from "./mentor-proativo";
 
 interface Agent {
   id: string; name: string; description: string;
@@ -39,59 +39,44 @@ export function WorkspaceShell({
   profile: initialProfile, subjects: initialSubjects,
   userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired,
 }: Props) {
-  const [profile, setProfile] = useState(initialProfile);
   const [subjects, setSubjects] = useState(initialSubjects);
-  const [step, setStep] = useState<"onboarding" | "subject-select" | "workspace">(
-    !initialProfile?.onboardingDone ? "onboarding"
-    : initialSubjects.length === 0 ? "subject-select"
-    : "workspace"
+  // onboarding agora ocorre em /onboarding — workspace só recebe usuários com onboardingDone=true
+  const [step, setStep] = useState<"subject-select" | "workspace">(
+    initialSubjects.length === 0 ? "subject-select" : "workspace"
   );
-
-  function onOnboardingComplete(newProfile: Profile, suggestedSubjects: Subject[]) {
-    setProfile(newProfile);
-    void suggestedSubjects;
-    setStep("subject-select");
-  }
 
   function onSubjectsConfirmed(confirmedSubjects: Subject[]) {
     setSubjects(confirmedSubjects);
     setStep("workspace");
   }
 
-  if (step === "onboarding") {
-    return (
-      <OnboardingChat
-        agents={agents}
-        userId={userId}
-        aiCreditsTotal={aiCreditsTotal}
-        onComplete={onOnboardingComplete}
-      />
-    );
-  }
-
   if (step === "subject-select") {
     return (
       <SubjectSelector
         userId={userId}
-        profile={profile!}
+        profile={initialProfile!}
         onConfirm={onSubjectsConfirmed}
       />
     );
   }
 
   return (
-    <WorkspaceMain
-      agents={agents}
-      allAgents={allAgents}
-      activeAgentIds={activeAgentIds}
-      maxAgents={maxAgents}
-      subjects={subjects}
-      profile={profile!}
-      userId={userId}
-      aiCreditsTotal={aiCreditsTotal}
-      subscriptionEndDate={subscriptionEndDate}
-      isPremium={isPremium ?? false}
-      isExpired={isExpired ?? false}
-    />
+    <>
+      <WorkspaceMain
+        agents={agents}
+        allAgents={allAgents}
+        activeAgentIds={activeAgentIds}
+        maxAgents={maxAgents}
+        subjects={subjects}
+        profile={initialProfile!}
+        userId={userId}
+        aiCreditsTotal={aiCreditsTotal}
+        subscriptionEndDate={subscriptionEndDate}
+        isPremium={isPremium ?? false}
+        isExpired={isExpired ?? false}
+      />
+      {/* Mentor proativo — banner flutuante contextual */}
+      <MentorProativo />
+    </>
   );
 }

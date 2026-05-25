@@ -58,10 +58,24 @@ export async function PATCH(req: Request) {
 export async function DELETE(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { id } = await req.json();
+  const { id, permanent } = await req.json();
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
 
+  if (permanent) {
+    // Verifica se há assinaturas vinculadas antes de deletar
+    const { count } = await db.from("Subscription").select("id", { count: "exact", head: true }).eq("planId", id);
+    if ((count ?? 0) > 0) {
+      return NextResponse.json({
+        error: `Não é possível excluir: existem ${count} assinatura(s) vinculadas a este plano. Desative-o ao invés de excluir.`
+      }, { status: 409 });
+    }
+    const { error } = await db.from("Plan").delete().eq("id", id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, deleted: true });
+  }
+
+  // Soft delete (desativar) — comportamento padrão
   const { error } = await db.from("Plan").update({ active: false }).eq("id", id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, deleted: false });
 }

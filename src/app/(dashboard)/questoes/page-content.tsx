@@ -6,6 +6,9 @@ import {
   Star, Zap, BookOpen, Trophy, Flag, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSessionState } from "@/lib/use-session-state";
+
+const QS_KEY = "questoes:session";
 
 interface Question {
   id: number;
@@ -44,26 +47,30 @@ const QUALITY_OPTS = [
 
 export function QuestoesInner() {
   const searchParams = useSearchParams();
-  const [questions, setQuestions]   = useState<Question[]>([]);
+
+  // Estado persistido — sobrevive à navegação
+  const [questions, setQuestions]   = useSessionState<Question[]>(`${QS_KEY}:questions`, []);
+  const [current, setCurrent]       = useSessionState<number>(`${QS_KEY}:current`, 0);
+  const [score, setScore]           = useSessionState<{ correct: number; total: number; xpGained: number }>(`${QS_KEY}:score`, { correct: 0, total: 0, xpGained: 0 });
+  const [filterBanca, setFilterBanca]   = useSessionState<string>(`${QS_KEY}:banca`, "");
+  const [filterLevel, setFilterLevel]   = useSessionState<string>(`${QS_KEY}:level`, "");
+  const [filterSubject, setFilterSubject] = useSessionState<string>(`${QS_KEY}:subject`, searchParams.get("subjectId") ?? "");
+  const [filterYear, setFilterYear]     = useSessionState<string>(`${QS_KEY}:year`, "");
+  const [onlyFavs, setOnlyFavs]         = useSessionState<boolean>(`${QS_KEY}:favs`, searchParams.get("favoritos") === "1");
+  const [onlyErros, setOnlyErros]       = useSessionState<boolean>(`${QS_KEY}:erros`, searchParams.get("erros") === "1");
+  const [done, setDone]                 = useSessionState<boolean>(`${QS_KEY}:done`, false);
+
+  // Estado local (não precisa persistir)
   const [subjects, setSubjects]     = useState<Subject[]>([]);
   const [favoritos, setFavoritos]   = useState<number[]>([]);
-  const [current, setCurrent]       = useState(0);
   const [selected, setSelected]     = useState<string | null>(null);
   const [quality, setQuality]       = useState<string | null>(null);
   const [showResult, setShowResult] = useState(false);
-  const [score, setScore]           = useState({ correct: 0, total: 0, xpGained: 0 });
-  const [loading, setLoading]       = useState(true);
-  const [xpFlash, setXpFlash]       = useState(0); // >0 triggers flash
-  const [filterBanca, setFilterBanca]     = useState("");
-  const [filterLevel, setFilterLevel]     = useState("");
-  const [filterSubject, setFilterSubject] = useState(searchParams.get("subjectId") ?? "");
-  const [filterYear, setFilterYear]       = useState("");
-  const [onlyFavs, setOnlyFavs]           = useState(searchParams.get("favoritos") === "1");
-  const [onlyErros, setOnlyErros]         = useState(searchParams.get("erros") === "1");
-  const [showFilter, setShowFilter]       = useState(
+  const [loading, setLoading]       = useState(questions.length === 0); // não recarrega se tem questões
+  const [xpFlash, setXpFlash]       = useState(0);
+  const [showFilter, setShowFilter] = useState(
     searchParams.get("favoritos") === "1" || searchParams.get("erros") === "1"
   );
-  const [done, setDone]                   = useState(false);
 
   // Reporte de questão
   const [reportModal, setReportModal]     = useState<number | null>(null); // questionId
