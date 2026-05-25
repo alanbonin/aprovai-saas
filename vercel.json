@@ -1,6 +1,6 @@
 {
   "framework": "nextjs",
-  "buildCommand": "npm run build",
+  "buildCommand": "NEXT_TURBOPACK=0 npx next build",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
   "crons": [
@@ -35,6 +35,10 @@
     {
       "path": "/api/email/admin-semanal",
       "schedule": "0 10 * * 1"
+    },
+    {
+      "path": "/api/cron/importar-editais",
+      "schedule": "0 9 * * *"
     }
   ]
 }
