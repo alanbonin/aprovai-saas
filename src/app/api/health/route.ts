@@ -1,37 +1,18 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
 
-// GET /api/health — endpoint de monitoramento para Vercel, UptimeRobot, etc.
 export async function GET() {
-  const start = Date.now();
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const nextPublicUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const hasAnonKey = !!process.env.SUPABASE_ANON_KEY;
+  const hasNextPublicAnonKey = !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const hasSvcKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  // Teste simples de conexão ao banco
-  let dbOk = false;
-  let dbMs = 0;
-  try {
-    const t0 = Date.now();
-    await db.from("Plan").select("id").limit(1);
-    dbMs = Date.now() - t0;
-    dbOk = true;
-  } catch { /* db down */ }
-
-  const status = dbOk ? "ok" : "degraded";
-  const totalMs = Date.now() - start;
-
-  return NextResponse.json(
-    {
-      status,
-      version: process.env.npm_package_version ?? "0.1.0",
-      timestamp: new Date().toISOString(),
-      latencyMs: totalMs,
-      checks: {
-        database: { ok: dbOk, latencyMs: dbMs },
-        anthropicKey: { ok: !!process.env.ANTHROPIC_API_KEY },
-        resendKey: { ok: !!process.env.RESEND_API_KEY },
-        mercadopagoKey: { ok: !!process.env.MERCADOPAGO_ACCESS_TOKEN },
-        vapidKeys: { ok: !!(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) },
-      },
-    },
-    { status: dbOk ? 200 : 503 }
-  );
+  return NextResponse.json({
+    supabaseUrl: supabaseUrl ? supabaseUrl.slice(0, 30) + "..." : "MISSING",
+    nextPublicUrl: nextPublicUrl ? nextPublicUrl.slice(0, 30) + "..." : "MISSING",
+    hasAnonKey,
+    hasNextPublicAnonKey,
+    hasSvcKey,
+    nodeEnv: process.env.NODE_ENV,
+  });
 }
