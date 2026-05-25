@@ -1,7 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 
+// Server-side: usa SUPABASE_URL (não é inlinada pelo Turbopack como NEXT_PUBLIC_*)
+// Fallback para NEXT_PUBLIC_SUPABASE_URL em ambientes locais
+const supabaseUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
 export const db = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  supabaseUrl,
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
   { auth: { autoRefreshToken: false, persistSession: false } }
 );
