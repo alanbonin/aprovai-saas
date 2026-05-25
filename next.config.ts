@@ -33,8 +33,10 @@ const nextConfig: NextConfig = {
   compress: true,
 
   // Otimização de imports de pacotes pesados
+  // turboPack desabilitado: @tailwindcss/postcss não é suportado pelo Turbopack
   experimental: {
     optimizePackageImports: ["lucide-react", "@supabase/supabase-js"],
+    turbopack: undefined,
   },
 
   // Domínios permitidos para next/image
