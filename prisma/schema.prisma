@@ -18,12 +18,12 @@ model Plan {
   maxProfiles          Int @default(1)    // concursos/perfis simultâneos
   maxQuestionsPerWeek  Int @default(10)   // questões/semana (-1 = ilimitado)
   maxFlashcardsPerWeek Int @default(10)   // flashcards/semana (-1 = ilimitado)
-  maxSimuladosPerWeek  Int @default(0)    // simulados/semana (0 = bloqueado)
-  maxRedacoesPerWeek   Int @default(0)    // redações/semana (0 = bloqueado)
-  maxCasosPerWeek      Int @default(0)    // casos práticos/semana (0 = bloqueado)
-  hasEditalDecoder     Boolean @default(false) // decodificador de edital
-  hasPdfLibrary        Boolean @default(false) // biblioteca de PDFs
-  hasGroupStudy        Boolean @default(false) // grupos de estudo
+  maxSimuladosPerWeek  Int @default(0)    // simulados/semana (0 = bloqueado, -1 = ilimitado)
+  maxRedacoesPerWeek   Int @default(0)    // redações/semana (0 = bloqueado, -1 = ilimitado)
+  maxCasosPerWeek      Int @default(0)    // casos práticos/semana (0 = bloqueado, -1 = ilimitado)
+  maxEditalPerWeek     Int @default(0)    // decodificações de edital/semana (0 = bloqueado, -1 = ilimitado)
+  maxPdfPerWeek        Int @default(0)    // documentos PDF/semana (0 = bloqueado, -1 = ilimitado)
+  hasGroupStudy        Boolean @default(false) // grupos de estudo ilimitados
   hasLongTermMemory    Boolean @default(false) // memória de longo prazo do mentor
   features        String[] @default([])
   active          Boolean  @default(true)

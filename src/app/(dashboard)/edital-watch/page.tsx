@@ -4,12 +4,11 @@ import { EditalWatchInner } from "./page-content";
 
 export default async function Page() {
   const access = await getAccessLevel();
-  // Decodificador de edital disponível apenas no plano Elite
-  if (!access.hasEditalDecoder) {
+  if (access.maxEditalPerWeek === 0) {
     return (
       <UpgradeUI
         recurso="Decodificador de Edital"
-        desc="Faça upload do PDF do edital e receba automaticamente um plano de estudos personalizado. Exclusivo do plano Elite."
+        desc="Faça upload do PDF do edital e receba automaticamente um plano de estudos personalizado. Disponível a partir do plano Trial."
         icon="📡"
       />
     );

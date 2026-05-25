@@ -11,15 +11,16 @@ export interface PlanLimits {
   aiCreditsPerWeek: number;
   maxAgents: number;
   maxProfiles: number;
-  /** Questões por semana (-1 = ilimitado) */
+  /** -1 = ilimitado, 0 = bloqueado */
   maxQuestionsPerWeek: number;
   maxFlashcardsPerWeek: number;
-  /** 0 = bloqueado */
   maxSimuladosPerWeek: number;
   maxRedacoesPerWeek: number;
   maxCasosPerWeek: number;
-  hasEditalDecoder: boolean;
-  hasPdfLibrary: boolean;
+  /** Decodificações de edital/semana (0 = bloqueado, -1 = ilimitado) */
+  maxEditalPerWeek: number;
+  /** Documentos PDF/semana (0 = bloqueado, -1 = ilimitado) */
+  maxPdfPerWeek: number;
   hasGroupStudy: boolean;
   hasLongTermMemory: boolean;
 }
@@ -28,15 +29,36 @@ const EXPIRED_LIMITS = {
   aiCreditsPerWeek: 0, maxAgents: 0, maxProfiles: 0,
   maxQuestionsPerWeek: 0, maxFlashcardsPerWeek: 0,
   maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 0, maxCasosPerWeek: 0,
-  hasEditalDecoder: false, hasPdfLibrary: false, hasGroupStudy: false, hasLongTermMemory: false,
+  maxEditalPerWeek: 0, maxPdfPerWeek: 0,
+  hasGroupStudy: false, hasLongTermMemory: false,
 };
 
-const TRIAL_LIMITS = {
+// Fallback caso o plano trial não tenha os campos novos no banco ainda
+const TRIAL_DEFAULTS = {
   aiCreditsPerWeek: 10, maxAgents: 2, maxProfiles: 1,
   maxQuestionsPerWeek: 10, maxFlashcardsPerWeek: 10,
-  maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 0, maxCasosPerWeek: 0,
-  hasEditalDecoder: false, hasPdfLibrary: false, hasGroupStudy: false, hasLongTermMemory: false,
+  maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 2, maxCasosPerWeek: 2,
+  maxEditalPerWeek: 1, maxPdfPerWeek: 5,
+  hasGroupStudy: true, hasLongTermMemory: true,
 };
+
+function planLimits(plan: any, isTrial: boolean) {
+  const def = isTrial ? TRIAL_DEFAULTS : EXPIRED_LIMITS;
+  return {
+    aiCreditsPerWeek:     plan?.aiCreditsPerWeek     ?? def.aiCreditsPerWeek,
+    maxAgents:            plan?.maxAgents             ?? def.maxAgents,
+    maxProfiles:          plan?.maxProfiles           ?? def.maxProfiles,
+    maxQuestionsPerWeek:  plan?.maxQuestionsPerWeek   ?? def.maxQuestionsPerWeek,
+    maxFlashcardsPerWeek: plan?.maxFlashcardsPerWeek  ?? def.maxFlashcardsPerWeek,
+    maxSimuladosPerWeek:  plan?.maxSimuladosPerWeek   ?? def.maxSimuladosPerWeek,
+    maxRedacoesPerWeek:   plan?.maxRedacoesPerWeek    ?? def.maxRedacoesPerWeek,
+    maxCasosPerWeek:      plan?.maxCasosPerWeek       ?? def.maxCasosPerWeek,
+    maxEditalPerWeek:     plan?.maxEditalPerWeek      ?? def.maxEditalPerWeek,
+    maxPdfPerWeek:        plan?.maxPdfPerWeek         ?? def.maxPdfPerWeek,
+    hasGroupStudy:        plan?.hasGroupStudy         ?? def.hasGroupStudy,
+    hasLongTermMemory:    plan?.hasLongTermMemory     ?? def.hasLongTermMemory,
+  };
+}
 
 export const getAccessLevel = cache(async (): Promise<PlanLimits> => {
   try {
@@ -55,45 +77,13 @@ export const getAccessLevel = cache(async (): Promise<PlanLimits> => {
     }
 
     const plan = sub.plan as any;
-    if (!plan || (plan.price ?? 0) === 0) {
-      // Trial
-      return {
-        planSlug: plan?.slug ?? "trial",
-        planName: plan?.name ?? "Trial Gratuito",
-        isPremium: false,
-        ...TRIAL_LIMITS,
-        // override com valores do banco se existirem
-        aiCreditsPerWeek:     plan?.aiCreditsPerWeek     ?? TRIAL_LIMITS.aiCreditsPerWeek,
-        maxAgents:            plan?.maxAgents             ?? TRIAL_LIMITS.maxAgents,
-        maxProfiles:          plan?.maxProfiles           ?? TRIAL_LIMITS.maxProfiles,
-        maxQuestionsPerWeek:  plan?.maxQuestionsPerWeek   ?? TRIAL_LIMITS.maxQuestionsPerWeek,
-        maxFlashcardsPerWeek: plan?.maxFlashcardsPerWeek  ?? TRIAL_LIMITS.maxFlashcardsPerWeek,
-        maxSimuladosPerWeek:  plan?.maxSimuladosPerWeek   ?? 0,
-        maxRedacoesPerWeek:   plan?.maxRedacoesPerWeek    ?? 0,
-        maxCasosPerWeek:      plan?.maxCasosPerWeek       ?? 0,
-        hasEditalDecoder:     plan?.hasEditalDecoder      ?? false,
-        hasPdfLibrary:        plan?.hasPdfLibrary         ?? false,
-        hasGroupStudy:        plan?.hasGroupStudy         ?? false,
-        hasLongTermMemory:    plan?.hasLongTermMemory     ?? false,
-      };
-    }
+    const isTrial = !plan || (plan.price ?? 0) === 0;
 
     return {
-      planSlug:             plan.slug ?? null,
-      planName:             plan.name ?? null,
-      isPremium:            true,
-      aiCreditsPerWeek:     plan.aiCreditsPerWeek     ?? 10,
-      maxAgents:            plan.maxAgents             ?? 2,
-      maxProfiles:          plan.maxProfiles           ?? 1,
-      maxQuestionsPerWeek:  plan.maxQuestionsPerWeek   ?? -1,
-      maxFlashcardsPerWeek: plan.maxFlashcardsPerWeek  ?? -1,
-      maxSimuladosPerWeek:  plan.maxSimuladosPerWeek   ?? 2,
-      maxRedacoesPerWeek:   plan.maxRedacoesPerWeek    ?? 2,
-      maxCasosPerWeek:      plan.maxCasosPerWeek       ?? 2,
-      hasEditalDecoder:     plan.hasEditalDecoder      ?? false,
-      hasPdfLibrary:        plan.hasPdfLibrary         ?? false,
-      hasGroupStudy:        plan.hasGroupStudy         ?? false,
-      hasLongTermMemory:    plan.hasLongTermMemory     ?? false,
+      planSlug:   plan?.slug ?? (isTrial ? "trial" : null),
+      planName:   plan?.name ?? (isTrial ? "Trial Gratuito" : null),
+      isPremium:  !isTrial,
+      ...planLimits(plan, isTrial),
     };
   } catch {
     return { planSlug: null, planName: null, isPremium: false, ...EXPIRED_LIMITS };
