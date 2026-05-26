@@ -18,9 +18,29 @@ export default function CadastroPage() {
     setLoading(true);
     setError("");
 
-    const { data, error: signUpError } = await supabase.auth.signUp({ email, password });
+    // redirectTo: após confirmar o e-mail, Supabase redireciona para /api/auth/callback
+    const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
+
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: redirectTo,
+        data: { name }, // salva name no user_metadata do Supabase
+      },
+    });
     if (signUpError || !data.user) {
-      setError(signUpError?.message ?? "Erro ao criar conta.");
+      // Traduz mensagens comuns do Supabase
+      const msg = signUpError?.message ?? "";
+      if (msg.includes("already registered") || msg.includes("already been registered")) {
+        setError("Este e-mail já está cadastrado. Tente fazer login.");
+      } else if (msg.includes("invalid")) {
+        setError("E-mail inválido.");
+      } else if (msg.includes("Password")) {
+        setError("Senha muito curta. Use no mínimo 6 caracteres.");
+      } else {
+        setError("Erro ao criar conta. Tente novamente.");
+      }
       setLoading(false);
       return;
     }

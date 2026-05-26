@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,18 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [info, setInfo] = useState("");
   const [loading, setLoading] = useState(false);
   const supabase = createClient();
+
+  // Lê mensagens de erro/sucesso vindas do callback de confirmação de e-mail
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const erro = params.get("erro");
+    const confirmado = params.get("confirmado");
+    if (erro) setError(decodeURIComponent(erro));
+    if (confirmado) setInfo("E-mail confirmado! Faça login para acessar sua conta.");
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -80,6 +90,7 @@ export default function LoginPage() {
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
                     placeholder="••••••••" />
                 </div>
+                {info  && <p className="text-emerald-400 text-sm bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">{info}</p>}
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "Entrando..." : "Entrar"}
