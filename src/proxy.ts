@@ -39,7 +39,14 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, host } = request.nextUrl;
+
+  // ── Redirect www → apex ──────────────────────────────────────────────────
+  if (host === "www.aprovai360.com.br") {
+    const url = request.nextUrl.clone();
+    url.host = "aprovai360.com.br";
+    return NextResponse.redirect(url, { status: 301 });
+  }
 
   // ── Injeta pathname nos headers para server components ───────────────────
   const requestHeaders = new Headers(request.headers);
