@@ -42,7 +42,7 @@ export async function GET(req: Request) {
   if (banca)     query = query.ilike("banca", `%${banca}%`);
 
   const { data: questions, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   // Busca nomes de matérias
   const subjectIds = [...new Set((questions ?? []).map(q => q.subjectId).filter(Boolean))];

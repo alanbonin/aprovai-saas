@@ -70,7 +70,7 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ added: toAdd.length, matched: matched.length });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
@@ -145,6 +145,6 @@ FORMATO JSON OBRIGATÓRIO (retorne APENAS JSON, sem texto adicional):
     const result = JSON.parse(jsonMatch[0]) as EditalResult;
     return NextResponse.json({ result });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

@@ -111,7 +111,7 @@ function buildLembreteHtml({
 
 function checkAuth(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // sem secret, aceita (dev)
+  if (!secret) return process.env.NODE_ENV !== "production"; // dev: sem secret, aceita; prod: nega
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${secret}`;
 }

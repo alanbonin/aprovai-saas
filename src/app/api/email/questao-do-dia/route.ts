@@ -15,7 +15,7 @@ const FROM    = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.com.br>";
 
 function checkAuth(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
@@ -173,7 +173,7 @@ export async function GET(req: Request) {
   try {
     return NextResponse.json(await runCron());
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
@@ -182,6 +182,6 @@ export async function POST(req: Request) {
   try {
     return NextResponse.json(await runCron());
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

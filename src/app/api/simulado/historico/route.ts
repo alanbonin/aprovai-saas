@@ -24,7 +24,7 @@ export async function GET() {
     .order("createdAt", { ascending: false })
     .limit(50);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   const rows = history ?? [];
 

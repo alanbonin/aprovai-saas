@@ -18,7 +18,7 @@ export async function GET(
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   const { id } = await params;
   const { data, error } = await db.from("Question").select("*").eq("id", parseInt(id, 10)).maybeSingle();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   if (!data) return NextResponse.json({ error: "Questão não encontrada" }, { status: 404 });
   return NextResponse.json(data);
 }
@@ -40,7 +40,7 @@ export async function PATCH(
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -58,7 +58,7 @@ export async function DELETE(
   await db.from("Progress").delete().eq("questionId", numId);
 
   const { error } = await db.from("Question").delete().eq("id", numId);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json({ ok: true });
 }

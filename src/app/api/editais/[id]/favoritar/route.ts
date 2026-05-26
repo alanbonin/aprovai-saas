@@ -41,6 +41,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     }
   } catch (err) {
     console.error("[favoritar/POST]", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

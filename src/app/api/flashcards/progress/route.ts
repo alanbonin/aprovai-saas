@@ -106,6 +106,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ nextReview: srsResult.nextReview, interval: srsResult.interval });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

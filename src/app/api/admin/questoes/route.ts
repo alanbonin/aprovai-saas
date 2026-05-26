@@ -36,7 +36,7 @@ export async function GET(req: Request) {
     .order("id", { ascending: false })
     .range(offset, offset + limit - 1);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json({
     questions: questions ?? [],
@@ -52,7 +52,7 @@ export async function PATCH(req: Request) {
   const { id, ...fields } = await req.json() as { id: number; [key: string]: unknown };
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   const { data, error } = await db.from("Question").update(fields).eq("id", id).select().single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data);
 }
 
@@ -62,6 +62,6 @@ export async function DELETE(req: Request) {
   const { id } = await req.json() as { id: number };
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
   const { error } = await db.from("Question").delete().eq("id", id);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

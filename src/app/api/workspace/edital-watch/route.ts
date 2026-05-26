@@ -60,7 +60,7 @@ export async function GET() {
     const list = await getWatchlist(dbUser.id);
     return NextResponse.json({ orgaos: list });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
@@ -149,6 +149,6 @@ Retorne APENAS o array JSON, sem texto adicional.`;
 
     return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

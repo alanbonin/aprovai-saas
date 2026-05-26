@@ -53,7 +53,7 @@ export async function GET(req: Request) {
     if (soFavoritos)  query = query.in("id", favSet.size > 0 ? [...favSet] : ["__none__"]);
 
     const { data: editais, count, error } = await query.range(offset, offset + limit - 1);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
     // Adiciona flags de relevância e favorito
     const cargoProfile = (profile?.cargo ?? "").toLowerCase();
@@ -85,6 +85,6 @@ export async function GET(req: Request) {
     });
   } catch (err) {
     console.error("[editais/GET]", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

@@ -14,7 +14,7 @@ import { Resend } from "resend";
 
 function checkAuth(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // dev
+  if (!secret) return process.env.NODE_ENV !== "production"; // dev: sem secret, aceita; prod: nega
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 

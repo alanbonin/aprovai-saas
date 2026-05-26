@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest) {
       .from("Question")
       .update({ aprovado })
       .in("id", ids);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     return NextResponse.json({ updated: ids.length });
   }
 
@@ -47,6 +47,6 @@ export async function PATCH(req: NextRequest) {
     .select()
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data);
 }

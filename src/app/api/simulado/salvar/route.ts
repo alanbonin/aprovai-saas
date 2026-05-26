@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     subjectIds: subjectIds ?? [],
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   // ── 2. Atualiza Progress com SM-2 inteligente ─────────────────────────────
   if (Array.isArray(answers) && answers.length > 0) {

@@ -34,7 +34,7 @@ export async function GET(req: Request) {
   if (search) query = query.or(`titulo.ilike.%${search}%,orgao.ilike.%${search}%,cargo.ilike.%${search}%`);
 
   const { data: editais, count, error } = await query.range(offset, offset + limit - 1);
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json({ editais: editais ?? [], total: count ?? 0, page, totalPages: Math.ceil((count ?? 0) / limit) });
 }
@@ -74,7 +74,7 @@ export async function POST(req: Request) {
     updatedAt:           now,
   });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
@@ -91,7 +91,7 @@ export async function PATCH(req: Request) {
     .update({ ...fields, updatedAt: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }
 
@@ -108,6 +108,6 @@ export async function DELETE(req: Request) {
     .update({ active: false, updatedAt: new Date().toISOString() })
     .eq("id", id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json({ ok: true });
 }

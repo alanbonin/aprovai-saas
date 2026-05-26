@@ -35,7 +35,7 @@ export async function GET(req: Request) {
     const raw = note.content.replace(`${MEMORY_PREFIX}:${agentId}:`, "");
     return NextResponse.json({ memory: raw, savedAt: note.updatedAt });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }
 
@@ -125,6 +125,6 @@ RESUMO (em português):`,
 
     return NextResponse.json({ ok: true, summary });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

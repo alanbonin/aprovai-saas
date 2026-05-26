@@ -23,7 +23,7 @@ export async function GET() {
     .eq("userId", dbUser.id)
     .order("createdAt", { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   const rows = progress ?? [];
 

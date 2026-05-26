@@ -34,7 +34,7 @@ export async function POST(req: Request) {
   try {
     configVapid();
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   const body = await req.json() as SendPayload;

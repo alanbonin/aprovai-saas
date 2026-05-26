@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     .from("materiais")
     .upload(fileName, bytes, { contentType: file.type, upsert: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   const { data: { publicUrl } } = db.storage.from("materiais").getPublicUrl(data.path);
 

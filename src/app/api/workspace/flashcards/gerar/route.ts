@@ -105,6 +105,6 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
     updatedAt: new Date().toISOString(),
   }).select("id, name, cards, subjectId, createdAt").single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(set, { status: 201 });
 }

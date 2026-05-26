@@ -210,6 +210,6 @@ Retorne APENAS o JSON (array), sem texto antes ou depois.`;
       geradoEm: new Date().toISOString(),
     });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

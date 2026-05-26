@@ -263,7 +263,7 @@ export async function POST(req: Request) {
   });
 
   const { data, error } = await db.from("Question").insert(toInsert).select();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json({ count: data?.length ?? 0, questions: data });
 }

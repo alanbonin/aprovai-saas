@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
+import { log, LogEvent, mask } from "@/lib/logger";
 
 const RegisterSchema = z.object({
   supabaseId: z.string().uuid(),
@@ -52,7 +53,10 @@ export async function POST(req: Request) {
   // Rate limit por IP — protege contra cadastro em massa
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   const rl = await signupLimiter.check(`signup:${ip}`);
-  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+  if (!rl.ok) {
+    log.security(LogEvent.AUTH_RATE_LIMITED, { ip: mask.ip(ip), endpoint: "/api/auth/register" });
+    return NextResponse.json({ error: rl.error }, { status: 429 });
+  }
 
   const body = await req.json();
   const parseResult = RegisterSchema.safeParse(body);
@@ -81,7 +85,10 @@ export async function POST(req: Request) {
     updatedAt: now,
   }).select("id").single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    log.error(LogEvent.DB_ERROR, { table: "User", op: "insert" }, error);
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+  }
 
   // ── Ativa Trial de 7 dias automaticamente ───────────────────────────────
   const { data: trialPlan } = await db
@@ -105,6 +112,7 @@ export async function POST(req: Request) {
     });
   }
 
+  log.info(LogEvent.AUTH_REGISTER, { email: mask.email(email) });
   // Dispara boas-vindas + notificação admin em background (não-bloqueante)
   void sendBoasVindas(data.id, email, name);
   void notifyAdminNewUser(name, email);

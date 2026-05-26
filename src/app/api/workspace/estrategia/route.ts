@@ -303,6 +303,6 @@ Retorne APENAS JSON (sem texto antes ou depois):
     return NextResponse.json({ cronograma, ajustes: planData.ajustes });
   } catch (err) {
     console.error("[estrategia/POST]", err);
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

@@ -123,7 +123,7 @@ export async function PATCH(req: Request) {
 
     if (existing && existing.length > 0) {
       const { error } = await db.from("StudentProfile").update(fields).eq("id", existing[0].id);
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     } else {
       const { error } = await db.from("StudentProfile").insert({
         id: crypto.randomUUID(),
@@ -132,7 +132,7 @@ export async function PATCH(req: Request) {
         createdAt: new Date().toISOString(),
         ...fields,
       });
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
 
     // Reatribui mentores quando cargo/órgão mudam
@@ -142,6 +142,6 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    return NextResponse.json({ error: String(err) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

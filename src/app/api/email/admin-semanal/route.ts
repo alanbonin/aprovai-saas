@@ -22,7 +22,7 @@ const ADMIN_EMAIL = process.env.ADMIN_REPORT_EMAIL ?? process.env.EMAIL_FROM ?? 
 
 function checkAuth(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return process.env.NODE_ENV !== "production";
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${secret}`;
 }
@@ -229,6 +229,6 @@ export async function GET(req: Request) {
     const result = await runCron();
     return NextResponse.json(result);
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

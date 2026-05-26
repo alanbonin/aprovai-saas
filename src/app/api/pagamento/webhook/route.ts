@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import MercadoPago, { Payment, MerchantOrder } from "mercadopago";
 import { createHmac } from "crypto";
+import { log as slog, LogEvent } from "@/lib/logger";
 
 const mp = new MercadoPago({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
 
@@ -95,6 +96,7 @@ export async function POST(req: Request) {
     // Verificação de assinatura
     if (!verifySignature(req, rawBody)) {
       await log("signature_invalid", { headers: Object.fromEntries(req.headers) });
+      slog.security(LogEvent.PAYMENT_WEBHOOK, { result: "signature_invalid" });
       return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
     }
 
@@ -118,6 +120,7 @@ export async function POST(req: Request) {
       if (status === "approved") {
         await activateSubscription(userId, planId, String(paymentData.id));
         await log("payment_approved", { userId, planId, paymentId: paymentData.id });
+        slog.info(LogEvent.PAYMENT_APPROVED, { userId, planId });
       } else if (status === "refunded" || status === "cancelled" || status === "charged_back") {
         await cancelSubscription(userId, `payment_${status}`);
       } else if (status === "pending" || status === "in_process") {
@@ -174,6 +177,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     await log("webhook_error", { raw: rawBody.slice(0, 500) }, String(err));
+    slog.error(LogEvent.PAYMENT_FAILED, { stage: "webhook_processing" }, err);
     // Retorna 200 para evitar retentativas infinitas do MP
     return NextResponse.json({ ok: true });
   }

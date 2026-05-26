@@ -31,7 +31,7 @@ export async function POST(
     .update({ activeProfileId: id })
     .eq("id", dbUser.id);
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json({ ok: true, activeProfileId: id, profile });
 }
