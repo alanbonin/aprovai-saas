@@ -177,6 +177,6 @@ Retorne APENAS JSON válido:
     return NextResponse.json({ ...result, criterios: CRITERIOS });
   } catch (e) {
     console.error("[redacao/avaliar]", e);
-    return NextResponse.json({ error: `Erro ao avaliar redação: ${(e as Error).message}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

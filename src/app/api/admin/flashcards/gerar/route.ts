@@ -82,7 +82,7 @@ Retorne APENAS JSON válido, sem markdown:
   } catch (err) {
     console.error("[flashcards/gerar] Erro completo:", err);
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `Erro ao gerar flashcards com IA: ${msg}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao gerar flashcards" }, { status: 500 });
   }
 
   const cards = (generated.cards ?? []).map((c: { frente: string; verso: string }, i: number) => ({

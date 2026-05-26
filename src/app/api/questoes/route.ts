@@ -84,7 +84,7 @@ export async function GET(req: Request) {
     questions = fallbackResult.data;
     queryError = fallbackResult.error;
   }
-  if (queryError) return NextResponse.json({ error: queryError.message }, { status: 500 });
+  if (queryError) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   if (!questions?.length) {
     // Se esgotou questões não-vistas, retorna sem filtro de seen

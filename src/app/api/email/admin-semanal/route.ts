@@ -219,7 +219,7 @@ async function runCron() {
     html,
   });
 
-  if (error) return { error: error.message };
+  if (error) return { error: "Erro interno" };
   return { sent: true, to: ADMIN_EMAIL, weekLabel };
 }
 

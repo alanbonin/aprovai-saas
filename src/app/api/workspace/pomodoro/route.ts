@@ -121,7 +121,7 @@ export async function POST(req: Request) {
 
   if (dbError) {
     console.error("[pomodoro] save error:", dbError);
-    return NextResponse.json({ error: dbError }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   return NextResponse.json({ ok: true, session }, { status: 201 });

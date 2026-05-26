@@ -66,7 +66,7 @@ export async function POST(req: Request) {
   }
 
   const { data: notes, error: fetchErr } = await query;
-  if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  if (fetchErr) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   let sent = 0;
   let failed = 0;

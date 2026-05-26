@@ -143,7 +143,7 @@ Retorne APENAS JSON válido sem markdown:
   } catch (err) {
     console.error("[artigos] Erro completo:", err);
     const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: `Erro ao gerar artigos com IA: ${msg}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro ao gerar artigos" }, { status: 500 });
   }
 
   // Monta nova entrada de histórico

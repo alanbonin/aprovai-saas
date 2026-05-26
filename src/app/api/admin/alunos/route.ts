@@ -31,7 +31,7 @@ export async function POST(req: Request) {
     email_confirm: true,
     user_metadata: { name },
   });
-  if (authErr) return NextResponse.json({ error: authErr.message }, { status: 400 });
+  if (authErr) return NextResponse.json({ error: "Erro de autenticação" }, { status: 400 });
 
   // Cria registro no DB (id gerado aqui pois o Supabase JS não usa @default(cuid()) do Prisma)
   const newId = crypto.randomUUID();
@@ -49,7 +49,7 @@ export async function POST(req: Request) {
   if (dbErr) {
     console.error("[admin/alunos] erro:", typeof dbErr === 'object' ? dbErr?.message ?? 'unknown' : dbErr);
     await db.auth.admin.deleteUser(authUser.user.id);
-    return NextResponse.json({ error: dbErr.message }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   // Atribui plano se informado; caso contrário ativa trial de 7 dias automaticamente
@@ -126,7 +126,7 @@ export async function PATCH(req: Request) {
 
     if (Object.keys(dbUpdates).length > 1) {
       const { error: dbErr } = await db.from("User").update(dbUpdates).eq("id", userId);
-      if (dbErr) return NextResponse.json({ error: dbErr.message }, { status: 500 });
+      if (dbErr) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
 
     const authUpdates: Record<string, unknown> = {};
@@ -135,7 +135,7 @@ export async function PATCH(req: Request) {
 
     if (Object.keys(authUpdates).length > 0) {
       const { error: authErr } = await db.auth.admin.updateUserById(u.supabaseId, authUpdates);
-      if (authErr) return NextResponse.json({ error: `Auth: ${authErr.message}` }, { status: 500 });
+      if (authErr) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, name: dbUpdates.name ?? null, email: dbUpdates.email ?? null });
@@ -205,7 +205,7 @@ export async function PATCH(req: Request) {
 
       if (updateErr) {
         console.error("[admin/alunos PATCH] update error:", updateErr.message);
-        return NextResponse.json({ error: `Erro ao atualizar assinatura: ${updateErr.message}` }, { status: 500 });
+        return NextResponse.json({ error: "Erro interno" }, { status: 500 });
       }
     } else {
       // Cria nova assinatura (usuário sem assinatura prévia)
@@ -222,7 +222,7 @@ export async function PATCH(req: Request) {
 
       if (insertErr) {
         console.error("[admin/alunos PATCH] insert error:", insertErr.message);
-        return NextResponse.json({ error: `Erro ao criar assinatura: ${insertErr.message}` }, { status: 500 });
+        return NextResponse.json({ error: "Erro interno" }, { status: 500 });
       }
     }
   } else if (existing) {
@@ -261,7 +261,7 @@ export async function DELETE(req: Request) {
   const { error: delErr } = await db.from("User").delete().eq("id", userId);
   if (delErr) {
     console.error("[admin/alunos DELETE] User delete error:", delErr.message);
-    return NextResponse.json({ error: `Erro ao remover usuário: ${delErr.message}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   // Remove do Supabase Auth

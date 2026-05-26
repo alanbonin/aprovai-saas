@@ -402,7 +402,7 @@ Retorne APENAS JSON valido sem markdown:
     content = extractJSON<AulaContent>(raw);
   } catch (e) {
     console.error("[materiais/gerar] Erro IA:", e);
-    return NextResponse.json({ error: `Erro ao gerar conteudo: ${(e as Error).message}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   // ── Renderiza PDF ─────────────────────────────────────────────────────────────
@@ -411,7 +411,7 @@ Retorne APENAS JSON valido sem markdown:
     pdfBuffer = await renderToBuffer(<AulaPDF content={content} />);
   } catch (e) {
     console.error("[materiais/gerar] Erro PDF:", e);
-    return NextResponse.json({ error: `Erro ao renderizar PDF: ${(e as Error).message}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   // ── Garante bucket ────────────────────────────────────────────────────────────
@@ -425,7 +425,7 @@ Retorne APENAS JSON valido sem markdown:
       fileSizeLimit: 52428800,
     });
     if (createErr) {
-      return NextResponse.json({ error: `Erro ao criar bucket: ${createErr.message}` }, { status: 500 });
+      return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
 
@@ -438,7 +438,7 @@ Retorne APENAS JSON valido sem markdown:
 
   if (uploadError) {
     console.error("[materiais/gerar] Upload error:", uploadError);
-    return NextResponse.json({ error: `Erro no upload: ${uploadError.message}` }, { status: 500 });
+    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
   const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(fileName);
@@ -462,7 +462,7 @@ Retorne APENAS JSON valido sem markdown:
     updatedAt: new Date().toISOString(),
   }).select().single();
 
-  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+  if (dbError) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   return NextResponse.json(material, { status: 201 });
 }

@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   } catch (err) {
     console.error("[checkout] error:", err);
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : String(err) },
+      { error: "Erro interno" },
       { status: 500 }
     );
   }

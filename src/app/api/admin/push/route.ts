@@ -50,7 +50,7 @@ export async function POST(req: Request) {
   if (body.userId) query = query.eq("userId", body.userId);
 
   const { data: notes, error: fetchErr } = await query;
-  if (fetchErr) return NextResponse.json({ error: fetchErr.message }, { status: 500 });
+  if (fetchErr) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   let sent = 0, failed = 0;
   const expired: string[] = [];

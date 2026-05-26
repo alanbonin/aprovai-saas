@@ -29,7 +29,7 @@ async function runCron() {
     .gt("streak", 0)
     .not("lastStudyDate", "is", null);
 
-  if (error) return { error: error.message };
+  if (error) return { error: "Erro interno" };
 
   const toReset = (perfis ?? []).filter(p => {
     const last = p.lastStudyDate as string | null;
@@ -46,7 +46,7 @@ async function runCron() {
     .update({ streak: 0 })
     .in("id", ids);
 
-  if (updateErr) return { error: updateErr.message };
+  if (updateErr) return { error: "Erro interno" };
 
   return { reset: toReset.length };
 }

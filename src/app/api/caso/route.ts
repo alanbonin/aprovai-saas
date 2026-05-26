@@ -94,7 +94,7 @@ Retorne APENAS JSON válido:
       return NextResponse.json({ temas: parsed.temas ?? [], cargo, orgao });
     } catch (e) {
       console.error("[caso/sugerir_temas]", e);
-      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+      return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
 
@@ -134,7 +134,7 @@ Retorne APENAS JSON válido:
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[caso/gerar] erro:", e);
-      return NextResponse.json({ error: `Erro ao gerar caso: ${(e as Error).message}` }, { status: 500 });
+      return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
 
@@ -214,7 +214,7 @@ ${AVALIACAO_FIELDS}`,
       return NextResponse.json(parsed);
     } catch (e) {
       console.error("[caso/avaliar]", e);
-      return NextResponse.json({ error: (e as Error).message }, { status: 500 });
+      return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
 
