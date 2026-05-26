@@ -174,8 +174,8 @@ export default function AdminRelatorioPage() {
                         {u.questoes > 0 ? `${u.acerto}%` : "—"}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-amber-400 font-bold">{u.streak > 0 ? `${u.streak}d` : "—"}</td>
-                    <td className="px-4 py-3 text-yellow-400 font-mono">{u.xp.toLocaleString("pt-BR")}</td>
+                    <td className="px-4 py-3 text-amber-400 font-bold">{(u.streak ?? 0) > 0 ? `${u.streak}d` : "—"}</td>
+                    <td className="px-4 py-3 text-yellow-400 font-mono">{(u.xp ?? 0).toLocaleString("pt-BR")}</td>
                     <td className="px-4 py-3 text-gray-500">{fmtDate(u.lastStudy)}</td>
                     <td className="px-4 py-3">
                       <Link

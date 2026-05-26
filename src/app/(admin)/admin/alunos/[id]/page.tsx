@@ -230,14 +230,14 @@ export default function AdminAlunoDetailPage() {
         />
         <KpiCard
           label="Sequência"
-          value={`${s.streak}d`}
+          value={`${s.streak ?? 0}d`}
           sub="dias consecutivos"
           icon={<Flame className="w-4 h-4" />}
-          color={s.streak >= 7 ? "text-amber-400" : "text-gray-400"}
+          color={(s.streak ?? 0) >= 7 ? "text-amber-400" : "text-gray-400"}
         />
         <KpiCard
           label="XP Total"
-          value={s.xp.toLocaleString("pt-BR")}
+          value={(s.xp ?? 0).toLocaleString("pt-BR")}
           sub="pontos de experiência"
           icon={<Trophy className="w-4 h-4" />}
           color="text-yellow-400"
