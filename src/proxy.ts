@@ -31,6 +31,9 @@ function isPublicPath(pathname: string): boolean {
     PUBLIC_PATHS.has(pathname) ||
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api/auth") ||
+    // Cron e email internos: autenticados via CRON_SECRET (Bearer), não por sessão
+    pathname.startsWith("/api/cron/") ||
+    pathname.startsWith("/api/email/") ||
     /\.(?:svg|png|jpg|jpeg|gif|webp|ico|woff|woff2|ttf|eot|css|js)$/.test(pathname)
   );
 }
