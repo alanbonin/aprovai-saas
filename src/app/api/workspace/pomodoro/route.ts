@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 const KEY = "__POMODORO__";
 
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
   }
 
   if (dbError) {
-    console.error("[pomodoro] save error:", dbError);
+    log.error("db.pomodoro_save_error", { table: "Note" }, dbError);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 

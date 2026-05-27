@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { log, LogEvent } from "@/lib/logger";
 
 async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await db.from("User").select("role").eq("supabaseId", user.id).single();
-  return data?.role === "ADMIN" ? user : null;
+  const { data } = await db.from("User").select("id, role").eq("supabaseId", user.id).single();
+  return data?.role === "ADMIN" ? data : null;
 }
 
 function escapeCsv(val: string | number | null | undefined): string {
@@ -21,11 +22,23 @@ function escapeCsv(val: string | number | null | undefined): string {
 /**
  * GET /api/admin/alunos/export
  * Exporta alunos como CSV com plano, questões respondidas e taxa de acerto.
+ *
+ * LGPD: log obrigatório — exportação massiva de dados pessoais por admin.
  */
-export async function GET() {
-  if (!await requireAdmin()) {
+export async function GET(req: Request) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
+
+  // LGPD — exportação massiva de dados pessoais (art. 37, ANPD)
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  log.security(LogEvent.ADMIN_EXPORT, {
+    adminId: admin.id,
+    dataType: "users_full_list",
+    format: "csv",
+    ip,
+  });
 
   // Busca todos os usuários com assinaturas e planos
   const { data: users } = await db

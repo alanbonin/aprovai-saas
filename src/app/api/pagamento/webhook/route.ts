@@ -183,11 +183,7 @@ export async function POST(req: Request) {
   }
 }
 
-// GET: health check do endpoint de webhook
+// GET: não permitido — evita expor informações de infraestrutura
 export async function GET() {
-  return NextResponse.json({
-    status: "webhook ativo",
-    events: ["payment", "subscription_authorized_payment", "merchant_order"],
-    signatureVerification: !!process.env.MERCADOPAGO_WEBHOOK_SECRET,
-  });
+  return new NextResponse(null, { status: 405 });
 }

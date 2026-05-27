@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import type { MessageParam, ImageBlockParam, TextBlockParam } from "@anthropic-ai/sdk/resources";
+import { log } from "@/lib/logger";
 
 const REDACAO_SYSTEM =
   "Você é um especialista em Redação Oficial Brasileira e avaliador de concursos públicos, com profundo conhecimento do Manual de Redação da Presidência da República e das normas técnicas de cada área. Responda apenas com JSON válido.";
@@ -90,7 +91,7 @@ Retorne APENAS JSON válido:
       const tipos = parsed.tipos?.length ? parsed.tipos : TIPOS_GENERICOS;
       return NextResponse.json({ tipos, cargo, orgao });
     } catch (e) {
-      console.error("[redacao/sugerir_tipos]", e);
+      log.error("ai.redacao_sugerir_tipos_error", {}, e);
       return NextResponse.json({ tipos: TIPOS_GENERICOS });
     }
   }
@@ -176,7 +177,7 @@ Retorne APENAS JSON válido:
 
     return NextResponse.json({ ...result, criterios: CRITERIOS });
   } catch (e) {
-    console.error("[redacao/avaliar]", e);
+    log.error("ai.redacao_avaliar_error", {}, e);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

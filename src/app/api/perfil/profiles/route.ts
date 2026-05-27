@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { getAllProfiles, getActiveProfile, maxProfilesForSubscription } from "@/lib/get-active-profile";
+import { log } from "@/lib/logger";
 
 // ── GET — lista perfis do usuário ────────────────────────────────────────────
 export async function GET() {
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
   }).select().single();
 
   if (error) {
-    console.error("[profiles] create error:", error.message);
+    log.error("db.profiles_create_error", { table: "StudentProfile" }, error);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 

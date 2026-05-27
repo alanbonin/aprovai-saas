@@ -142,10 +142,22 @@ export async function POST(req: Request) {
   // ─────────────────────────────────────────────────────────────────────────
 
   const { questionId, correct, quality } = await req.json();
-  // Normaliza strings do componente QuestoesAdaptativas ("lembrei"/"nao-lembrei")
-  // para os valores esperados pelo SM-2 ("ok"/"again")
+
+  // Mapeia qualidades do frontend para o SM-2
+  // "errei"/"nao-lembrei" → "again" | "dificil" → "hard" | "ok"/"lembrei" → "ok" | "facil" → "easy"
   const rawQ = quality ?? (correct ? "ok" : "again");
-  const q = rawQ === "lembrei" ? "ok" : rawQ === "nao-lembrei" ? "again" : rawQ;
+  const q = rawQ === "lembrei"      ? "ok"
+          : rawQ === "nao-lembrei"  ? "again"
+          : rawQ === "errei"        ? "again"   // "Errei" = again no SM-2
+          : rawQ === "dificil"      ? "hard"
+          : rawQ === "facil"        ? "easy"
+          : rawQ;
+
+  // isCorrect vem do body (se o usuário acertou a alternativa certa)
+  // — independente de como ele avaliou a dificuldade
+  const isCorrect: boolean = typeof correct === "boolean"
+    ? correct
+    : q !== "again";
 
   // Busca progresso existente para este perfil (ou legado sem profileId)
   const existingQuery = db
@@ -158,7 +170,7 @@ export async function POST(req: Request) {
     ? await existingQuery.or(`profileId.eq.${profileId},profileId.is.null`).maybeSingle()
     : await existingQuery.is("profileId", null).maybeSingle();
 
-  const { interval, easeFactor, nextReview, correct: isCorrect } = calcNextReview(existing, q);
+  const { interval, easeFactor, nextReview } = calcNextReview(existing, q);
 
   if (existing) {
     await db.from("Progress").update({

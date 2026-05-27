@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createLimiter } from "@/lib/rate-limit";
+import { log, LogEvent } from "@/lib/logger";
 
 const adminAlunosLimiter = createLimiter({ max: 30, window: "1 m", prefix: "admin-alunos" });
 
@@ -47,7 +48,7 @@ export async function POST(req: Request) {
   }).select("id").single();
 
   if (dbErr) {
-    console.error("[admin/alunos] erro:", typeof dbErr === 'object' ? dbErr?.message ?? 'unknown' : dbErr);
+    log.error("db.admin_alunos_create_error", { table: "User" }, dbErr);
     await db.auth.admin.deleteUser(authUser.user.id);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
@@ -183,7 +184,7 @@ export async function PATCH(req: Request) {
     // Valida se o plano existe
     const { data: planExists } = await db.from("Plan").select("id").eq("id", planId).maybeSingle();
     if (!planExists) {
-      console.error("[admin/alunos PATCH] planId não encontrado:", planId);
+      log.warn("db.admin_alunos_plan_not_found", { planId });
       return NextResponse.json({ error: `Plano não encontrado: ${planId}` }, { status: 400 });
     }
 
@@ -204,7 +205,7 @@ export async function PATCH(req: Request) {
         .eq("userId", userId);
 
       if (updateErr) {
-        console.error("[admin/alunos PATCH] update error:", updateErr.message);
+        log.error("db.admin_alunos_subscription_update", { table: "Subscription" }, updateErr);
         return NextResponse.json({ error: "Erro interno" }, { status: 500 });
       }
     } else {
@@ -221,7 +222,7 @@ export async function PATCH(req: Request) {
       });
 
       if (insertErr) {
-        console.error("[admin/alunos PATCH] insert error:", insertErr.message);
+        log.error("db.admin_alunos_subscription_insert", { table: "Subscription" }, insertErr);
         return NextResponse.json({ error: "Erro interno" }, { status: 500 });
       }
     }
@@ -232,7 +233,7 @@ export async function PATCH(req: Request) {
       .eq("userId", userId);
   }
 
-  console.log("[admin/alunos PATCH] ok — userId:", userId, "planId:", planId || "(removido)");
+  log.info(LogEvent.ADMIN_USER_EDIT, { targetUserId: userId, planId: planId || null });
   return NextResponse.json({ ok: true });
 }
 
@@ -260,7 +261,7 @@ export async function DELETE(req: Request) {
   // Agora deleta o User (sem FKs pendentes)
   const { error: delErr } = await db.from("User").delete().eq("id", userId);
   if (delErr) {
-    console.error("[admin/alunos DELETE] User delete error:", delErr.message);
+    log.error("db.admin_alunos_delete_error", { table: "User" }, delErr);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
@@ -268,7 +269,7 @@ export async function DELETE(req: Request) {
   const { error: authErr } = await db.auth.admin.deleteUser(u.supabaseId);
   if (authErr) {
     // Não falha — o DB já foi limpo, o usuário não consegue mais logar
-    console.warn("[admin/alunos DELETE] Auth delete warning:", authErr.message);
+    log.warn("auth.admin_delete_auth_user_warning", {}, authErr);
   }
 
   return NextResponse.json({ ok: true });

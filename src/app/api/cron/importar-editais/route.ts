@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { log, LogEvent } from "@/lib/logger";
 
 /**
  * GET /api/cron/importar-editais
@@ -176,7 +177,7 @@ export async function GET(req: Request) {
     todosErros.push(...r.erros);
   }
 
-  console.log(`[cron/importar-editais] inseridos=${totalInseridos} ignorados=${totalIgnorados} erros=${todosErros.length}`);
+  log.info(LogEvent.CRON_RUN, { job: "importar-editais", inseridos: totalInseridos, ignorados: totalIgnorados, erros: todosErros.length });
 
   return NextResponse.json({
     ok: true,

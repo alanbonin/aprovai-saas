@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 /**
  * POST /api/onboarding
@@ -22,6 +23,7 @@ export async function POST(req: Request) {
     dataProva?: string | null;
     horasEstudo?: number | null;   // em horas/dia
     categoria?: string | null;
+    modalidade?: string | null;
   };
 
   // Verifica se já tem um perfil padrão
@@ -41,7 +43,7 @@ export async function POST(req: Request) {
     horasEstudo: body.horasEstudo ?? null,
     isDefault: true,
     onboardingDone: true,
-    modalidade: "CONCURSO_PUBLICO",
+    modalidade: body.modalidade ?? "CONCURSO_PUBLICO",
     updatedAt: new Date().toISOString(),
   };
 
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
       .eq("userId", dbUser.id);
 
     if (error) {
-      console.error("[onboarding] Erro ao atualizar StudentProfile:", error);
+      log.error("db.onboarding_update_profile", { table: "StudentProfile" }, error);
       return NextResponse.json({ error: "Erro ao salvar perfil" }, { status: 500 });
     }
   } else {
@@ -63,7 +65,7 @@ export async function POST(req: Request) {
       .insert({ ...profileData, createdAt: new Date().toISOString() });
 
     if (error) {
-      console.error("[onboarding] Erro ao criar StudentProfile:", error);
+      log.error("db.onboarding_insert_profile", { table: "StudentProfile" }, error);
       return NextResponse.json({ error: "Erro ao criar perfil" }, { status: 500 });
     }
   }

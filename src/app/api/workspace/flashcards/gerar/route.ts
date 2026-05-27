@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { defaultAiLimiter } from "@/lib/rate-limit";
+import { log } from "@/lib/logger";
 
 const FLASH_SYSTEM =
   "Você é um especialista em didática e elaboração de flashcards para concursos públicos brasileiros. Crie flashcards precisos, objetivos e no estilo das bancas.";
@@ -65,7 +66,7 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
         messages: [{ role: "user", content: prompt }],
       });
     } catch (haikuErr) {
-      console.error("[workspace/flashcards/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+      log.warn("ai.flashcards_haiku_fallback_sonnet", {}, haikuErr);
       msg = await createWithCache({
         model: MODELS.sonnet,
         maxTokens: 4000,
@@ -82,8 +83,7 @@ Retorne APENAS JSON válido, sem markdown ou texto adicional:
       back: c.verso,
     }));
   } catch (err) {
-    console.error("[workspace/flashcards/gerar] Erro completo:", err);
-    const msg = err instanceof Error ? err.message : String(err);
+    log.error("ai.flashcards_gerar_error", {}, err);
     return NextResponse.json({ error: "Erro ao gerar flashcards" }, { status: 500 });
   }
 

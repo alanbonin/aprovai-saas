@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Resend } from "resend";
+import { log } from "@/lib/logger";
 
 // ── Email de boas-vindas enviado após registro do usuário ─────────────────────
 // Chamado internamente por /api/auth/register após criar o User no banco.
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
     if (error) throw new Error(error.message);
     emailOk = true;
   } catch (err) {
-    console.error("[boas-vindas] Erro ao enviar email:", err);
+    log.error("email.boas_vindas_send_error", {}, err);
   }
 
   // Ativa o Trial automaticamente se o usuário ainda não tem assinatura
@@ -137,7 +138,7 @@ export async function POST(req: Request) {
       }
     }
   } catch (err) {
-    console.error("[boas-vindas] Erro ao ativar trial:", err);
+    log.error("email.boas_vindas_trial_error", {}, err);
   }
 
   return NextResponse.json({ emailOk, trialActivated });

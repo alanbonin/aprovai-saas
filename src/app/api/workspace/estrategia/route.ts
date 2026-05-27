@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { getActiveProfile } from "@/lib/get-active-profile";
+import { log } from "@/lib/logger";
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────────
 export interface DaySchedule {
@@ -147,7 +148,7 @@ export async function GET() {
       isCurrentWeek: note.data.weekStart === getWeekStart(),
     });
   } catch (err) {
-    console.error("[estrategia/GET]", err);
+    log.error("workspace.estrategia_get_error", {}, err);
     return NextResponse.json({ cronograma: null, ajustes: [] });
   }
 }
@@ -302,7 +303,7 @@ Retorne APENAS JSON (sem texto antes ou depois):
 
     return NextResponse.json({ cronograma, ajustes: planData.ajustes });
   } catch (err) {
-    console.error("[estrategia/POST]", err);
+    log.error("workspace.estrategia_post_error", {}, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

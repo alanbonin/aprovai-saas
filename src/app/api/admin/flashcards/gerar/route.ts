@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 
 async function requireAdmin() {
@@ -68,7 +69,7 @@ Retorne APENAS JSON válido, sem markdown:
         messages: [{ role: "user", content: prompt }],
       });
     } catch (haikuErr) {
-      console.error("[flashcards/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+      log.warn("ai.admin_flashcards_haiku_fallback", {}, haikuErr);
       msg = await createWithCache({
         model: MODELS.sonnet,
         maxTokens: 6000,
@@ -80,8 +81,7 @@ Retorne APENAS JSON válido, sem markdown:
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
     generated = extractJSON<{ cards: { frente: string; verso: string }[] }>(raw);
   } catch (err) {
-    console.error("[flashcards/gerar] Erro completo:", err);
-    const msg = err instanceof Error ? err.message : String(err);
+    log.error("ai.admin_flashcards_gerar_error", {}, err);
     return NextResponse.json({ error: "Erro ao gerar flashcards" }, { status: 500 });
   }
 

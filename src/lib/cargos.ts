@@ -47,7 +47,7 @@ export const GRUPOS_AREA: GrupoArea[] = [
   { area: "ti",           label: "Tecnologia da Informação",emoji: "💻", cor: "bg-violet-500/15 border-violet-500/30 text-violet-300" },
   { area: "militar",      label: "Militar / Defesa",       emoji: "🎖️",  cor: "bg-slate-500/15 border-slate-500/30 text-slate-300" },
   { area: "diplomatico",  label: "Diplomacia / IRBr",      emoji: "🌍",  cor: "bg-sky-500/15 border-sky-500/30 text-sky-300" },
-  { area: "saude",        label: "Saúde / Revalida",       emoji: "⚕️",  cor: "bg-rose-500/15 border-rose-500/30 text-rose-300" },
+  { area: "saude",        label: "Saúde",                   emoji: "⚕️",  cor: "bg-rose-500/15 border-rose-500/30 text-rose-300" },
   { area: "ambiental",    label: "Ambiental / Agrário",    emoji: "🌿",  cor: "bg-green-500/15 border-green-500/30 text-green-300" },
   { area: "administrativo",label: "Administrativo / Geral",emoji: "📋",  cor: "bg-orange-500/15 border-orange-500/30 text-orange-300" },
 ];
@@ -116,7 +116,6 @@ export const CARGOS: Cargo[] = [
   { id: "auditor-cgu",         nome: "Auditor Federal — CGU",                     orgao: "CGU",                          area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
   { id: "analista-cgu",        nome: "Analista de Finanças e Controle — CGU",     orgao: "CGU",                          area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
   { id: "auditor-tce",         nome: "Auditor de Controle Externo — TCE",         orgao: "TCE Estadual",                 area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
-  { id: "cfc-contador",        nome: "Exame de Suficiência — CFC",                orgao: "Conselho Federal de Contabilidade", area: "controle", banca: "CFC/IBRACON", categoria: "cfc" },
 
   // ── Previdência Social ───────────────────────────────────────────────────────
   { id: "tecnico-inss",        nome: "Técnico do Seguro Social — INSS",        orgao: "INSS",                      area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
@@ -145,10 +144,9 @@ export const CARGOS: Cargo[] = [
   { id: "en",                  nome: "EN — Escola Naval",                       orgao: "Marinha do Brasil",        area: "militar",   categoria: "militar" },
   { id: "capf",                nome: "CAPF — Corpo de Bombeiros Federal",      orgao: "Corpo de Bombeiros",        area: "militar",   categoria: "militar" },
 
-  // ── Saúde / Revalida ─────────────────────────────────────────────────────────
-  { id: "revalida",            nome: "REVALIDA — Revalidação de Diploma Médico", orgao: "MEC / INEP",             area: "saude",     banca: "FUFMS/INEP",     categoria: "revalida" },
-  { id: "medico-concurso",     nome: "Médico em Concurso Público (diversas áreas)", orgao: "SUS / Hospitais / Prefeituras", area: "saude", banca: "CESPE/CEBRASPE", categoria: "revalida" },
-  { id: "enfermeiro",          nome: "Enfermeiro em Concurso Público",          orgao: "SUS / Hospitais",          area: "saude",     banca: "CESPE/CEBRASPE", categoria: "revalida" },
+  // ── Saúde ─────────────────────────────────────────────────────────────────────
+  { id: "medico-concurso",     nome: "Médico em Concurso Público (diversas áreas)", orgao: "SUS / Hospitais / Prefeituras", area: "saude", banca: "CESPE/CEBRASPE", categoria: "saude" },
+  { id: "enfermeiro",          nome: "Enfermeiro em Concurso Público",          orgao: "SUS / Hospitais",          area: "saude",     banca: "CESPE/CEBRASPE", categoria: "saude" },
 
   // ── Ambiental / Agrário ──────────────────────────────────────────────────────
   { id: "ibama-analista",      nome: "Analista Ambiental — IBAMA",             orgao: "IBAMA",                    area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },

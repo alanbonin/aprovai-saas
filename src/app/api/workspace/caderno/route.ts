@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 const PREFIX = "__CADERNO_APRENDIDO__";
 
@@ -22,16 +23,21 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Fetch all progress entries (correct=false) — get latest per question
-  const { data: progressAll } = await db
+  // Fetch all progress entries — get all entries to compute wrong count
+  const { data: progressAll, error: progressErr } = await db
     .from("Progress")
-    .select("questionId, correct, createdAt")
+    .select("questionId, correct, reviewedAt")
     .eq("userId", dbUser.id)
-    .order("createdAt", { ascending: false });
+    .order("reviewedAt", { ascending: false });
+
+  if (progressErr) {
+    log.error("db.caderno_progress_error", { table: "Progress" }, progressErr);
+    return NextResponse.json({ subjects: [], total: 0, aprendidos: 0 });
+  }
 
   const progress = progressAll ?? [];
 
-  // Group: for each questionId, compute wrong count and whether ever right
+  // Group: for each questionId, compute wrong count
   const stats: Record<number, { wrong: number; total: number; lastWrong: string }> = {};
   for (const p of progress) {
     const qid = p.questionId as number;
@@ -39,7 +45,7 @@ export async function GET() {
     stats[qid].total++;
     if (!(p.correct as boolean)) {
       stats[qid].wrong++;
-      if (!stats[qid].lastWrong) stats[qid].lastWrong = p.createdAt as string;
+      if (!stats[qid].lastWrong) stats[qid].lastWrong = (p.reviewedAt ?? "") as string;
     }
   }
 

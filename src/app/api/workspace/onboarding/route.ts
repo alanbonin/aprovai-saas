@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 // ── Keyword matching para detectar área do cargo ─────────────────────
 const AREA_KEYWORDS: Record<string, string[]> = {
@@ -35,10 +36,7 @@ interface AgentRow { id: string; name: string; categoria: string | null; area: s
 function getSubjectCategorias(modalidade: string, agentAreas: string[]): string[] {
   const directMap: Record<string, string[]> = {
     "ENEM":       ["enem"],
-    "VESTIBULAR": ["vestibular"],
     "OAB":        ["oab"],
-    "REVALIDA":   ["revalida"],
-    "CFC":        ["cfc"],
   };
   if (directMap[modalidade]) return directMap[modalidade];
 
@@ -62,33 +60,19 @@ function getSubjectCategorias(modalidade: string, agentAreas: string[]): string[
 function selectAgents(allAgents: AgentRow[], cargo: string, orgao: string, banca: string, maxAgents: number, modalidade = "CONCURSO_PUBLICO", trilha?: string | null): string[] {
   // For special modalidades, use keyword matching on modalidade first
   const modalidadeKeywords: Record<string, string[]> = {
-    "ENEM":       ["enem"],
-    "OAB":        ["oab"],
-    "REVALIDA":   ["revalida"],
-    "CFC":        ["cfc"],
-    "VESTIBULAR": ["vestibular", "medicina", "engenharia", "direito"],
+    "ENEM": ["enem"],
+    "OAB":  ["oab"],
   };
 
-  // For VESTIBULAR, prefer the specific trilha agent (e.g., "Mentor Medicina")
   let primaryAgent: AgentRow | undefined;
-  if (modalidade === "VESTIBULAR" && trilha) {
-    const trilhaKeyword = normalize(trilha).split(/[\s/]/)[0]; // "medicina" | "engenharia" | "direito"
+  const mKeywords = modalidadeKeywords[modalidade] ?? [];
+  if (mKeywords.length > 0) {
     primaryAgent = allAgents.find(a =>
-      normalize(a.name ?? "").includes(trilhaKeyword) ||
-      normalize(a.categoria ?? "").includes(trilhaKeyword)
+      mKeywords.some(k =>
+        normalize(a.name ?? "").includes(k) ||
+        normalize(a.categoria ?? "").includes(k)
+      )
     );
-  }
-
-  if (!primaryAgent) {
-    const mKeywords = modalidadeKeywords[modalidade] ?? [];
-    if (mKeywords.length > 0) {
-      primaryAgent = allAgents.find(a =>
-        mKeywords.some(k =>
-          normalize(a.name ?? "").includes(k) ||
-          normalize(a.categoria ?? "").includes(k)
-        )
-      );
-    }
   }
 
   // Fallback to existing area/banca detection for CONCURSO_PUBLICO
@@ -150,38 +134,6 @@ Valores válidos: horasEstudo: inteiro 1-12, nivelAtual: "iniciante"|"intermedia
 Responda SEMPRE em português brasileiro.`;
   }
 
-  if (modalidade === "VESTIBULAR") {
-    return `Você é a Estrategista Aprovai, especialista em preparação para vestibulares.
-
-CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
-DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre vestibulares e prazos.
-
-SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
-1. [JÁ FEITO] Nome preferido
-2. Qual(is) vestibular(es) você vai prestar? (FUVEST, UNICAMP, UNESP, UERJ ou outro)${multiConcurso ? ` — você pode indicar até ${maxConcursos}` : ""}
-3. Qual curso você quer fazer? (Medicina, Direito, Engenharia, Administração, outro)
-4. Você tem data prevista para a prova?
-5. Quantas horas por dia você consegue estudar?
-6. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
-7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
-8. Qual é sua maior dificuldade? (matéria ou área específica)
-
-REGRAS:
-- UMA pergunta por mensagem
-- Use SEMPRE o nome do aluno
-- Seja motivador
-- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
-- NÃO mencione "mentores" ou "agentes"
-
-ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + vestibular + curso + pelo menos 3 outras respostas (mínimo 5 informações coletadas):
-Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
-__DONE__{"nomePreferido":"...","modalidade":"VESTIBULAR","cargo":"<curso escolhido>","orgao":"<vestibular alvo>","banca":"<vestibular alvo>","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","vestibular":"<vestibular>","trilha":"<curso>"}
-
-ATENÇÃO: Não espere mais perguntas após ter as 5 informações. Encerre imediatamente com o __DONE__.
-
-Responda SEMPRE em português brasileiro.`;
-  }
-
   if (modalidade === "OAB") {
     return `Você é a Estrategista Aprovai, especialista em preparação para a OAB.
 
@@ -212,67 +164,6 @@ __DONE__{"nomePreferido":"...","modalidade":"OAB","cargo":"OAB <fase>","orgao":"
 
 ATENÇÃO: Não faça mais perguntas após ter as 5 informações. Encerre imediatamente.
 Valores oabFase: "primeira" | "segunda". Responda SEMPRE em português brasileiro.`;
-  }
-
-  if (modalidade === "REVALIDA") {
-    return `Você é a Estrategista Aprovai, especialista em preparação para o REVALIDA.
-
-CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
-DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre o REVALIDA e prazos.
-
-SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
-1. [JÁ FEITO] Nome preferido
-2. Em qual país você se formou em Medicina? (Contexto: currículos variam bastante entre países)
-3. Você vai focar na Etapa 1 (múltipla escolha, clínica teórica) ou Etapa 2 (OSCE, avaliação prática)?
-4. Você tem data prevista para a prova?
-5. Quantas horas por dia você consegue estudar?
-6. Como você se avalia hoje no contexto do REVALIDA? Iniciante, Intermediário ou Avançado?
-7. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
-8. Qual área da medicina você tem mais dificuldade? (Clínica Médica, Cirurgia, Pediatria, Ginecologia/Obstetrícia, Saúde Coletiva)
-
-REGRAS:
-- UMA pergunta por mensagem
-- Use SEMPRE o nome do aluno
-- NÃO use travessão (—) ou traço longo em nenhuma frase.
-- Organize a banca como "INEP/REVALIDA"
-- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
-- NÃO mencione "mentores" ou "agentes"
-
-ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + etapa + pelo menos 3 outras respostas (mínimo 5 informações):
-Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
-__DONE__{"nomePreferido":"...","modalidade":"REVALIDA","cargo":"Médico REVALIDA","orgao":"REVALIDA/INEP","banca":"INEP","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","trilha":"Etapa 1"}
-
-ATENÇÃO: Não faça mais perguntas após ter as 5 informações. Encerre imediatamente.
-Responda SEMPRE em português brasileiro.`;
-  }
-
-  if (modalidade === "CFC") {
-    return `Você é a Estrategista Aprovai, especialista em preparação para o Exame de Suficiência do CFC.
-
-CONTEXTO: A saudação pedindo o nome já foi feita. Use o nome informado em todas as mensagens seguintes.
-DATA ATUAL: ${hoje} (ano ${anoAtual}). Use essa data ao falar sobre o exame do CFC e prazos.
-
-SEQUÊNCIA OBRIGATÓRIA (uma pergunta por mensagem):
-1. [JÁ FEITO] Nome preferido
-2. Você é Bacharel em Ciências Contábeis ou Técnico em Contabilidade? (A prova tem escopos diferentes)
-3. Você tem data prevista para o exame?
-4. Quantas horas por dia você consegue estudar?
-5. Como você se avalia hoje? Iniciante, Intermediário ou Avançado?
-6. Qual é seu melhor horário? Manhã, Tarde, Noite ou Varia?
-7. Qual matéria da contabilidade você mais teme? (Contabilidade Geral, Custos, Auditoria, Perícia, Ética, Legislação…)
-
-REGRAS:
-- UMA pergunta por mensagem
-- Use SEMPRE o nome do aluno
-- NÃO use travessão (—), hífen duplo ou traço longo em NENHUMA frase. Use vírgula, ponto ou reescreva.
-- NÃO mencione "mentores" ou "agentes"
-
-ENCERRAMENTO OBRIGATÓRIO — dispare assim que tiver: nome + habilitação + pelo menos 3 outras respostas (mínimo 4 informações):
-Na MESMA mensagem em que acolher a última resposta do aluno, escreva uma frase animada de encerramento e, na mesma linha (sem quebra de linha), adicione exatamente:
-__DONE__{"nomePreferido":"...","modalidade":"CFC","cargo":"<Bacharel ou Técnico> CFC","orgao":"CFC","banca":"CFC","dataProva":null ou "YYYY-MM-DD","horasEstudo":2,"nivelAtual":"iniciante","disponibilidade":"noite","dificuldades":"...","trilha":"<Bacharel|Tecnico>"}
-
-ATENÇÃO: Não faça mais perguntas após ter as 4 informações. Encerre imediatamente.
-Responda SEMPRE em português brasileiro.`;
   }
 
   // Default: CONCURSO_PUBLICO (existing behavior)
@@ -541,7 +432,7 @@ export async function POST(req: Request) {
           .update(profileFields)
           .eq("id", profileId);
         if (updErr) {
-          console.warn(`[onboarding] update profile[${i}]:`, updErr.message);
+          log.warn("db.onboarding_profile_update", { index: i }, updErr);
           // Tenta salvando só campos base se coluna nova não existir
           await db.from("StudentProfile").update({
             cargo: c.cargo || null, orgao: c.orgao || null,
@@ -555,7 +446,7 @@ export async function POST(req: Request) {
           .from("StudentProfile")
           .insert({ id: profileId, userId: dbUser.id, ...profileFields, createdAt: now });
         if (insErr) {
-          console.error(`[onboarding] insert profile[${i}]:`, insErr.message);
+          log.error("db.onboarding_profile_insert", { index: i }, insErr);
           continue;
         }
       }
@@ -627,7 +518,7 @@ export async function POST(req: Request) {
             createdAt:  now,
           }));
           const { error: ssErr } = await db.from("StudentSubject").insert(ssRows);
-          if (ssErr) console.error("[onboarding] StudentSubject insert error:", ssErr.message);
+          if (ssErr) log.error("db.onboarding_student_subject", { table: "StudentSubject" }, ssErr);
         }
       }
 
@@ -688,8 +579,7 @@ export async function POST(req: Request) {
     });
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[onboarding] error:", msg);
+    log.error("workspace.onboarding_fatal", {}, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

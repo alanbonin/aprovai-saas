@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import type { MessageParam, ImageBlockParam, TextBlockParam } from "@anthropic-ai/sdk/resources";
+import { log } from "@/lib/logger";
 
 const CASO_SYSTEM =
   "Você é um especialista em seleção e avaliação para concursos públicos brasileiros, com vasta experiência em estudos de caso, banca examinadora e critérios de avaliação discursiva. Responda apenas com JSON válido.";
@@ -93,7 +94,7 @@ Retorne APENAS JSON válido:
       const parsed = extractJSON<{ temas: { id: string; label: string; icon: string }[] }>(raw);
       return NextResponse.json({ temas: parsed.temas ?? [], cargo, orgao });
     } catch (e) {
-      console.error("[caso/sugerir_temas]", e);
+      log.error("ai.caso_sugerir_temas_error", {}, e);
       return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
@@ -122,18 +123,18 @@ Retorne APENAS JSON válido:
           messages: [{ role: "user", content: prompt }],
         });
       } catch (haikuErr) {
-        console.error("[caso/gerar] Haiku falhou, tentando Sonnet:", haikuErr);
+        log.warn("ai.caso_haiku_fallback_sonnet", {}, haikuErr);
         msg = await createWithCache({
           model: MODELS.sonnet, maxTokens: 2500, systemPrompt: CASO_SYSTEM, cacheSystem: false,
           messages: [{ role: "user", content: prompt }],
         });
       }
       const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-      console.error("[caso/gerar] raw preview:", raw.slice(0, 120));
+      log.debug("ai.caso_gerar_raw_preview", { preview: raw.slice(0, 120) });
       const parsed = extractJSON<{ titulo: string; contexto: string; pergunta: string; dicas: string[]; criterios: string[] }>(raw);
       return NextResponse.json(parsed);
     } catch (e) {
-      console.error("[caso/gerar] erro:", e);
+      log.error("ai.caso_gerar_error", {}, e);
       return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }
@@ -213,7 +214,7 @@ ${AVALIACAO_FIELDS}`,
 
       return NextResponse.json(parsed);
     } catch (e) {
-      console.error("[caso/avaliar]", e);
+      log.error("ai.caso_avaliar_error", {}, e);
       return NextResponse.json({ error: "Erro interno" }, { status: 500 });
     }
   }

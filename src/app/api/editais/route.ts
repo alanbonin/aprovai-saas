@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 // GET /api/editais — lista editais para o aluno, com relevância baseada no perfil
 export async function GET(req: Request) {
@@ -84,7 +85,7 @@ export async function GET(req: Request) {
       totalPages: Math.ceil((count ?? 0) / limit),
     });
   } catch (err) {
-    console.error("[editais/GET]", err);
+    log.error("db.editais_get_error", {}, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

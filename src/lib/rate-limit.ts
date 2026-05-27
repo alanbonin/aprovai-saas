@@ -103,8 +103,8 @@ export const editalLimiter = createLimiter({ max: 2, window: "1 m", prefix: "edi
 /** Genérico IA — 10/min */
 export const defaultAiLimiter = createLimiter({ max: 10, window: "1 m", prefix: "ai-default" });
 
-/** Cadastro — 5 tentativas/5min por IP */
-export const signupLimiter = createLimiter({ max: 5, window: "5 m", prefix: "signup" });
+/** Cadastro — 20 tentativas/5min por IP */
+export const signupLimiter = createLimiter({ max: 20, window: "5 m", prefix: "signup" });
 
 /** Login — 10 tentativas/5min por IP */
 export const loginLimiter = createLimiter({ max: 10, window: "5 m", prefix: "login" });

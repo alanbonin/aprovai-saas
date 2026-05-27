@@ -44,3 +44,12 @@ next-env.d.ts
 .wiki
 .env*.local
 .claude/settings.local.json
+
+# Estado interno de scripts de geração (dados operacionais, não código)
+scripts/.gerar-progress.json
+
+# Chaves e certificados que possam ser gerados localmente
+*.key
+*.p12
+*.pfx
+*.cer

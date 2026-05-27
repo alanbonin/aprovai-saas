@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 const NOTE_PREFIX = "__ARTIGOS_COBRADOS__";
 const MAX_HISTORY = 10; // máximo de gerações salvas por matéria por aluno
@@ -122,7 +123,7 @@ Retorne APENAS JSON válido sem markdown:
         messages: [{ role: "user", content: prompt }],
       });
     } catch (haikuErr) {
-      console.error("[artigos] Haiku falhou, tentando Sonnet:", haikuErr);
+      log.warn("ai.artigos_haiku_fallback_sonnet", {}, haikuErr);
       msg = await createWithCache({
         model: MODELS.sonnet,
         maxTokens: 4000,
@@ -137,12 +138,11 @@ Retorne APENAS JSON válido sem markdown:
     artigos = parsed.artigos ?? [];
 
     if (artigos.length === 0) {
-      console.error("[artigos] IA retornou array vazio. Raw:", raw.slice(0, 200));
+      log.warn("ai.artigos_empty_response", {});
       return NextResponse.json({ error: "IA não retornou artigos" }, { status: 500 });
     }
   } catch (err) {
-    console.error("[artigos] Erro completo:", err);
-    const msg = err instanceof Error ? err.message : String(err);
+    log.error("ai.artigos_gerar_error", {}, err);
     return NextResponse.json({ error: "Erro ao gerar artigos" }, { status: 500 });
   }
 

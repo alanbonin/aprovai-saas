@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 // ── GET /api/mentor/proativo ─────────────────────────────────────────────────
 // Retorna uma mensagem proativa do mentor se o aluno precisar de contato.
@@ -79,8 +80,7 @@ Retorne APENAS o texto da mensagem, sem explicações, sem JSON.`;
     return NextResponse.json({ message: text, diasDesdeOnboarding, diasAteProva });
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[mentor/proativo] error:", msg);
+    log.error("ai.mentor_proativo_error", {}, err);
     return NextResponse.json({ message: null });
   }
 }

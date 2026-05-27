@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createWithCache, MODELS } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 interface ProfileInput {
   modalidade?: string;
   cargo?: string;
   orgao?: string;
   banca?: string;
-  vestibular?: string;
   trilha?: string;
   oabFase?: string;
   dataProva?: string | null;
@@ -30,17 +30,6 @@ Use a Matriz de Referência do ENEM (INEP). As 5 grandes áreas:
 5. Redação — dissertação argumentativa com proposta de intervenção social
 Dificuldades relatadas: ${profile.dificuldades ?? "Nenhuma"}`;
   }
-  if (mod === "VESTIBULAR") {
-    const vest = profile.vestibular ?? "Vestibular geral";
-    const trilha = profile.trilha ?? "Geral";
-    return `MODALIDADE: Vestibular — ${vest} — Trilha: ${trilha}
-Use o programa oficial do ${vest}. Para ${trilha}:
-- Se Medicina (FUVEST): Biologia (alta), Química Orgânica (alta), Física, Matemática, Português+Redação
-- Se Medicina (UNICAMP): questões discursivas, Biologia, Química, Física, Matemática, Redação
-- Se Engenharia: Matemática (muito alta), Física, Química, Português
-- Se Direito/Humanas: Português (alta), Redação (alta), História, Geografia, Literatura
-Formato: FUVEST = 2 fases (90 MC + discursivas). UNICAMP = 2 fases (questões discursivas). UNESP = única fase. UERJ = 2 etapas.`;
-  }
   if (mod === "OAB") {
     const fase = profile.oabFase ?? "primeira";
     if (fase === "segunda") {
@@ -54,22 +43,6 @@ Dificuldades: ${profile.dificuldades ?? "Nenhuma"}`;
 Banca: FGV (desde 2010). 80 questões objetivas, 5h, mínimo 50% para aprovação.
 Matérias (pesos históricos FGV): Ética e Estatuto OAB (8%), Direito Constitucional (10%), Dir. Civil (12%), Dir. Processual Civil (9%), Dir. Penal (8%), Dir. Processual Penal (6%), Dir. Trabalhista (8%), Dir. Tributário (8%), Dir. Empresarial (7%), Dir. Administrativo (8%), Dir. do Consumidor (5%), Dir. Internacional (4%), Dir. Ambiental (4%), Dir. Previdenciário (3%).
 Conteúdo ESTÁVEL — use o Regulamento Geral do Exame de Ordem.`;
-  }
-  if (mod === "REVALIDA") {
-    return `MODALIDADE: REVALIDA (Revalidação de Diploma Médico)
-Organizador: INEP/MEC. Duas etapas:
-Etapa 1 — Prova escrita (múltipla escolha): 5 áreas — Clínica Médica, Cirurgia Geral, Pediatria, Ginecologia/Obstetrícia, Saúde Coletiva/MFC
-Etapa 2 — OSCE (avaliação prática em estações): anamnese, exame físico, conduta, comunicação
-Base: diretrizes SUS, CFM, CID-10/11, PCDT (Protocolos Clínicos e Diretrizes Terapêuticas do MS)
-Dificuldades: ${profile.dificuldades ?? "Nenhuma"}`;
-  }
-  if (mod === "CFC") {
-    const hab = profile.trilha ?? "Bacharel";
-    return `MODALIDADE: CFC — Exame de Suficiência (${hab})
-Organizador: CFC. Duas partes:
-Parte 1 — Conhecimentos Contábeis Gerais (50 questões, 3h): Contabilidade Geral, Análise das Demonstrações, Teoria da Contabilidade, Ética Profissional, Legislação Profissional
-Parte 2 — Conhecimentos Específicos (25 questões, 1,5h): para Bacharel: Contabilidade de Custos, Auditoria, Perícia, Contabilidade Avançada (CPCs)
-Base: NBCs (Normas Brasileiras de Contabilidade), CPCs (Comitê de Pronunciamentos Contábeis), Código de Ética do Contador`;
   }
   // CONCURSO_PUBLICO — return empty, use existing editalBloco logic
   return "";
@@ -168,14 +141,8 @@ REGRAS CRÍTICAS:
 
     const userMsg = modalidade === "ENEM"
       ? `Modalidade: ENEM\nNome: ${profile?.nomePreferido ?? "Não informado"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva}` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
-      : modalidade === "VESTIBULAR"
-      ? `Modalidade: Vestibular\nVestibular alvo: ${profile?.vestibular ?? "Não informado"}\nCurso/Trilha: ${profile?.trilha ?? "Não informado"}\nData da prova: ${profile?.dataProva ?? "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
       : modalidade === "OAB"
       ? `Modalidade: OAB — ${profile?.oabFase === "segunda" ? "2ª Fase" : "1ª Fase"}\nData da prova: ${profile?.dataProva ?? "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
-      : modalidade === "REVALIDA"
-      ? `Modalidade: REVALIDA\nEtapa foco: ${profile?.trilha ?? "Etapa 1"}\nData da prova: ${profile?.dataProva ?? "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
-      : modalidade === "CFC"
-      ? `Modalidade: CFC — ${profile?.trilha ?? "Bacharel"}\nData da prova: ${profile?.dataProva ?? "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
       : `Cargo: ${profile?.cargo}\nÓrgão: ${profile?.orgao ?? "Não informado"}\nBanca: ${profile?.banca ?? "Não informada"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva} (${diasRestantes != null ? `${diasRestantes} dias` : ""})` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`;
 
     const response = await createWithCache({
@@ -190,7 +157,7 @@ REGRAS CRÍTICAS:
 
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
-      console.error("[plano] JSON not found:", raw.slice(0, 300));
+      log.warn("ai.onboarding_plano_json_not_found", {});
       return NextResponse.json({ error: "Plano não gerado" }, { status: 500 });
     }
 
@@ -213,8 +180,7 @@ REGRAS CRÍTICAS:
     return NextResponse.json({ plan: raw_plan });
 
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[plano] error:", msg);
+    log.error("ai.onboarding_plano_error", {}, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

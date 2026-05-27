@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import MercadoPago, { Preference } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
+import { log, LogEvent } from "@/lib/logger";
 
 function getMp() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ checkoutUrl: response.init_point });
   } catch (err) {
-    console.error("[checkout] error:", err);
+    log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);
     return NextResponse.json(
       { error: "Erro interno" },
       { status: 500 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 // POST /api/editais/[id]/favoritar — toggle favorito
 export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -40,7 +41,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
       return NextResponse.json({ favoritado: true });
     }
   } catch (err) {
-    console.error("[favoritar/POST]", err);
+    log.error("db.editais_favoritar_error", {}, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 }

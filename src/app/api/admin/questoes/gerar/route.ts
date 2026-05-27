@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 const recentTopicsCache = new Map<string, string[]>();
 
@@ -179,8 +180,8 @@ export async function POST(req: Request) {
           remaining -= count;
         }
       } catch (e) {
+        log.error("ai.admin_questoes_gerar_error", { subject: sname }, e);
         const msg2 = (e as Error).message ?? String(e);
-        console.error(`[gerar] erro em ${sname}:`, msg2);
         erros.push(`${sname}: ${msg2.slice(0, 120)}`);
       }
     }

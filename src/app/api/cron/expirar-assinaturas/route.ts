@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { Resend } from "resend";
+import { log, LogEvent } from "@/lib/logger";
 
 /**
  * GET /api/cron/expirar-assinaturas
@@ -105,7 +106,7 @@ export async function GET(req: Request) {
     .select("userId");
 
   if (errExp) {
-    console.error("[expirar-assinaturas] Erro ao marcar expiradas:", errExp.message);
+    log.error("db.cron_expirar_assinaturas_update", { table: "Subscription" }, errExp);
   }
 
   const expiradaUserIds = (expiradas ?? []).map((s: { userId: string }) => s.userId);
@@ -133,7 +134,7 @@ export async function GET(req: Request) {
         });
         expiradoEmailsSent++;
       } catch (err) {
-        console.error("[expirar-assinaturas] Erro ao enviar email expirado:", err);
+        log.error("email.cron_expirado_send_error", {}, err);
       }
     }
   }
@@ -187,7 +188,7 @@ export async function GET(req: Request) {
           });
           avisoEmailsSent++;
         } catch (err) {
-          console.error("[expirar-assinaturas] Erro ao enviar aviso:", err);
+          log.error("email.cron_aviso_expiracao_send_error", {}, err);
         }
       }
     }
