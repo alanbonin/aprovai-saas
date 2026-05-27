@@ -42,3 +42,5 @@ next-env.d.ts
 
 # symlinks externos (ex: .wiki → Obsidian Vault) — ignorados pelo Tailwind v4 e Turbopack
 .wiki
+.env*.local
+.claude/settings.local.json

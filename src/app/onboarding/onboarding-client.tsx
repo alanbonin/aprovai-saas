@@ -1,859 +1,704 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
-import { Send, FileText, CheckCircle, ArrowRight, Calendar, Clock, BookOpen, Target, Zap, Brain, Sparkles } from "lucide-react";
-import Image from "next/image";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Search, ChevronRight, ChevronLeft, Check, Calendar, Clock, X } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { CARGOS, GRUPOS_AREA, buscarCargos, type Cargo, type AreaCargo } from "@/lib/cargos";
 
-// ── Types ─────────────────────────────────────────────────────────────────────
-interface Agent { id: string; name: string; description?: string; categoria?: string | null; banca?: string | null; color?: string | null; }
-interface Message { role: "user" | "assistant"; content: string; ts?: number; }
-interface RotinaDiaria { questoes: number; flashcards: number; leituraMin: number; revisaoMin: number; simulado: string; dica?: string; }
-interface StudyPlan { titulo: string; matérias: string[]; horasPorDia: number; foco: string; editalStatus?: string; rotinaDiaria?: RotinaDiaria; cronograma: { semana: string; tema: string }[]; }
+// ── Types ──────────────────────────────────────────────────────────────────────
+type Step = "nome" | "cargo" | "banca" | "data" | "tempo" | "gerando" | "pronto";
 
-type Stage = "welcome" | "modalidade" | "chat" | "generating" | "plan";
-
-
-// ── Steps da barra de progresso — por modalidade ─────────────────────────────
-const PROGRESS_LABELS_MAP: Record<string, string[]> = {
-  CONCURSO_PUBLICO: ["Cargo/Órgão", "Banca", "Data da Prova", "Horas/dia", "Nível", "Horário", "Dificuldades"],
-  ENEM:            ["Etapa escolar", "Áreas foco", "Data ENEM",  "Horas/dia", "Nível", "Horário", "Dificuldades"],
-  VESTIBULAR:      ["Vestibular",    "Curso/trilha", "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
-  OAB:             ["Fase OAB",      "Edição",       "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
-  REVALIDA:        ["País formação",  "Etapa",        "Data",     "Horas/dia", "Nível", "Horário", "Dificuldades"],
-  CFC:             ["Habilitação",   "Data",         "Horas/dia","Nível",     "Horário","Dificuldades", ""],
-};
-
-// ── Marca o texto com **bold** e _italic_ ─────────────────────────────────────
-function renderMd(text: string) {
-  return text.split("\n").map((line, i, arr) => {
-    const parts = line.split(/\*\*(.+?)\*\*/g);
-    return (
-      <span key={i}>
-        {parts.map((p, j) => j % 2 === 1 ? <strong key={j} style={{ fontWeight: 700, color: "#ffffff" }}>{p}</strong> : p)}
-        {i < arr.length - 1 && <br />}
-      </span>
-    );
-  });
+interface WizardState {
+  nome: string;
+  cargo: Cargo | null;
+  banca: string | null;       // null = não definida
+  dataProva: string | null;   // YYYY-MM-DD ou null
+  horasEstudo: number | null; // minutos por dia
 }
 
-// ── Avatar da IA (orb animado) ────────────────────────────────────────────────
-function AIOrb({ thinking }: { thinking: boolean }) {
-  return (
-    <div className="relative flex-shrink-0" style={{ width: 38, height: 38 }}>
-      <div className={`absolute inset-0 rounded-full transition-all duration-700 ${thinking ? "scale-150 opacity-50" : "scale-125 opacity-30"}`}
-        style={{ background: "radial-gradient(circle, #0ab5bd 0%, transparent 70%)", animation: thinking ? "obPulse 1.2s ease-in-out infinite" : "obPulse 3s ease-in-out infinite" }} />
-      <div className="relative w-full h-full rounded-full flex items-center justify-center overflow-hidden"
-        style={{ background: "radial-gradient(circle at 35% 30%, #b0f0f5, #0ab5bd 40%, #044d52)" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3) 0%, transparent 60%)", borderRadius: "50%" }} />
-        <div className="absolute inset-0 rounded-full" style={{ border: "1.5px solid rgba(10,181,189,0.5)" }} />
-        {thinking && (
-          <div className="absolute inset-0 rounded-full" style={{ border: "1.5px solid rgba(10,181,189,0.7)", animation: "orbRing 1.2s ease-out infinite" }} />
-        )}
-        <span style={{ fontSize: 16, position: "relative", zIndex: 1 }}>✦</span>
-      </div>
-    </div>
-  );
+interface Props {
+  userId: string;
+  userName: string;
+  agents: { id: string; name: string }[];
+  maxConcursos: number;
 }
 
-// ── Indicador de digitação ────────────────────────────────────────────────────
-function TypingDots() {
-  return (
-    <div className="flex items-center gap-1 py-1 px-1">
-      {[0, 1, 2].map(i => (
-        <div key={i} className="w-2 h-2 rounded-full bg-teal-400/60"
-          style={{ animation: `typingBounce 1.2s ease-in-out ${i * 0.2}s infinite` }} />
-      ))}
-    </div>
-  );
-}
-
-// ── Barra de progresso ────────────────────────────────────────────────────────
-function ProgressBar({ step, labels }: { step: number; labels: string[] }) {
-  const pct = Math.min(100, (step / labels.length) * 100);
-  const label = step >= labels.length
-    ? "✓ Perfil completo"
-    : `Coletando: ${labels[Math.min(step, labels.length - 1)]}`;
-
-  return (
-    <div className="px-5 py-3 border-b border-white/5">
-      <div className="flex justify-between items-center mb-1.5">
-        <span className="text-xs text-slate-300 font-medium">{label}</span>
-        <span className="text-xs text-teal-400/70 font-semibold">{Math.round(pct)}%</span>
-      </div>
-      <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-        <div className="h-full rounded-full transition-all duration-700 ease-out"
-          style={{ width: `${pct}%`, background: "linear-gradient(90deg, #0ab5bd, #00ffa3)" }} />
-      </div>
-      {/* Dots indicadores */}
-      <div className="flex justify-between mt-1.5 px-0.5">
-        {labels.map((_, i) => (
-          <div key={i} className="w-1 h-1 rounded-full transition-all duration-300"
-            style={{ background: i < step ? "#0ab5bd" : "rgba(255,255,255,0.1)" }} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Tela de geração do plano ──────────────────────────────────────────────────
-function GeneratingScreen() {
-  const steps = [
-    { icon: "🔍", text: "Analisando seu perfil e objetivos…" },
-    { icon: "📚", text: "Selecionando matérias prioritárias…" },
-    { icon: "⏰", text: "Calibrando carga horária diária…" },
-    { icon: "📅", text: "Montando cronograma semanal…" },
-    { icon: "🎯", text: "Configurando seus mentores IA…" },
-    { icon: "✨", text: "Finalizando seu plano personalizado…" },
-  ];
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    if (active >= steps.length - 1) return;
-    const t = setTimeout(() => setActive(a => a + 1), 1200);
-    return () => clearTimeout(t);
-  }, [active, steps.length]);
-
-  return (
-    <div className="flex-1 flex flex-col items-center justify-center px-8 text-center gap-10">
-      <div className="relative" style={{ width: 120, height: 120 }}>
-        <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, #0ab5bd 0%, transparent 70%)", animation: "obPulse 2s ease-in-out infinite", opacity: 0.4 }} />
-        <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle at 35% 30%, #b0f0f5, #0ab5bd 40%, #044d52)" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3) 0%, transparent 60%)", borderRadius: "50%" }} />
-        </div>
-        <div className="absolute inset-0 rounded-full flex items-center justify-center text-4xl">🧠</div>
-        <div className="absolute inset-0 rounded-full" style={{ border: "2px solid rgba(10,181,189,0.4)", animation: "orbRing 2s ease-out infinite" }} />
-        <div className="absolute inset-0 rounded-full" style={{ border: "2px solid rgba(10,181,189,0.25)", animation: "orbRing 2s 0.7s ease-out infinite" }} />
-      </div>
-
-      <div className="space-y-2 w-full max-w-xs">
-        {steps.map((s, i) => (
-          <div key={i} className="flex items-center gap-3 transition-all duration-500"
-            style={{ opacity: i <= active ? 1 : 0.2, transform: i <= active ? "none" : "translateY(4px)" }}>
-            <span className="text-lg flex-shrink-0">{s.icon}</span>
-            <div className="flex-1 text-left">
-              <span className="text-sm text-slate-300">{s.text}</span>
-            </div>
-            {i < active && <CheckCircle size={14} className="text-teal-400 flex-shrink-0" />}
-            {i === active && (
-              <div className="w-3.5 h-3.5 flex-shrink-0 border-2 border-teal-400/40 border-t-teal-400 rounded-full" style={{ animation: "spin 0.7s linear infinite" }} />
-            )}
-          </div>
-        ))}
-      </div>
-
-      <p className="text-xs text-slate-300">Isso levará apenas alguns segundos…</p>
-    </div>
-  );
-}
-
-// ── Tela de revelação do plano ────────────────────────────────────────────────
-function PlanReveal({ plan, agents, onEnter }: { plan: StudyPlan | null; agents: Agent[]; onEnter: () => void }) {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 200);
-    return () => clearTimeout(t);
-  }, []);
-
-  return (
-    <div style={{
-      flex: 1, display: "flex", flexDirection: "column",
-      minHeight: 0,               /* ← obrigatório para flex+scroll funcionar */
-      transition: "opacity 0.7s, transform 0.7s",
-      opacity: visible ? 1 : 0,
-      transform: visible ? "none" : "translateY(16px)",
-    }}>
-      {/* Plano scrollável */}
-      <div style={{ flex: 1, overflowY: "auto", minHeight: 0 }}>
-      <div style={{ maxWidth: 512, margin: "0 auto", padding: "32px 20px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {/* Hero */}
-        <div style={{ textAlign: "center", marginBottom: 12 }}>
-          <div style={{ fontSize: 48, marginBottom: 12, animation: "obPulse 3s ease-in-out infinite" }}>🚀</div>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>
-            {plan ? "Seu plano está pronto!" : "Perfil criado com sucesso!"}
-          </h1>
-          <p style={{ fontSize: 14, color: "#cbd5e1", lineHeight: 1.5 }}>
-            {plan ? "Personalizado exclusivamente para você conquistar sua aprovação." : "Seu workspace foi configurado. O plano detalhado ficará disponível dentro da plataforma."}
-          </p>
-        </div>
-
-        {/* Fallback quando plano não carregou */}
-        {!plan && agents.length > 0 && (
-          <div style={{ borderRadius: 16, padding: 20, textAlign: "center", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.2)" }}>
-            <p style={{ fontSize: 14, color: "#cbd5e1", marginBottom: 8 }}>Seus mentores IA foram selecionados e suas matérias foram configuradas.</p>
-            <p style={{ fontSize: 12, color: "#94a3b8" }}>Dentro do workspace você poderá ver seu plano completo, estudar questões e conversar com seus mentores.</p>
-          </div>
-        )}
-
-        {/* Cargo card */}
-        {plan && (
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "linear-gradient(135deg, rgba(10,181,189,0.15), rgba(10,181,189,0.05))", border: "1px solid rgba(10,181,189,0.3)" }}>
-            <div style={{ padding: "16px 20px" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-                <Target size={14} color="#2dd4bf" />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#2dd4bf", textTransform: "uppercase", letterSpacing: "0.06em" }}>Seu objetivo</span>
-              </div>
-              <p style={{ fontWeight: 700, color: "#ffffff", fontSize: 15, marginBottom: 4 }}>{plan.titulo}</p>
-              <p style={{ fontSize: 12, color: "#cbd5e1" }}>{plan.foco}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Stats */}
-        {plan && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div style={{ borderRadius: 14, padding: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <Clock size={16} color="#2dd4bf" style={{ marginBottom: 6 }} />
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.1 }}>{plan.horasPorDia}h</div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>por dia recomendadas</div>
-            </div>
-            <div style={{ borderRadius: 14, padding: 16, background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <BookOpen size={16} color="#f59e0b" style={{ marginBottom: 6 }} />
-              <div style={{ fontSize: 28, fontWeight: 800, color: "#ffffff", lineHeight: 1.1 }}>{(plan.matérias ?? []).length}</div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>matérias prioritárias</div>
-            </div>
-          </div>
-        )}
-
-        {/* Rotina Diária */}
-        {plan?.rotinaDiaria && (
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
-              <Brain size={14} color="#2dd4bf" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Rotina diária recomendada</span>
-            </div>
-            <div style={{ padding: "16px 20px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-              {[
-                { icon: "🎯", label: "Questões/dia", value: `${plan.rotinaDiaria.questoes} questões` },
-                { icon: "🃏", label: "Flashcards/dia", value: `${plan.rotinaDiaria.flashcards} cards` },
-                { icon: "📖", label: "Leitura", value: `${plan.rotinaDiaria.leituraMin} min` },
-                { icon: "🔁", label: "Revisão", value: `${plan.rotinaDiaria.revisaoMin} min` },
-              ].map(item => (
-                <div key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, borderRadius: 12, padding: "10px 12px", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.18)" }}>
-                  <span style={{ fontSize: 18, flexShrink: 0 }}>{item.icon}</span>
-                  <div style={{ minWidth: 0 }}>
-                    <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>{item.label}</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#ffffff" }}>{item.value}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div style={{ padding: "0 20px 16px", display: "flex", alignItems: "center", gap: 10 }}>
-              <span style={{ fontSize: 18 }}>📋</span>
-              <div>
-                <div style={{ fontSize: 10, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 2 }}>Simulado</div>
-                <div style={{ fontSize: 14, fontWeight: 600, color: "#ffffff", textTransform: "capitalize" }}>{plan.rotinaDiaria.simulado}</div>
-              </div>
-            </div>
-            {plan.rotinaDiaria.dica && (
-              <div style={{ padding: "0 20px 16px" }}>
-                <div style={{ padding: "10px 14px", borderRadius: 12, fontSize: 12, color: "#5eead4", fontStyle: "italic", background: "rgba(10,181,189,0.08)", border: "1px solid rgba(10,181,189,0.15)" }}>
-                  💡 {plan.rotinaDiaria.dica}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Matérias */}
-        {plan && (plan.matérias ?? []).length > 0 && (
-          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
-              <BookOpen size={14} color="#f59e0b" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Matérias prioritárias</span>
-            </div>
-            <div style={{ padding: "16px 20px", display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {(plan.matérias ?? []).map((m, i) => (
-                <span key={i} style={{ padding: "4px 12px", borderRadius: 99, fontSize: 12, fontWeight: 500, background: "rgba(10,181,189,0.12)", border: "1px solid rgba(10,181,189,0.25)", color: "#7ae8ed" }}>
-                  {m}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Cronograma completo */}
-        {plan && plan.cronograma.length > 0 && (
-          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <Calendar size={14} color="#a78bfa" />
-                <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Cronograma de Estudos</span>
-              </div>
-              <span style={{ fontSize: 11, color: "#64748b" }}>{plan.cronograma.length} semanas</span>
-            </div>
-            {plan.editalStatus && (
-              <div style={{ padding: "8px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                <span style={{ fontSize: 11, padding: "3px 10px", borderRadius: 99,
-                  ...(plan.editalStatus === "com_edital"
-                    ? { background: "rgba(34,197,94,0.1)", border: "1px solid rgba(34,197,94,0.3)", color: "#86efac" }
-                    : { background: "rgba(251,191,36,0.1)", border: "1px solid rgba(251,191,36,0.3)", color: "#fde68a" }) }}>
-                  {plan.editalStatus === "com_edital" ? "✓ Baseado no edital fornecido" : "⚡ Baseado em editais históricos desta banca/cargo"}
-                </span>
-              </div>
-            )}
-            <div>
-              {plan.cronograma.map((c: { semana: string; tema: string }, i: number) => {
-                const dias = c.tema.split("|").map(d => d.trim()).filter(Boolean);
-                return (
-                  <div key={i} style={{ padding: "12px 20px", display: "flex", alignItems: "flex-start", gap: 16, borderBottom: i < plan.cronograma.length - 1 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
-                    <div style={{ width: 56, flexShrink: 0, fontSize: 12, fontWeight: 700, color: "#a78bfa" }}>{c.semana}</div>
-                    <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 4 }}>
-                      {dias.map((dia, j) => (
-                        <div key={j} style={{ fontSize: 13, color: "#cbd5e1", display: "flex", alignItems: "flex-start", gap: 8 }}>
-                          {dias.length > 1 && <span style={{ width: 6, height: 6, borderRadius: "50%", background: "rgba(167,139,250,0.4)", flexShrink: 0, marginTop: 6 }} />}
-                          <span>{dia}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Mentores */}
-        {agents.length > 0 && (
-          <div style={{ borderRadius: 16, background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.08)" }}>
-            <div style={{ padding: "12px 20px", borderBottom: "1px solid rgba(255,255,255,0.06)", display: "flex", alignItems: "center", gap: 8 }}>
-              <Zap size={14} color="#f472b6" />
-              <span style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.06em" }}>Seus mentores IA</span>
-            </div>
-            <div style={{ padding: "16px 20px", display: "flex", flexDirection: "column", gap: 12 }}>
-              {agents.map(a => (
-                <div key={a.id} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: 10, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, fontWeight: 700, flexShrink: 0, background: a.color ? `${a.color}22` : "rgba(10,181,189,0.15)", border: `1px solid ${a.color ?? "#0ab5bd"}44`, color: a.color ?? "#0ab5bd" }}>
-                    {a.name.charAt(0)}
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <p style={{ fontSize: 14, fontWeight: 600, color: "#ffffff", marginBottom: 2 }}>{a.name}</p>
-                    {a.description && <p style={{ fontSize: 12, color: "#64748b", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.description}</p>}
-                  </div>
-                  <CheckCircle size={14} color="#2dd4bf" style={{ flexShrink: 0 }} />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* ── BOTÃO PRINCIPAL — dentro do scroll, sempre acessível ── */}
-        <div style={{ paddingTop: 8, paddingBottom: 24 }}>
-          <button
-            onClick={onEnter}
-            style={{
-              width: "100%", padding: "18px 24px", borderRadius: 18, border: "none", cursor: "pointer",
-              background: "linear-gradient(135deg, #0ab5bd, #0891b2)",
-              color: "#ffffff", fontSize: 16, fontWeight: 700,
-              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-              boxShadow: "0 0 40px rgba(10,181,189,0.5), 0 4px 20px rgba(0,0,0,0.4)",
-              transition: "transform 0.15s, box-shadow 0.15s",
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.02)"; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)"; }}
-          >
-            🚀 Entrar no workspace
-            <ArrowRight size={18} />
-          </button>
-          <p style={{ textAlign: "center", fontSize: 12, color: "#475569", marginTop: 10 }}>
-            Você pode ajustar seu plano a qualquer momento dentro da plataforma.
-          </p>
-        </div>
-
-      </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Seletor de modalidade ─────────────────────────────────────────────────────
-const MODALIDADE_OPTIONS = [
-  { id: "CONCURSO_PUBLICO", icon: "🏛️", title: "Concurso Público",  desc: "Federal, estadual ou municipal. Qualquer cargo e banca.",         color: "#0ab5bd" },
-  { id: "ENEM",             icon: "📋", title: "ENEM",               desc: "Plano personalizado por área de conhecimento e Redação.",          color: "#6366f1" },
-  { id: "VESTIBULAR",       icon: "🎓", title: "Vestibular",          desc: "Para qualquer vestibular. Medicina, Engenharia, Direito e mais.",  color: "#8b5cf6" },
-  { id: "OAB",              icon: "⚖️", title: "OAB",                 desc: "1ª fase (objetiva) ou 2ª fase (peça processual).",                color: "#f59e0b" },
-  { id: "REVALIDA",         icon: "🩺", title: "REVALIDA",            desc: "Revalidação de diploma médico estrangeiro no Brasil.",             color: "#10b981" },
-  { id: "CFC",              icon: "📊", title: "CFC",                 desc: "Exame de Suficiência do Conselho Federal de Contabilidade.",       color: "#ec4899" },
+// ── Bancas ─────────────────────────────────────────────────────────────────────
+const BANCAS = [
+  { slug: "CESPE/CEBRASPE", label: "CESPE / CEBRASPE", emoji: "🎯", desc: "Certo ou Errado, questões abertas" },
+  { slug: "FCC",             label: "FCC",               emoji: "📋", desc: "Objetiva, foco em português" },
+  { slug: "FGV",             label: "FGV",               emoji: "🏛️", desc: "Raciocínio lógico, atualidades" },
+  { slug: "CESGRANRIO",      label: "CESGRANRIO",        emoji: "🏦", desc: "Bancária, questões técnicas" },
+  { slug: "VUNESP",          label: "VUNESP",            emoji: "📝", desc: "São Paulo, municipal/estadual" },
+  { slug: "IADES",           label: "IADES",             emoji: "🔍", desc: "Regional, interdisciplinar" },
+  { slug: "QUADRIX",         label: "QUADRIX",           emoji: "📐", desc: "Conselhos profissionais" },
+  { slug: "IDECAN",          label: "IDECAN",            emoji: "📌", desc: "Regional, nível médio e superior" },
 ];
 
-function ModalidadeChooser({ onSelect }: { onSelect: (id: string) => void }) {
-  const [visible, setVisible] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+// ── Opções de tempo ────────────────────────────────────────────────────────────
+const OPCOES_TEMPO = [
+  { minutos: 30,  label: "30 min",  desc: "Estudos leves, rotina intensa" },
+  { minutos: 60,  label: "1 hora",  desc: "Equilíbrio no dia a dia" },
+  { minutos: 120, label: "2 horas", desc: "Dedicação consistente" },
+  { minutos: 180, label: "3 horas", desc: "Foco intenso, resultado rápido" },
+  { minutos: 240, label: "4+ horas",desc: "Imersão total na preparação" },
+];
 
-  useEffect(() => {
-    const t = setTimeout(() => setVisible(true), 100);
-    return () => clearTimeout(t);
-  }, []);
+// ── Passos ─────────────────────────────────────────────────────────────────────
+const STEPS: Step[] = ["nome", "cargo", "banca", "data", "tempo", "gerando", "pronto"];
+const STEP_LABELS: Record<Step, string> = {
+  nome: "Boas-vindas", cargo: "Cargo", banca: "Banca",
+  data: "Data da prova", tempo: "Tempo de estudo",
+  gerando: "Gerando plano", pronto: "Pronto!",
+};
 
-  function confirm() {
-    if (selected) onSelect(selected);
+// ── Generating steps animation ──────────────────────────────────────────────────
+const GEN_STEPS = [
+  { icon: "🎯", text: "Analisando seu cargo e área de concurso…" },
+  { icon: "📚", text: "Selecionando as matérias mais cobradas pela banca…" },
+  { icon: "⚖️",  text: "Calculando peso de cada disciplina…" },
+  { icon: "📅", text: "Montando cronograma com base no seu tempo disponível…" },
+  { icon: "🧠", text: "Configurando seu perfil de aprendizagem…" },
+  { icon: "✨", text: "Finalizando seu plano personalizado…" },
+];
+
+// ── Component ──────────────────────────────────────────────────────────────────
+export function OnboardingClient({ userId, userName }: Props) {
+  const [step, setStep] = useState<Step>("nome");
+  const [state, setState] = useState<WizardState>({
+    nome: userName.split(" ")[0] ?? "",
+    cargo: null,
+    banca: null,
+    dataProva: null,
+    horasEstudo: null,
+  });
+
+  // Cargo search
+  const [search, setSearch] = useState("");
+  const [areaFiltro, setAreaFiltro] = useState<AreaCargo | null>(null);
+
+  // Generating animation
+  const [genStep, setGenStep] = useState(0);
+
+  // Saving state
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+
+  const stepIndex = STEPS.indexOf(step);
+  const progress = Math.round((stepIndex / (STEPS.length - 2)) * 100);
+
+  // ── Cargo filtering ──────────────────────────────────────────────────────────
+  const cargosVisiveis = search.trim().length >= 2
+    ? buscarCargos(search)
+    : areaFiltro
+      ? CARGOS.filter(c => c.area === areaFiltro)
+      : CARGOS;
+
+  // ── Navigate steps ───────────────────────────────────────────────────────────
+  function goNext() {
+    const idx = STEPS.indexOf(step);
+    if (idx < STEPS.length - 1) setStep(STEPS[idx + 1]);
+  }
+  function goBack() {
+    const idx = STEPS.indexOf(step);
+    if (idx > 0) setStep(STEPS[idx - 1]);
   }
 
-  return (
-    <div className={`flex-1 overflow-y-auto transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}
-      style={{ transform: visible ? "none" : "translateY(16px)" }}>
-      <div className="max-w-lg mx-auto px-5 py-8">
-        <div className="text-center mb-8">
-          <div className="text-4xl mb-3">🎯</div>
-          <h1 style={{ fontSize: 20, fontWeight: 700, color: "#ffffff", marginBottom: 8 }}>
-            Para qual exame você vai se preparar?
-          </h1>
-          <p style={{ fontSize: 14, color: "rgba(255,255,255,0.6)", lineHeight: 1.5 }}>
-            Vou personalizar todo o seu plano de estudos com base na sua escolha.
-          </p>
-        </div>
+  // ── Save & generate ──────────────────────────────────────────────────────────
+  const save = useCallback(async () => {
+    setSaving(true);
+    setSaveError(null);
 
-        <div className="grid grid-cols-1 gap-3 mb-6">
-          {MODALIDADE_OPTIONS.map(opt => {
-            const isSelected = selected === opt.id;
-            return (
-              <button key={opt.id} onClick={() => setSelected(opt.id)}
-                className="flex items-center gap-4 p-4 rounded-2xl text-left transition-all duration-200 hover:scale-[1.01]"
-                style={{
-                  background: isSelected ? `${opt.color}22` : "rgba(255,255,255,0.05)",
-                  border: `1.5px solid ${isSelected ? opt.color : "rgba(255,255,255,0.14)"}`,
-                  boxShadow: isSelected ? `0 0 24px ${opt.color}35` : "none",
-                }}>
-                <div className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl flex-shrink-0"
-                  style={{ background: `${opt.color}28`, border: `1px solid ${opt.color}50` }}>
-                  {opt.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p style={{ fontWeight: 700, fontSize: 14, color: "#ffffff", margin: 0 }}>{opt.title}</p>
-                    {isSelected && (
-                      <span style={{ fontSize: 10, padding: "2px 8px", borderRadius: 20, fontWeight: 600, background: `${opt.color}30`, color: opt.color }}>
-                        ✓ Selecionado
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 12, marginTop: 3, lineHeight: 1.5, color: isSelected ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.5)" }}>
-                    {opt.desc}
-                  </p>
-                </div>
-              </button>
-            );
-          })}
-        </div>
+    // Animate generating steps
+    for (let i = 0; i < GEN_STEPS.length; i++) {
+      setGenStep(i);
+      await new Promise(r => setTimeout(r, 1100));
+    }
 
-        <button onClick={confirm} disabled={!selected}
-          className="w-full py-4 rounded-2xl text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] disabled:opacity-40 disabled:cursor-not-allowed"
-          style={{ fontWeight: 700, background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: selected ? "0 0 30px rgba(10,181,189,0.4)" : "none" }}>
-          Continuar <ArrowRight size={16} />
-        </button>
-      </div>
-    </div>
-  );
-}
+    try {
+      const res = await fetch("/api/onboarding", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nomePreferido: state.nome.trim() || userName,
+          cargo: state.cargo?.nome ?? null,
+          orgao: state.cargo?.orgao ?? null,
+          banca: state.banca,
+          dataProva: state.dataProva,
+          horasEstudo: state.horasEstudo ? Math.round(state.horasEstudo / 60) : null,
+          categoria: state.cargo?.categoria ?? null,
+        }),
+      });
+      if (!res.ok) {
+        const d = await res.json() as { error?: string };
+        setSaveError(d.error ?? "Erro ao salvar. Tente novamente.");
+        setStep("tempo");
+        return;
+      }
+      setStep("pronto");
+    } catch {
+      setSaveError("Erro de rede. Tente novamente.");
+      setStep("tempo");
+    } finally {
+      setSaving(false);
+    }
+  }, [state, userName]);
 
-// ── Tela de boas-vindas ───────────────────────────────────────────────────────
-function WelcomeScreen({ userName, maxConcursos, onStart }: { userName: string; maxConcursos: number; onStart: () => void }) {
-  const [visible, setVisible] = useState(false);
-  useEffect(() => { setTimeout(() => setVisible(true), 100); }, []);
-
-  const isTrial = maxConcursos === 1;
-
-  return (
-    <div className={`flex-1 flex flex-col items-center justify-center px-8 text-center gap-8 transition-all duration-700 ${visible ? "opacity-100" : "opacity-0"}`}>
-      {/* Logo orb grande */}
-      <div className="relative" style={{ width: 100, height: 100 }}>
-        <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, #0ab5bd40 0%, transparent 70%)", animation: "obPulse 3s ease-in-out infinite" }} />
-        <div className="absolute inset-0 rounded-full" style={{ background: "radial-gradient(circle, #0ab5bd22 0%, transparent 70%)", animation: "obPulse 3s 1s ease-in-out infinite" }} />
-        <div className="relative w-full h-full rounded-full flex items-center justify-center"
-          style={{ background: "radial-gradient(circle at 35% 30%, #b0f0f5, #0ab5bd 40%, #044d52)", border: "2px solid rgba(10,181,189,0.5)" }}>
-          <div style={{ position: "absolute", inset: 0, background: "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3) 0%, transparent 60%)", borderRadius: "50%" }} />
-          <Image src="/logo-icon.svg" alt="Aprovai" width={60} height={60} style={{ position: "relative", zIndex: 1, opacity: 0.9 }} />
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold"
-          style={{ background: "rgba(10,181,189,0.12)", border: "1px solid rgba(10,181,189,0.3)", color: "#7ae8ed" }}>
-          <span className="w-1.5 h-1.5 rounded-full bg-teal-400 inline-block" style={{ animation: "obPulse 1.5s ease-in-out infinite" }} />
-          Mentor IA disponível
-        </div>
-        <h1 className="text-2xl font-bold text-white">
-          {userName ? `Olá, ${userName.split(" ")[0]}! 👋` : "Bem-vindo à Aprovai! 👋"}
-        </h1>
-        <p className="text-slate-200 text-sm leading-relaxed max-w-sm">
-          Vou ser sua estrategista pessoal de concursos. Em menos de 3 minutos, monto um{" "}
-          <strong className="text-white">plano de estudos personalizado</strong> para você.
-        </p>
-
-        {/* Badge do plano */}
-        <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs"
-          style={{ background: isTrial ? "rgba(251,191,36,0.08)" : "rgba(99,102,241,0.1)", border: isTrial ? "1px solid rgba(251,191,36,0.25)" : "1px solid rgba(99,102,241,0.3)", color: isTrial ? "#fbbf24" : "#a5b4fc" }}>
-          {isTrial ? (
-            <><Brain size={12} /> Trial: 1 concurso foco — direto ao ponto!</>
-          ) : (
-            <><Sparkles size={12} /> Seu plano permite até {maxConcursos} concursos simultâneos!</>
-          )}
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="grid grid-cols-3 gap-3 w-full max-w-xs">
-        {[
-          { icon: "🎯", label: "Plano personalizado" },
-          { icon: "📊", label: "Cronograma semanal" },
-          { icon: "🤖", label: "Mentor proativo" },
-        ].map(f => (
-          <div key={f.label} className="rounded-xl p-3 text-center space-y-1.5"
-            style={{ background: "rgba(255,255,255,0.03)", border: "1px solid rgba(255,255,255,0.07)" }}>
-            <div className="text-xl">{f.icon}</div>
-            <div className="text-xs text-slate-300 leading-tight">{f.label}</div>
-          </div>
-        ))}
-      </div>
-
-      <button onClick={onStart}
-        className="w-full max-w-xs py-4 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-200 hover:scale-[1.03] active:scale-[0.97]"
-        style={{ background: "linear-gradient(135deg, #0ab5bd, #0891b2)", color: "#fff", boxShadow: "0 0 30px rgba(10,181,189,0.35)" }}>
-        Começar agora <ArrowRight size={16} />
-      </button>
-      <p className="text-xs text-slate-300">Leva menos de 3 minutos · Sem necessidade de cartão</p>
-    </div>
-  );
-}
-
-// ── Chat stage ────────────────────────────────────────────────────────────────
-interface ChatStageProps {
-  messages: Message[];
-  input: string;
-  loading: boolean;
-  onInput: (v: string) => void;
-  onSend: (msg?: string) => void;
-  editalVisible: boolean;
-  setEditalVisible: (v: boolean) => void;
-  editalText: string;
-  setEditalText: (v: string) => void;
-  onEditalSubmit: () => void;
-}
-
-
-function ChatStage({ messages, input, loading, onInput, onSend, editalVisible, setEditalVisible, editalText, setEditalText, onEditalSubmit }: ChatStageProps) {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
+  // Trigger save when entering "gerando"
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, loading]);
+    if (step === "gerando") save();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
+  // Redirect after "pronto"
+  useEffect(() => {
+    if (step === "pronto") {
+      const t = setTimeout(() => { window.location.href = "/hoje"; }, 2200);
+      return () => clearTimeout(t);
+    }
+  }, [step]);
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <>
-      {/* Messages area */}
-      <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        {messages.map((msg, i) => (
-          <div key={i} className={`flex gap-3 ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-            style={{ animation: "msgIn 0.3s ease-out both" }}>
-            {msg.role === "assistant" && <AIOrb thinking={false} />}
-            <div className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${msg.role === "user" ? "rounded-br-sm" : "rounded-bl-sm"}`}
-              style={msg.role === "user"
-                ? { background: "linear-gradient(135deg, #0891b2, #0ab5bd)", borderRadius: "18px 18px 4px 18px", color: "#fff" }
-                : { background: "rgba(255,255,255,0.09)", border: "1px solid rgba(255,255,255,0.13)", borderRadius: "18px 18px 18px 4px", color: "#e2e8f0" }}>
-              {msg.content ? renderMd(msg.content) : <TypingDots />}
-            </div>
-          </div>
-        ))}
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
+      style={{ background: "radial-gradient(ellipse at 20% 20%, rgba(10,181,189,0.08) 0%, transparent 60%), #0a0d12" }}>
 
-        {loading && (
-          <div className="flex gap-3 justify-start" style={{ animation: "msgIn 0.3s ease-out both" }}>
-            <AIOrb thinking={true} />
-            <div className="px-4 py-3 rounded-2xl" style={{ background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.08)", borderRadius: "18px 18px 18px 4px" }}>
-              <TypingDots />
+      {/* Card principal */}
+      <div className="w-full max-w-2xl">
+
+        {/* Progress bar (oculto em gerando/pronto) */}
+        {step !== "gerando" && step !== "pronto" && (
+          <div className="mb-8">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs text-gray-500 font-medium">
+                {stepIndex + 1} de {STEPS.length - 2} — {STEP_LABELS[step]}
+              </span>
+              <span className="text-xs text-teal-400 font-semibold">{progress}%</span>
+            </div>
+            <div className="h-1 rounded-full bg-white/5 overflow-hidden">
+              <div className="h-full rounded-full bg-gradient-to-r from-[#0ab5bd] to-[#00ffa3] transition-all duration-700"
+                style={{ width: `${progress}%` }} />
+            </div>
+            {/* Step dots */}
+            <div className="flex gap-2 mt-2 justify-center">
+              {STEPS.slice(0, -2).map((s, i) => (
+                <div key={s} className={cn(
+                  "h-1.5 rounded-full transition-all duration-300",
+                  i < stepIndex ? "bg-[#0ab5bd] w-6" : i === stepIndex ? "bg-[#0ab5bd] w-4" : "bg-white/10 w-3"
+                )} />
+              ))}
             </div>
           </div>
         )}
-        <div ref={bottomRef} />
+
+        {/* ── STEP: NOME ────────────────────────────────────────────────────── */}
+        {step === "nome" && (
+          <StepNome
+            nome={state.nome}
+            onChange={nome => setState(s => ({ ...s, nome }))}
+            onNext={goNext}
+          />
+        )}
+
+        {/* ── STEP: CARGO ───────────────────────────────────────────────────── */}
+        {step === "cargo" && (
+          <StepCargo
+            cargo={state.cargo}
+            search={search}
+            setSearch={setSearch}
+            areaFiltro={areaFiltro}
+            setAreaFiltro={setAreaFiltro}
+            cargosVisiveis={cargosVisiveis}
+            onSelect={cargo => {
+              setState(s => ({ ...s, cargo, banca: cargo.banca ?? null }));
+              setTimeout(goNext, 300);
+            }}
+            onBack={goBack}
+          />
+        )}
+
+        {/* ── STEP: BANCA ───────────────────────────────────────────────────── */}
+        {step === "banca" && (
+          <StepBanca
+            banca={state.banca}
+            sugestao={state.cargo?.banca ?? null}
+            onSelect={banca => {
+              setState(s => ({ ...s, banca }));
+              setTimeout(goNext, 300);
+            }}
+            onBack={goBack}
+          />
+        )}
+
+        {/* ── STEP: DATA ────────────────────────────────────────────────────── */}
+        {step === "data" && (
+          <StepData
+            dataProva={state.dataProva}
+            onChange={dataProva => setState(s => ({ ...s, dataProva }))}
+            onNext={goNext}
+            onBack={goBack}
+          />
+        )}
+
+        {/* ── STEP: TEMPO ───────────────────────────────────────────────────── */}
+        {step === "tempo" && (
+          <StepTempo
+            horasEstudo={state.horasEstudo}
+            onSelect={minutos => {
+              setState(s => ({ ...s, horasEstudo: minutos }));
+              setTimeout(goNext, 300);
+            }}
+            onBack={goBack}
+            error={saveError}
+          />
+        )}
+
+        {/* ── STEP: GERANDO ─────────────────────────────────────────────────── */}
+        {step === "gerando" && <StepGerando genStep={genStep} saving={saving} />}
+
+        {/* ── STEP: PRONTO ──────────────────────────────────────────────────── */}
+        {step === "pronto" && <StepPronto nome={state.nome} cargo={state.cargo} />}
+      </div>
+    </div>
+  );
+}
+
+// ── Step Components ────────────────────────────────────────────────────────────
+
+function StepNome({ nome, onChange, onNext }: {
+  nome: string; onChange: (v: string) => void; onNext: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => { ref.current?.focus(); }, []);
+
+  return (
+    <div className="text-center space-y-8">
+      {/* Orb */}
+      <div className="flex justify-center">
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full opacity-30 animate-pulse"
+            style={{ background: "radial-gradient(circle, #0ab5bd, transparent 70%)", transform: "scale(1.5)" }} />
+          <div className="w-full h-full rounded-full flex items-center justify-center text-4xl"
+            style={{ background: "radial-gradient(circle at 35% 30%, #b0f0f5, #0ab5bd 40%, #044d52)" }}>
+            ✦
+          </div>
+        </div>
       </div>
 
-      {/* Edital textarea */}
-      {editalVisible && (
-        <div className="mx-4 mb-3 rounded-xl overflow-hidden" style={{ background: "rgba(10,181,189,0.06)", border: "1px solid rgba(10,181,189,0.25)" }}>
-          <div className="px-4 py-2.5 flex items-center gap-2 border-b border-teal-500/15">
-            <FileText size={12} className="text-teal-400" />
-            <span className="text-xs font-semibold text-teal-400">Conteúdo programático do edital</span>
-          </div>
-          <textarea value={editalText} onChange={e => setEditalText(e.target.value)} rows={5}
-            placeholder="Cole aqui o conteúdo programático ou as matérias do edital…"
-            className="w-full px-4 py-3 text-xs bg-transparent resize-none outline-none placeholder-slate-400" style={{ color: "#e2e8f0" }} />
-          <div className="px-4 py-2 flex gap-2 justify-end">
-            <button onClick={() => setEditalVisible(false)} className="text-xs text-slate-300 hover:text-slate-200 transition-colors px-3 py-1.5">Cancelar</button>
-            <button onClick={onEditalSubmit} disabled={!editalText.trim()}
-              className="text-xs font-semibold px-4 py-1.5 rounded-lg transition-all disabled:opacity-40"
-              style={{ background: "rgba(10,181,189,0.2)", border: "1px solid rgba(10,181,189,0.4)", color: "#7ae8ed" }}>
-              Enviar →
+      <div>
+        <h1 className="text-3xl font-bold text-white mb-2">Bem-vindo ao AprovAI!</h1>
+        <p className="text-gray-400">Vamos montar seu plano de estudos personalizado em menos de 1 minuto.</p>
+      </div>
+
+      <div className="space-y-3 max-w-sm mx-auto">
+        <label className="block text-sm text-gray-400 text-left">Como posso te chamar?</label>
+        <input
+          ref={ref}
+          type="text"
+          value={nome}
+          onChange={e => onChange(e.target.value)}
+          onKeyDown={e => e.key === "Enter" && nome.trim() && onNext()}
+          placeholder="Seu nome ou apelido"
+          maxLength={30}
+          className="w-full px-4 py-3 rounded-xl text-white text-lg bg-white/5 border border-white/10 outline-none focus:border-[#0ab5bd]/60 focus:bg-white/8 transition-all placeholder-gray-600"
+        />
+      </div>
+
+      <button
+        onClick={onNext}
+        disabled={!nome.trim()}
+        className="px-8 py-3.5 rounded-xl text-sm font-semibold bg-[#0ab5bd] text-black hover:bg-[#09a3aa] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-2 mx-auto"
+      >
+        Começar <ChevronRight className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
+function StepCargo({ cargo, search, setSearch, areaFiltro, setAreaFiltro, cargosVisiveis, onSelect, onBack }: {
+  cargo: Cargo | null;
+  search: string;
+  setSearch: (v: string) => void;
+  areaFiltro: AreaCargo | null;
+  setAreaFiltro: (v: AreaCargo | null) => void;
+  cargosVisiveis: Cargo[];
+  onSelect: (c: Cargo) => void;
+  onBack: () => void;
+}) {
+  const grupoAtual = areaFiltro ? GRUPOS_AREA.find(g => g.area === areaFiltro) : null;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Qual cargo você vai prestar?</h2>
+        <p className="text-sm text-gray-500">Selecione seu cargo para personalizarmos seu plano.</p>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => { setSearch(e.target.value); setAreaFiltro(null); }}
+          placeholder="Buscar cargo ou órgão (ex: INSS, Delegado, TRF…)"
+          className="w-full pl-10 pr-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-[#0ab5bd]/60 placeholder-gray-600 transition-all"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Filtro por área (só quando não pesquisando) */}
+      {!search && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setAreaFiltro(null)}
+            className={cn(
+              "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+              !areaFiltro
+                ? "bg-[#0ab5bd]/20 border-[#0ab5bd]/40 text-[#0ab5bd]"
+                : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
+            )}
+          >
+            Todos
+          </button>
+          {GRUPOS_AREA.map(g => (
+            <button
+              key={g.area}
+              onClick={() => setAreaFiltro(g.area)}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                areaFiltro === g.area
+                  ? "bg-[#0ab5bd]/20 border-[#0ab5bd]/40 text-[#0ab5bd]"
+                  : "bg-white/5 border-white/10 text-gray-400 hover:border-white/20"
+              )}
+            >
+              {g.emoji} {g.label}
             </button>
-          </div>
+          ))}
         </div>
       )}
 
-      {/* Input */}
-      <div className="px-4 pb-5 pt-2">
-        <div className="flex gap-2 items-end">
-          <button onClick={() => setEditalVisible(!editalVisible)} title="Colar edital"
-            className="p-2.5 rounded-xl transition-colors flex-shrink-0"
-            style={{ background: editalVisible ? "rgba(10,181,189,0.2)" : "rgba(255,255,255,0.07)", border: `1px solid ${editalVisible ? "rgba(10,181,189,0.4)" : "rgba(255,255,255,0.15)"}`, color: editalVisible ? "#7ae8ed" : "#94a3b8" }}>
-            <FileText size={15} />
-          </button>
-          <div className="flex-1 relative">
-            <textarea
-              value={input}
-              onChange={e => onInput(e.target.value)}
-              disabled={loading}
-              placeholder="Responda aqui…"
-              rows={1}
-              className="onboarding-input w-full px-4 py-3 pr-12 text-sm rounded-2xl resize-none outline-none transition-all"
-              style={{ background: "rgba(255,255,255,0.12)", border: "1px solid rgba(255,255,255,0.25)", minHeight: 48, maxHeight: 120 }}
-              onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }} />
-            <button disabled={loading || !input.trim()} onClick={() => onSend()}
-              className="absolute right-2.5 bottom-2 w-8 h-8 rounded-xl flex items-center justify-center transition-all"
-              style={{ background: loading || !input.trim() ? "rgba(10,181,189,0.2)" : "linear-gradient(135deg, #0ab5bd, #0891b2)", opacity: loading || !input.trim() ? 0.5 : 1 }}>
-              {loading
-                ? <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full" style={{ animation: "spin 0.7s linear infinite" }} />
-                : <Send size={14} color="#fff" />}
-            </button>
+      {/* Lista de cargos */}
+      <div className="max-h-80 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
+        {cargosVisiveis.length === 0 && (
+          <div className="text-center py-8 text-gray-600 text-sm">
+            Nenhum cargo encontrado para "{search}"
           </div>
-        </div>
-        <p className="text-center text-xs mt-2" style={{ color: "rgba(255,255,255,0.35)" }}>Enter para enviar · Shift+Enter para nova linha</p>
+        )}
+        {cargosVisiveis.map(c => {
+          const grupo = GRUPOS_AREA.find(g => g.area === c.area);
+          const isSelected = cargo?.id === c.id;
+          return (
+            <button
+              key={c.id}
+              onClick={() => onSelect(c)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all",
+                isSelected
+                  ? "bg-[#0ab5bd]/15 border-[#0ab5bd]/50"
+                  : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
+              )}
+            >
+              <span className="text-xl flex-shrink-0">{grupo?.emoji ?? "📋"}</span>
+              <div className="flex-1 min-w-0">
+                <p className={cn("text-sm font-medium truncate", isSelected ? "text-[#0ab5bd]" : "text-white")}>
+                  {c.nome}
+                </p>
+                <p className="text-xs text-gray-500 truncate">{c.orgao}</p>
+              </div>
+              {c.banca && (
+                <span className="text-xs text-gray-600 flex-shrink-0 hidden sm:block">{c.banca}</span>
+              )}
+              {isSelected && <Check className="w-4 h-4 text-[#0ab5bd] flex-shrink-0" />}
+            </button>
+          );
+        })}
       </div>
-    </>
+
+      {/* Cargo selecionado + navegar */}
+      <div className="flex items-center gap-3 pt-2">
+        <button onClick={onBack} className="p-2 rounded-lg text-gray-500 hover:text-gray-300 hover:bg-white/5 transition-all">
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        {cargo && (
+          <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0ab5bd]/10 border border-[#0ab5bd]/25">
+            <Check className="w-4 h-4 text-[#0ab5bd] flex-shrink-0" />
+            <span className="text-sm text-[#0ab5bd] font-medium truncate">{cargo.nome}</span>
+          </div>
+        )}
+        {!cargo && <div className="flex-1 text-sm text-gray-600">Selecione um cargo acima</div>}
+      </div>
+    </div>
   );
 }
 
-// ── Componente principal ──────────────────────────────────────────────────────
-export function OnboardingClient({
-  userId,
-  userName,
-  agents,
-  maxConcursos = 1,
-}: {
-  userId: string;
-  userName: string;
-  agents: Agent[];
-  maxConcursos?: number;
+function StepBanca({ banca, sugestao, onSelect, onBack }: {
+  banca: string | null;
+  sugestao: string | null;
+  onSelect: (b: string | null) => void;
+  onBack: () => void;
 }) {
-  void userId;
-
-  const [stage, setStage] = useState<Stage>("welcome");
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState(0);
-  const [editalVisible, setEditalVisible] = useState(false);
-  const [editalText, setEditalText] = useState("");
-  const [studyPlan, setStudyPlan] = useState<StudyPlan | null>(null);
-  const [selectedAgents, setSelectedAgents] = useState<Agent[]>([]);
-  const [modalidade, setModalidade] = useState("CONCURSO_PUBLICO");
-  const initSent = useRef(false);
-
-  const isTrial = maxConcursos === 1;
-
-  // Primeira mensagem — gerada pela API para não ter duplicata
-  async function startChat(selectedModalidade: string) {
-    setModalidade(selectedModalidade);
-    setStage("chat");
-    setMessages([{ role: "assistant", content: "" }]); // placeholder de loading
-    setLoading(true);
-    try {
-      const res = await fetch("/api/workspace/onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // Mensagem especial de init — a IA gera o primeiro greeting
-        body: JSON.stringify({ message: "__INIT__", history: [], maxConcursos, userName, modalidade: selectedModalidade }),
-      });
-      const data = await res.json();
-      const text: string = data.text ?? "";
-      // Anima o texto letra a letra
-      let built = "";
-      const words = text.split(" ");
-      for (let i = 0; i < words.length; i++) {
-        built += (i === 0 ? "" : " ") + words[i];
-        const snap = built;
-        setMessages([{ role: "assistant", content: snap }]);
-        await new Promise(r => setTimeout(r, 16));
-      }
-    } catch {
-      setMessages([{ role: "assistant", content: "Olá! 😊 Como você prefere ser chamado(a)?" }]);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-const send = useCallback(async (customMsg?: string) => {
-    const text = (customMsg ?? input).trim();
-    if (!text || loading) return;
-
-    const userMsg: Message = { role: "user", content: text, ts: Date.now() };
-    const historyToSend = messages.slice(-14);
-    const newMessages: Message[] = [...messages, userMsg];
-    setMessages(newMessages);
-    setInput("");
-    setLoading(true);
-    const progressLabels = PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO;
-    setStep(prev => Math.min(prev + 1, progressLabels.length));
-
-    try {
-      const res = await fetch("/api/workspace/onboarding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text, history: historyToSend, maxConcursos, userName, modalidade }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setMessages(prev => [...prev, { role: "assistant", content: `❌ ${data.error ?? "Erro ao processar. Tente novamente."}` }]);
-        return;
-      }
-
-      const responseText: string = data.text ?? "";
-
-      // Animated text reveal
-      setMessages(prev => [...prev, { role: "assistant", content: "" }]);
-      const words = responseText.split(" ");
-      let built = "";
-      for (let i = 0; i < words.length; i++) {
-        built += (i === 0 ? "" : " ") + words[i];
-        const current = built;
-        setMessages(prev => {
-          const updated = [...prev];
-          updated[updated.length - 1] = { role: "assistant", content: current };
-          return updated;
-        });
-        await new Promise(r => setTimeout(r, 16));
-      }
-
-      if (data.done) {
-        if (data.agents?.length) setSelectedAgents(data.agents as Agent[]);
-        setStep((PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO).length);
-        await new Promise(r => setTimeout(r, 5500)); // tempo para ler a mensagem final
-        setStage("generating");
-        try {
-          // Roda fetch e animação mínima em paralelo — plano aparece assim que a IA terminar
-          const [planoRes] = await Promise.all([
-            fetch("/api/onboarding/plano", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                profile: {
-                  ...data.profile,
-                  editalContent: editalText.trim() || null,
-                },
-              }),
-            }),
-            new Promise(r => setTimeout(r, 3000)), // mínimo 3s de animação
-          ]);
-          if (planoRes.ok) {
-            const planoData = await planoRes.json();
-            if (planoData.plan) setStudyPlan(planoData.plan as StudyPlan);
-          }
-        } catch { /* plan generation failed — show anyway */ }
-        setStage("plan");
-      }
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro de conexão.";
-      setMessages(prev => [...prev, { role: "assistant", content: `❌ ${msg} Tente novamente.` }]);
-    } finally {
-      setLoading(false);
-    }
-  }, [input, loading, messages, maxConcursos, modalidade]);
-
-  function handleEditalSubmit() {
-    const msg = `Aqui está o conteúdo programático do edital:\n\n${editalText}`;
-    setEditalText("");
-    setEditalVisible(false);
-    send(msg);
-  }
-
-  function handleEnterWorkspace() {
-    window.location.replace("/workspace?welcome=1");
-  }
-
-  // ── Render ──────────────────────────────────────────────────────────────────
   return (
-    <>
-      <style>{`
-        @keyframes obPulse { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
-        @keyframes orbRing { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.2);opacity:0} }
-        @keyframes typingBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-5px)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        @keyframes msgIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
-        @keyframes bgDrift1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,-20px)} }
-        @keyframes bgDrift2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-25px,15px)} }
-        @keyframes bgDrift3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,25px)} }
-      `}</style>
-
-      <div style={{ height: "100dvh", background: "#050511", color: "#e2e8f0", display: "flex", flexDirection: "column", position: "relative", overflow: "hidden" }}>
-        {/* Ambient background orbs */}
-        <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 }}>
-          <div style={{ position: "absolute", width: 600, height: 600, borderRadius: "50%", background: "radial-gradient(circle, rgba(10,181,189,0.07) 0%, transparent 70%)", top: "-20%", left: "-10%", animation: "bgDrift1 18s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", width: 500, height: 500, borderRadius: "50%", background: "radial-gradient(circle, rgba(99,102,241,0.06) 0%, transparent 70%)", bottom: "-10%", right: "-5%", animation: "bgDrift2 22s ease-in-out infinite" }} />
-          <div style={{ position: "absolute", width: 350, height: 350, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,255,163,0.04) 0%, transparent 70%)", top: "40%", right: "15%", animation: "bgDrift3 15s ease-in-out infinite" }} />
-        </div>
-
-        {/* Header */}
-        <div style={{ position: "relative", zIndex: 10, padding: "14px 20px", borderBottom: "1px solid rgba(255,255,255,0.05)", backdropFilter: "blur(10px)", background: "rgba(5,5,17,0.8)", display: "flex", alignItems: "center", gap: 12 }}>
-          <Image src="/logo-icon.svg" alt="Aprovai" width={28} height={28} />
-          <div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: "-0.01em" }}>AprovAI360</span>
-            <span style={{ fontSize: 11, color: "#0ab5bd", marginLeft: 6, fontWeight: 500 }}>· Onboarding IA</span>
-          </div>
-          <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "#0ab5bd", background: "rgba(10,181,189,0.1)", border: "1px solid rgba(10,181,189,0.25)", borderRadius: 99, padding: "3px 10px" }}>
-            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#0ab5bd", display: "inline-block", animation: "obPulse 1.5s ease-in-out infinite" }} />
-            Estrategista IA online
-          </div>
-        </div>
-
-        {/* Main content */}
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0, position: "relative", zIndex: 10 }}>
-          {/* Welcome */}
-          {stage === "welcome" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-              <WelcomeScreen userName={userName} maxConcursos={maxConcursos} onStart={() => setStage("modalidade")} />
-            </div>
-          )}
-
-          {/* Modalidade chooser */}
-          {stage === "modalidade" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <ModalidadeChooser onSelect={(id) => startChat(id)} />
-            </div>
-          )}
-
-          {/* Chat */}
-          {stage === "chat" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <ProgressBar step={step} labels={PROGRESS_LABELS_MAP[modalidade] ?? PROGRESS_LABELS_MAP.CONCURSO_PUBLICO} />
-              <ChatStage
-                messages={messages}
-                input={input}
-                loading={loading}
-                onInput={setInput}
-                onSend={send}
-                editalVisible={editalVisible}
-                setEditalVisible={setEditalVisible}
-                editalText={editalText}
-                setEditalText={setEditalText}
-                onEditalSubmit={handleEditalSubmit}
-              />
-            </div>
-          )}
-
-          {/* Generating */}
-          {stage === "generating" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden" }}>
-              <GeneratingScreen />
-            </div>
-          )}
-
-          {/* Plan reveal */}
-          {stage === "plan" && (
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
-              <PlanReveal plan={studyPlan} agents={selectedAgents.length ? selectedAgents : agents.slice(0, 2)} onEnter={handleEnterWorkspace} />
-            </div>
-          )}
-        </div>
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Qual é a banca do seu concurso?</h2>
+        <p className="text-sm text-gray-500">Cada banca tem um estilo único. Isso ajuda a calibrar seu treinamento.</p>
       </div>
-    </>
+
+      {sugestao && (
+        <div className="px-4 py-2.5 rounded-lg bg-[#0ab5bd]/10 border border-[#0ab5bd]/25 text-sm text-[#0ab5bd]">
+          💡 Sugestão com base no cargo: <strong>{sugestao}</strong>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {BANCAS.map(b => (
+          <button
+            key={b.slug}
+            onClick={() => onSelect(b.slug)}
+            className={cn(
+              "flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all",
+              banca === b.slug
+                ? "bg-[#0ab5bd]/15 border-[#0ab5bd]/50"
+                : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
+            )}
+          >
+            <span className="text-2xl">{b.emoji}</span>
+            <div className="flex-1 min-w-0">
+              <p className={cn("text-sm font-semibold", banca === b.slug ? "text-[#0ab5bd]" : "text-white")}>
+                {b.label}
+              </p>
+              <p className="text-xs text-gray-500">{b.desc}</p>
+            </div>
+            {banca === b.slug && <Check className="w-4 h-4 text-[#0ab5bd] flex-shrink-0" />}
+          </button>
+        ))}
+
+        {/* Não definida */}
+        <button
+          onClick={() => onSelect(null)}
+          className={cn(
+            "flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all sm:col-span-2",
+            banca === null
+              ? "bg-white/8 border-white/20"
+              : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
+          )}
+        >
+          <span className="text-2xl">🤷</span>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-gray-300">Ainda não sei / Não definida</p>
+            <p className="text-xs text-gray-500">Treinaremos com questões variadas de todas as bancas</p>
+          </div>
+          {banca === null && <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />}
+        </button>
+      </div>
+
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+    </div>
+  );
+}
+
+function StepData({ dataProva, onChange, onNext, onBack }: {
+  dataProva: string | null;
+  onChange: (v: string | null) => void;
+  onNext: () => void;
+  onBack: () => void;
+}) {
+  // Calcula dias restantes
+  const diasRestantes = dataProva
+    ? Math.ceil((new Date(dataProva + "T00:00:00").getTime() - Date.now()) / 86400000)
+    : null;
+
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() + 7);
+  const minStr = minDate.toISOString().slice(0, 10);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Quando é sua prova?</h2>
+        <p className="text-sm text-gray-500">Isso nos ajuda a calcular a intensidade ideal de estudos.</p>
+      </div>
+
+      <div className="space-y-3">
+        {/* Date picker */}
+        <div className="relative">
+          <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+          <input
+            type="date"
+            value={dataProva ?? ""}
+            min={minStr}
+            onChange={e => onChange(e.target.value || null)}
+            className="w-full pl-10 pr-4 py-3.5 rounded-xl bg-white/5 border border-white/10 text-white text-sm outline-none focus:border-[#0ab5bd]/60 transition-all [color-scheme:dark]"
+          />
+        </div>
+
+        {/* Indicador de dias */}
+        {diasRestantes !== null && diasRestantes > 0 && (
+          <div className="px-4 py-3 rounded-xl bg-[#0ab5bd]/10 border border-[#0ab5bd]/25 text-sm flex items-center gap-2">
+            <Clock className="w-4 h-4 text-[#0ab5bd]" />
+            <span className="text-[#0ab5bd] font-semibold">{diasRestantes} dias</span>
+            <span className="text-gray-400">até a prova — vamos aproveitar bem!</span>
+          </div>
+        )}
+
+        {/* Não sabe */}
+        <button
+          onClick={() => { onChange(null); onNext(); }}
+          className={cn(
+            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all",
+            !dataProva
+              ? "bg-white/8 border-white/20"
+              : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
+          )}
+        >
+          <span className="text-2xl">📅</span>
+          <div>
+            <p className="text-sm font-semibold text-gray-300">Data ainda não definida</p>
+            <p className="text-xs text-gray-500">Estudaremos com ritmo contínuo sem pressão de prazo</p>
+          </div>
+          {!dataProva && <Check className="w-4 h-4 text-gray-400 ml-auto flex-shrink-0" />}
+        </button>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+          <ChevronLeft className="w-4 h-4" /> Voltar
+        </button>
+        {dataProva && (
+          <button
+            onClick={onNext}
+            className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0ab5bd] text-black hover:bg-[#09a3aa] transition-all flex items-center gap-2"
+          >
+            Continuar <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StepTempo({ horasEstudo, onSelect, onBack, error }: {
+  horasEstudo: number | null;
+  onSelect: (min: number) => void;
+  onBack: () => void;
+  error: string | null;
+}) {
+  return (
+    <div className="space-y-5">
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-1">Quanto tempo você estuda por dia?</h2>
+        <p className="text-sm text-gray-500">Em média — não precisa ser exato. Você pode ajustar depois.</p>
+      </div>
+
+      {error && (
+        <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-sm text-red-400">
+          ⚠️ {error}
+        </div>
+      )}
+
+      <div className="space-y-2">
+        {OPCOES_TEMPO.map(o => (
+          <button
+            key={o.minutos}
+            onClick={() => onSelect(o.minutos)}
+            className={cn(
+              "w-full flex items-center gap-4 px-4 py-4 rounded-xl border text-left transition-all",
+              horasEstudo === o.minutos
+                ? "bg-[#0ab5bd]/15 border-[#0ab5bd]/50"
+                : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0",
+              horasEstudo === o.minutos ? "bg-[#0ab5bd] text-black" : "bg-white/8 text-gray-400"
+            )}>
+              {o.label.replace(" ", "")}
+            </div>
+            <div>
+              <p className={cn("text-sm font-semibold", horasEstudo === o.minutos ? "text-[#0ab5bd]" : "text-white")}>
+                {o.label} por dia
+              </p>
+              <p className="text-xs text-gray-500">{o.desc}</p>
+            </div>
+            {horasEstudo === o.minutos && <Check className="w-4 h-4 text-[#0ab5bd] ml-auto flex-shrink-0" />}
+          </button>
+        ))}
+      </div>
+
+      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
+        <ChevronLeft className="w-4 h-4" /> Voltar
+      </button>
+    </div>
+  );
+}
+
+function StepGerando({ genStep, saving }: { genStep: number; saving: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-10">
+      {/* Orb animada */}
+      <div className="relative" style={{ width: 120, height: 120 }}>
+        <div className="absolute inset-0 rounded-full opacity-30 animate-ping"
+          style={{ background: "radial-gradient(circle, #0ab5bd, transparent 70%)" }} />
+        <div className="absolute inset-0 rounded-full"
+          style={{ background: "radial-gradient(circle at 35% 30%, #b0f0f5, #0ab5bd 40%, #044d52)" }}>
+          <div className="absolute inset-0 rounded-full"
+            style={{ background: "radial-gradient(circle at 35% 30%, rgba(255,255,255,0.3) 0%, transparent 60%)", borderRadius: "50%" }} />
+        </div>
+        <div className="absolute inset-0 flex items-center justify-center text-4xl z-10">🧠</div>
+      </div>
+
+      <div>
+        <h2 className="text-2xl font-bold text-white mb-2">Montando seu plano…</h2>
+        <p className="text-sm text-gray-500">A IA está personalizando tudo para você.</p>
+      </div>
+
+      <div className="space-y-3 w-full max-w-xs text-left">
+        {GEN_STEPS.map((s, i) => (
+          <div key={i} className="flex items-center gap-3 transition-all duration-500"
+            style={{ opacity: i <= genStep ? 1 : 0.2 }}>
+            <span className="text-lg flex-shrink-0">{s.icon}</span>
+            <span className="text-sm text-gray-300 flex-1">{s.text}</span>
+            {i < genStep && <Check className="w-4 h-4 text-[#0ab5bd] flex-shrink-0" />}
+            {i === genStep && saving && (
+              <div className="w-3.5 h-3.5 rounded-full border-2 border-[#0ab5bd]/30 border-t-[#0ab5bd] animate-spin flex-shrink-0" />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StepPronto({ nome, cargo }: { nome: string; cargo: Cargo | null }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 text-center gap-6">
+      <div className="w-20 h-20 rounded-full bg-[#0ab5bd]/20 border-2 border-[#0ab5bd]/50 flex items-center justify-center text-4xl">
+        🎉
+      </div>
+      <div>
+        <h2 className="text-3xl font-bold text-white mb-2">
+          Pronto, {nome.split(" ")[0]}!
+        </h2>
+        <p className="text-gray-400">
+          {cargo
+            ? `Seu plano para ${cargo.nome} está pronto.`
+            : "Seu plano de estudos está pronto."}
+        </p>
+        <p className="text-sm text-gray-600 mt-1">Redirecionando para seu painel…</p>
+      </div>
+      <div className="flex gap-1 mt-2">
+        {[0, 1, 2].map(i => (
+          <div key={i} className="w-2 h-2 rounded-full bg-[#0ab5bd]/60 animate-bounce"
+            style={{ animationDelay: `${i * 0.15}s` }} />
+        ))}
+      </div>
+    </div>
   );
 }

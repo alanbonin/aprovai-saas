@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
-import { ChevronDown, Sun, Moon } from "lucide-react";
+import { ChevronDown, Sun, Moon, Menu, X } from "lucide-react";
 import { ProfileSwitcher } from "@/components/layout/profile-switcher";
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
@@ -118,6 +118,7 @@ const SECTIONS_ADMIN: NavSection[] = [
       { href: "/admin/questoes/reportes", label: "Reportes",    icon: "🚩" },
       { href: "/admin/flashcards",        label: "Flashcards",  icon: "🗂️" },
       { href: "/admin/materias",          label: "Matérias",    icon: "📚" },
+      { href: "/admin/topicos",           label: "Tópicos",     icon: "🏷️" },
       { href: "/admin/materiais",         label: "Materiais",   icon: "📄" },
       { href: "/admin/simulados",         label: "Simulados",   icon: "🎯" },
       { href: "/admin/editais",           label: "Editais",     icon: "📡" },
@@ -149,6 +150,158 @@ const SECTIONS_ADMIN: NavSection[] = [
 ];
 
 /* ── Subcomponente: seção recolhível ────────────────────────────────────── */
+/* ── Mobile Bottom Nav ──────────────────────────────────────────────────── */
+// 5 atalhos fixos + botão "Mais" que abre o menu completo
+const BOTTOM_NAV = [
+  { href: "/hoje",      label: "Hoje",      icon: "☀️" },
+  { href: "/workspace", label: "Estudar",   icon: "📚" },
+  { href: "/questoes",  label: "Questões",  icon: "📝" },
+  { href: "/simulado",  label: "Simulado",  icon: "🎯" },
+];
+
+function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobileOpen }: {
+  pathname: string;
+  sections: NavSection[];
+  unreadNotifs: number;
+  mobileOpen: boolean;
+  setMobileOpen: (v: boolean) => void;
+}) {
+  return (
+    <>
+      {/* Overlay do menu "Mais" */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm md:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sheet "Mais" — desliza de baixo */}
+      <div
+        className={cn(
+          "fixed bottom-16 left-0 right-0 z-[160] md:hidden transition-all duration-300 ease-out",
+          mobileOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+        )}
+        style={{ maxHeight: "70vh" }}
+      >
+        <div
+          className="mx-2 rounded-2xl overflow-hidden border border-white/10"
+          style={{ backgroundColor: "var(--bg-surface)" }}
+        >
+          {/* Handle */}
+          <div className="flex justify-center pt-3 pb-1">
+            <div className="w-10 h-1 rounded-full bg-white/20" />
+          </div>
+
+          {/* Seções do menu */}
+          <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: "calc(70vh - 40px)" }}>
+            {sections.map(section => (
+              <div key={section.id}>
+                <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-1.5"
+                  style={{ color: section.color + "99" }}>
+                  {section.title}
+                </p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {section.items.map(item => {
+                    const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
+                    const hasNotif = item.href === "/notificacoes" && unreadNotifs > 0;
+                    return (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setMobileOpen(false)}
+                        className={cn(
+                          "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-center transition-all relative",
+                          active
+                            ? "bg-indigo-600/25 border-indigo-500/40"
+                            : "bg-white/[0.03] border-white/8 hover:bg-white/8"
+                        )}
+                      >
+                        <span className="text-xl leading-none">{item.icon}</span>
+                        <span className={cn("text-[10px] font-medium leading-none", active ? "text-indigo-300" : "text-gray-400")}>
+                          {item.label}
+                        </span>
+                        {hasNotif && (
+                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Config + Sair */}
+            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/8">
+              <Link href="/configuracoes" onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
+                ⚙️ <span>Configurações</span>
+              </Link>
+              <form action="/api/auth/logout" method="POST">
+                <button type="submit"
+                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
+                  🚪 <span>Sair</span>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Barra inferior fixa ─────────────────────────────────── */}
+      <nav
+        className="fixed bottom-0 left-0 right-0 z-[140] md:hidden border-t border-white/10"
+        style={{
+          backgroundColor: "var(--bg-surface)",
+          paddingBottom: "env(safe-area-inset-bottom, 0px)", // suporte iPhone
+        }}
+      >
+        <div className="flex items-stretch h-16">
+          {BOTTOM_NAV.map(item => {
+            const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={cn(
+                  "flex-1 flex flex-col items-center justify-center gap-1 transition-all",
+                  active ? "text-[#0ab5bd]" : "text-gray-500 hover:text-gray-300"
+                )}
+              >
+                <span className={cn("text-xl leading-none transition-transform", active && "scale-110")}>
+                  {item.icon}
+                </span>
+                <span className={cn("text-[10px] font-medium", active ? "text-[#0ab5bd]" : "text-gray-600")}>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+
+          {/* Botão "Mais" */}
+          <button
+            onClick={() => setMobileOpen(!mobileOpen)}
+            className={cn(
+              "flex-1 flex flex-col items-center justify-center gap-1 transition-all relative",
+              mobileOpen ? "text-[#0ab5bd]" : "text-gray-500 hover:text-gray-300"
+            )}
+          >
+            <span className={cn("text-xl leading-none transition-transform", mobileOpen && "rotate-45")}>
+              {mobileOpen ? "✕" : "⋯"}
+            </span>
+            <span className={cn("text-[10px] font-medium", mobileOpen ? "text-[#0ab5bd]" : "text-gray-600")}>
+              Mais
+            </span>
+            {unreadNotifs > 0 && !mobileOpen && (
+              <div className="absolute top-2 right-5 w-2 h-2 rounded-full bg-red-500" />
+            )}
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}
+
 function SidebarSection({
   section, isAdmin, open, onToggle, pathname, unreadNotifs, isPremium,
 }: {
@@ -252,6 +405,10 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
   const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
+  const [mobileOpen, setMobileOpen] = useState(false);
+
+  // Fecha o menu ao navegar para outra página
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const sections = isAdmin ? SECTIONS_ADMIN : SECTIONS_STUDENT;
 
@@ -317,11 +474,20 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
   }
 
   return (
-    <aside className="flex flex-col w-56 min-h-screen border-r border-white/[0.06] flex-shrink-0" style={{ backgroundColor: "var(--bg-surface)" }}>
+    <>
+      {/* ── Sidebar — APENAS DESKTOP ─────────────────────────────── */}
+    <aside
+      className={cn(
+        "hidden md:flex flex-col w-56 flex-shrink-0",
+        "sticky top-0 h-screen",   // ← fixa na tela, não rola com o conteúdo
+        "border-r border-white/[0.06]"
+      )}
+      style={{ backgroundColor: "var(--bg-surface)" }}
+    >
 
       {/* ── Logo + Briefing do Dia ──────────────────────────────── */}
       <div className="px-4 py-4 border-b border-white/[0.06] flex-shrink-0 space-y-2">
-        <div className="flex items-center gap-3">
+        <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-icon.svg" alt="AprovAI360" className="w-9 h-9 flex-shrink-0" />
           <div className="min-w-0">
@@ -334,7 +500,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               {isAdmin ? "Painel Admin" : (planName ?? "Gratuito")}
             </p>
           </div>
-        </div>
+        </a>
 
         {/* Briefing do Dia — destaque fixo (só aluno) */}
         {!isAdmin && (
@@ -478,5 +644,17 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         </div>
       </div>
     </aside>
+
+      {/* ── Bottom Nav — APENAS MOBILE ───────────────────────────── */}
+      {!isAdmin && (
+        <MobileBottomNav
+          pathname={pathname}
+          sections={sections}
+          unreadNotifs={unreadNotifs}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+        />
+      )}
+    </>
   );
 }

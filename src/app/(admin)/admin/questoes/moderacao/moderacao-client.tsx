@@ -211,9 +211,6 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
                     <span className={cn("px-2 py-0.5 rounded-full text-xs border", LEVEL_COLOR[levelKey] ?? LEVEL_COLOR.medio)}>
                       {LEVEL_LABEL[levelKey] ?? q.level}
                     </span>
-                    <span className="px-2 py-0.5 rounded-full text-xs bg-white/5 border border-white/8 text-gray-600">
-                      {q.source ?? "ia"}
-                    </span>
                     <span className="text-xs text-gray-700 ml-auto whitespace-nowrap">
                       {new Date(q.createdAt).toLocaleDateString("pt-BR", {
                         day: "2-digit", month: "2-digit", year: "2-digit",

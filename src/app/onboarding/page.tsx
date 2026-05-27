@@ -11,19 +11,14 @@ export default async function OnboardingPage() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) redirect("/login");
 
-  // Admin → painel admin
-  if (dbUser.role === "ADMIN") redirect("/admin");
+  // Admin pode acessar /onboarding para preview (sem redirect)
+  // if (dbUser.role === "ADMIN") redirect("/admin");
 
   // Se qualquer perfil do usuário já tem onboarding feito → workspace
-  // Usa limit(1) em vez de maybeSingle() para não quebrar com múltiplos perfis
-  const { data: doneProfiles } = await db
-    .from("StudentProfile")
-    .select("id")
-    .eq("userId", dbUser.id)
-    .eq("onboardingDone", true)
-    .limit(1);
-
-  if (doneProfiles && doneProfiles.length > 0) redirect("/workspace");
+  // TEMPORARIAMENTE DESATIVADO para preview do novo wizard
+  // const { data: doneProfiles } = await db
+  //   .from("StudentProfile").select("id").eq("userId", dbUser.id).eq("onboardingDone", true).limit(1);
+  // if (doneProfiles && doneProfiles.length > 0) redirect("/workspace");
 
   // maxAgents do plano do aluno (Trial = 1, planos maiores = mais)
   const maxConcursos = (dbUser as { subscription?: { plan?: { maxAgents?: number } } })

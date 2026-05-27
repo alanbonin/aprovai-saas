@@ -53,7 +53,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         aiCreditsTotal={aiCreditsTotal}
         isPremium={isPremium}
       />
-      <main className="flex-1 min-w-0 overflow-auto" style={{ backgroundColor: "var(--bg-base)" }}>
+      {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
+      <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
     </div>

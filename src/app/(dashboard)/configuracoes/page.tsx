@@ -1,7 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Settings, Bell, User, Save, Check, Loader2, Smartphone } from "lucide-react";
+import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { MeuPlanoSection } from "@/components/configuracoes/meu-plano-section";
+
+type Tab = "perfil" | "plano" | "notificacoes";
 
 interface Prefs {
   emailQuestaoDodia: boolean;
@@ -46,6 +49,7 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
 }
 
 export default function ConfiguracoesPage() {
+  const [tab, setTab] = useState<Tab>("plano");
   const [config, setConfig] = useState<Config | null>(null);
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
@@ -145,36 +149,60 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <Settings className="w-6 h-6 text-indigo-400" />
-          <div>
-            <h1 className="text-2xl font-bold">Configurações</h1>
-            <p className="text-gray-500 text-sm">Personalize sua experiência de estudo</p>
-          </div>
+      <div className="flex items-center gap-3 mb-6">
+        <Settings className="w-6 h-6 text-indigo-400" />
+        <div>
+          <h1 className="text-2xl font-bold">Configurações</h1>
+          <p className="text-gray-500 text-sm">Personalize sua experiência de estudo</p>
         </div>
-        <button
-          onClick={save}
-          disabled={saving}
-          className={cn(
-            "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
-            saved
-              ? "bg-green-600 text-white"
-              : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
-          )}
-        >
-          {saving
-            ? <Loader2 className="w-4 h-4 animate-spin" />
-            : saved
-            ? <Check className="w-4 h-4" />
-            : <Save className="w-4 h-4" />}
-          {saved ? "Salvo!" : "Salvar"}
-        </button>
       </div>
 
-      <div className="space-y-6">
-        {/* Perfil */}
-        <section className="rounded-2xl bg-white/3 border border-white/10 overflow-hidden">
+      {/* Tabs */}
+      <div className="flex gap-1 mb-6 p-1 rounded-xl bg-white/[0.04] border border-white/8 w-fit">
+        {([
+          { id: "plano" as Tab,         label: "Meu Plano",        icon: <Target className="w-3.5 h-3.5" /> },
+          { id: "perfil" as Tab,        label: "Perfil",           icon: <User className="w-3.5 h-3.5" /> },
+          { id: "notificacoes" as Tab,  label: "Notificações",     icon: <Bell className="w-3.5 h-3.5" /> },
+        ] as const).map(t => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id)}
+            className={cn(
+              "flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+              tab === t.id
+                ? "bg-[#0ab5bd] text-black"
+                : "text-gray-400 hover:text-white hover:bg-white/5"
+            )}
+          >
+            {t.icon}{t.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── ABA: MEU PLANO ──────────────────────────────────────────────────── */}
+      {tab === "plano" && <MeuPlanoSection />}
+
+      {/* ── ABA: PERFIL + NOTIFICAÇÕES ──────────────────────────────────────── */}
+      {(tab === "perfil" || tab === "notificacoes") && <div className="space-y-6">
+        {/* Perfil (só na aba perfil) */}
+        {tab === "perfil" && (
+          <div className="flex justify-end">
+            <button
+              onClick={save}
+              disabled={saving}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all",
+                saved ? "bg-green-600 text-white" : "bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
+              )}
+            >
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {saved ? "Salvo!" : "Salvar"}
+            </button>
+          </div>
+        )}
+      {/* Perfil */}
+      {tab === "perfil" &&
+        <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5 bg-white/2">
             <User className="w-4 h-4 text-indigo-400" />
             <h2 className="text-sm font-semibold">Perfil</h2>
@@ -238,10 +266,10 @@ export default function ConfiguracoesPage() {
               />
             </div>
           </div>
-        </section>
+        </section>}
 
         {/* Notificações por email */}
-        <section className="rounded-2xl bg-white/3 border border-white/10 overflow-hidden">
+        {tab === "notificacoes" && <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
           <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5 bg-white/2">
             <Bell className="w-4 h-4 text-indigo-400" />
             <div>
@@ -263,11 +291,11 @@ export default function ConfiguracoesPage() {
               </div>
             ))}
           </div>
-        </section>
+        </section>}
 
         {/* Push notifications */}
-        {pushSupported && (
-          <section className="rounded-2xl bg-white/3 border border-white/10 overflow-hidden">
+        {tab === "notificacoes" && pushSupported && (
+          <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
             <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5 bg-white/2">
               <Smartphone className="w-4 h-4 text-indigo-400" />
               <div>
@@ -309,19 +337,21 @@ export default function ConfiguracoesPage() {
         )}
 
         {/* Danger zone */}
-        <section className="rounded-2xl bg-red-500/5 border border-red-500/20 p-5">
-          <h2 className="text-sm font-semibold text-red-400 mb-3">Zona de perigo</h2>
-          <p className="text-xs text-gray-500 mb-3">
-            Para cancelar sua assinatura ou excluir sua conta, entre em contato com o suporte.
-          </p>
-          <a
-            href="mailto:suporte@aprovai.com.br?subject=Cancelamento+de+conta"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 transition-colors"
-          >
-            Contatar suporte
-          </a>
-        </section>
-      </div>
+        {tab === "perfil" && (
+          <section className="rounded-2xl bg-red-500/5 border border-red-500/20 p-5">
+            <h2 className="text-sm font-semibold text-red-400 mb-3">Zona de perigo</h2>
+            <p className="text-xs text-gray-500 mb-3">
+              Para cancelar sua assinatura ou excluir sua conta, entre em contato com o suporte.
+            </p>
+            <a
+              href="mailto:suporte@aprovai.com.br?subject=Cancelamento+de+conta"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 transition-colors"
+            >
+              Contatar suporte
+            </a>
+          </section>
+        )}
+      </div>}
     </div>
   );
 }
