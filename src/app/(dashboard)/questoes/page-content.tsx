@@ -392,17 +392,6 @@ export function QuestoesInner() {
               </select>
             </div>
             <div className="flex-1 min-w-36">
-              <label className="text-xs text-gray-500 mb-1 block">Banca</label>
-              <select
-                value={filterBanca}
-                onChange={e => setFilterBanca(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="">Todas</option>
-                {BANCAS.map(b => <option key={b} value={b}>{b}</option>)}
-              </select>
-            </div>
-            <div className="flex-1 min-w-36">
               <label className="text-xs text-gray-500 mb-1 block">Nível</label>
               <select
                 value={filterLevel}
@@ -411,19 +400,6 @@ export function QuestoesInner() {
               >
                 <option value="">Todos</option>
                 {LEVELS.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
-              </select>
-            </div>
-            <div className="flex-1 min-w-36">
-              <label className="text-xs text-gray-500 mb-1 block">Ano</label>
-              <select
-                value={filterYear}
-                onChange={e => setFilterYear(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
-              >
-                <option value="">Todos</option>
-                {Array.from({ length: 12 }, (_, i) => 2025 - i).map(y => (
-                  <option key={y} value={y}>{y}</option>
-                ))}
               </select>
             </div>
           </div>
@@ -461,11 +437,6 @@ export function QuestoesInner() {
         <div className="mb-5">
           <div className="flex justify-between text-xs text-gray-500 mb-1.5">
             <span>Questão {current + 1} de {questions.length}</span>
-            {q?.banca && (
-              <span className="text-indigo-400">
-                {q.banca}{q.year ? ` · ${q.year}` : ""}
-              </span>
-            )}
           </div>
           <div className="h-1.5 rounded-full bg-white/10">
             <div
