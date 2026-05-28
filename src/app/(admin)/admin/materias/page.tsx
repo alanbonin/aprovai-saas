@@ -11,16 +11,16 @@ interface SubjectStats {
 }
 
 export default async function MateriasAdminPage() {
-  const [{ data: subjects, count }, questoesPorMateria, progressData] = await Promise.all([
+  const [{ data: subjects, count }, questoesCounts, progressData] = await Promise.all([
     db.from("Subject").select("*", { count: "exact" }).order("categoria").order("ordem"),
-    db.from("Question").select("subjectId"),
-    db.from("Progress").select("userId, questionId, correct, Question:questionId(subjectId)"),
+    db.rpc("get_question_counts_by_subject"),
+    db.from("Progress").select("userId, questionId, correct, Question:questionId(subjectId)").limit(5000),
   ]);
 
-  // Mapa subjectId → nº questões
+  // Mapa subjectId → nº questões (via RPC para evitar limite 1000 linhas)
   const qMap: Record<string, number> = {};
-  for (const q of questoesPorMateria.data ?? []) {
-    if (q.subjectId) qMap[q.subjectId] = (qMap[q.subjectId] ?? 0) + 1;
+  for (const row of (questoesCounts.data ?? []) as { subject_id: string; question_count: number }[]) {
+    if (row.subject_id) qMap[row.subject_id] = Number(row.question_count);
   }
 
   // Calcula stats por matéria a partir do progresso
