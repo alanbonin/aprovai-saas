@@ -79,6 +79,14 @@ export function DesafioSemanalInner() {
         );
         return { ...prev, questions: qs, answeredCount: upd.answeredCount, completed: upd.completed, score: upd.score };
       });
+      // Se errou, salva no caderno de erros via SM-2
+      if (opt !== q.answer) {
+        fetch("/api/questoes/progresso", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ questionId: q.id, correct: false, quality: 0 }),
+        }).catch(() => {});
+      }
     }
     setSubmitting(false);
   }

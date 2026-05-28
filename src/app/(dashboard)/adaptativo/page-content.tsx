@@ -30,7 +30,6 @@ interface AdaptResponse {
 type Quality = "again" | "hard" | "good" | "easy";
 
 const QUALITY_BTNS: { q: Quality; label: string; color: string }[] = [
-  { q: "again", label: "Errei",   color: "bg-red-600 hover:bg-red-700" },
   { q: "hard",  label: "Difícil", color: "bg-amber-600 hover:bg-amber-700" },
   { q: "good",  label: "Entendi", color: "bg-blue-600 hover:bg-blue-700" },
   { q: "easy",  label: "Dominei", color: "bg-green-600 hover:bg-green-700" },
@@ -75,10 +74,10 @@ export function AdaptativoInner() {
 
   useEffect(() => { load(); }, [load]);
 
-  async function handleQuality(q: Quality) {
+  async function handleQuality(q: Quality, forceCorrect?: boolean) {
     if (!data) return;
     const questao = data.questoes[idx];
-    const isCorrect = selected === questao.answer || q === "good" || q === "easy";
+    const isCorrect = forceCorrect ?? (selected === questao.answer || q === "good" || q === "easy");
 
     if (isCorrect) {
       setXpFlash(true);
@@ -246,6 +245,10 @@ export function AdaptativoInner() {
                     if (revealed) return;
                     setSelected(letter);
                     setRevealed(true);
+                    if (letter !== questao.answer) {
+                      // Errou — salva automaticamente e avança após breve delay
+                      setTimeout(() => handleQuality("again", false), 1500);
+                    }
                   }}
                   className={cn("w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all text-sm", cls)}
                 >
@@ -274,17 +277,19 @@ export function AdaptativoInner() {
                     <Zap className="w-4 h-4" /> +2 XP
                   </div>
                 )}
-                <div className="flex gap-2 flex-wrap">
-                  <span className="text-xs text-gray-500 w-full mb-1 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Como foi?
-                  </span>
-                  {QUALITY_BTNS.map(btn => (
-                    <button key={btn.q} onClick={() => handleQuality(btn.q)}
-                      className={cn("flex-1 min-w-[70px] py-2 rounded-xl text-white text-xs font-bold transition-all", btn.color)}>
-                      {btn.label}
-                    </button>
-                  ))}
-                </div>
+                {selected === questao.answer && (
+                  <div className="flex gap-2 flex-wrap">
+                    <span className="text-xs text-gray-500 w-full mb-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Como foi?
+                    </span>
+                    {QUALITY_BTNS.map(btn => (
+                      <button key={btn.q} onClick={() => handleQuality(btn.q)}
+                        className={cn("flex-1 min-w-[70px] py-2 rounded-xl text-white text-xs font-bold transition-all", btn.color)}>
+                        {btn.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}

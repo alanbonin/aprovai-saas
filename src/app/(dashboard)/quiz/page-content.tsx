@@ -110,6 +110,12 @@ export function QuizInner() {
     const xp = calcXp(isCorrect, used);
     setSelected(opt ?? "");
     setResults(prev => [...prev, { correct: isCorrect, xp, time: used }]);
+    // Salva no SM-2 / caderno de erros
+    fetch("/api/questoes/progresso", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: isCorrect ? 3 : 0 }),
+    }).catch(() => {});
   }
 
   function nextQuestion() {

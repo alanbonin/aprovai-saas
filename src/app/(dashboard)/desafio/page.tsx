@@ -39,9 +39,8 @@ interface ChallengeData {
 }
 
 const QUALITY_OPTS = [
-  { id: "errei",   label: "Errei",   style: "border-red-500/50 bg-red-500/10 text-red-400" },
   { id: "dificil", label: "Difícil", style: "border-amber-500/50 bg-amber-500/10 text-amber-400" },
-  { id: "ok",      label: "OK",      style: "border-blue-500/50 bg-blue-500/10 text-blue-400" },
+  { id: "ok",      label: "Boa!",    style: "border-blue-500/50 bg-blue-500/10 text-blue-400" },
   { id: "facil",   label: "Fácil",   style: "border-green-500/50 bg-green-500/10 text-green-400" },
 ];
 
@@ -146,6 +145,17 @@ export default function DesafioPage() {
     const isCorrect = key === q.answer;
     if (isCorrect) score.current += 1;
     answers.current.push({ questionId: q.id, correct: isCorrect });
+
+    if (!isCorrect) {
+      // Auto-save como erro no caderno de erros e avança automaticamente
+      fetch("/api/questoes/progresso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: q.id, correct: false, quality: "errei" }),
+      }).catch(() => {});
+      setQuality("__auto__");
+      setTimeout(next, 1500);
+    }
   }
 
   async function handleQuality(qual: string) {
@@ -472,10 +482,10 @@ export default function DesafioPage() {
                 <strong className="text-gray-400">Explicação: </strong>{q.explanation}
               </div>
             )}
-            {!quality && (
+            {!quality && selected === q.answer && (
               <div>
                 <p className="text-xs text-gray-500 mb-2">Como foi?</p>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   {QUALITY_OPTS.map(o => (
                     <button key={o.id} onClick={() => handleQuality(o.id)}
                       className={cn("py-2 rounded-lg border text-xs font-medium transition-colors", o.style)}>

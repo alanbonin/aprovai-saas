@@ -40,9 +40,8 @@ const LEVELS = [
 ];
 
 const QUALITY_OPTS = [
-  { id: "errei",   label: "Errei",   color: "border-red-500/60 bg-red-500/10 text-red-400 hover:bg-red-500/20" },
   { id: "dificil", label: "Difícil", color: "border-amber-500/60 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20" },
-  { id: "ok",      label: "OK",      color: "border-blue-500/60 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" },
+  { id: "ok",      label: "Boa!",    color: "border-blue-500/60 bg-blue-500/10 text-blue-400 hover:bg-blue-500/20" },
   { id: "facil",   label: "Fácil",   color: "border-green-500/60 bg-green-500/10 text-green-400 hover:bg-green-500/20" },
 ];
 
@@ -157,7 +156,7 @@ export function QuestoesInner() {
     setSelected(key);
     setShowResult(true); // abre explicação automaticamente
     setActiveTermo(null); // fecha glossário aberto
-    const isCorrect = key === q.answer;
+    const isCorrect = key === q!.answer;
     setScore(s => ({
       correct: s.correct + (isCorrect ? 1 : 0),
       total: s.total + 1,
@@ -166,6 +165,15 @@ export function QuestoesInner() {
     if (isCorrect) {
       setXpFlash(f => f + 1);
       setTimeout(() => setXpFlash(f => f - 1), 1500);
+    } else {
+      // Auto-salva como erro no caderno de erros e avança automaticamente
+      fetch("/api/questoes/progresso", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: q!.id, correct: false, quality: "errei" }),
+      }).catch(() => {});
+      setQuality("__auto__");
+      setTimeout(next, 1500);
     }
   }
 
@@ -576,11 +584,11 @@ export function QuestoesInner() {
                 </div>
               )}
 
-              {/* SM-2 quality rating */}
-              {!quality && (
+              {/* SM-2 quality rating — só para acertos */}
+              {!quality && selected === q?.answer && (
                 <div>
-                  <p className="text-xs text-gray-500 mb-2">Como foi essa questão para você?</p>
-                  <div className="grid grid-cols-4 gap-2">
+                  <p className="text-xs text-gray-500 mb-2">Como foi?</p>
+                  <div className="grid grid-cols-3 gap-2">
                     {QUALITY_OPTS.map(opt => (
                       <button
                         key={opt.id}
