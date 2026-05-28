@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import { MateriasAdmin } from "./materias-client";
 import { CATEGORIAS } from "@/lib/agents";
 
+export const dynamic = "force-dynamic";
+
 interface SubjectStats {
   totalQuestoes: number;
   totalRespostas: number;

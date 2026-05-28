@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { TopicosAdmin } from "./topicos-client";
 
+export const dynamic = "force-dynamic";
+
 export default async function TopicosAdminPage() {
   const [{ data: subjects }, { data: topics, count }] = await Promise.all([
     db.from("Subject").select("id, name, slug, categoria").order("categoria").order("name"),
