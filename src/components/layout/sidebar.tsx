@@ -25,6 +25,7 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰" },
       { href: "/caso",          label: "Casos",            icon: "🔍" },
       { href: "/redacao",       label: "Redação",          icon: "✍️" },
+      { href: "/flashcards",    label: "Flashcards",       icon: "🗂️" },
     ],
   },
   {
@@ -43,7 +44,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/revisao",        label: "Revisão SM-2",    icon: "🔄" },
       { href: "/agenda-revisoes",label: "Agenda SM-2",     icon: "📆" },
       { href: "/caderno-erros",  label: "Caderno de Erros",icon: "📒" },
-      { href: "/flashcards",     label: "Flashcards",      icon: "🗂️" },
       { href: "/favoritos",      label: "Favoritos",       icon: "⭐" },
     ],
   },

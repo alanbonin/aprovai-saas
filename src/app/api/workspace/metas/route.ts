@@ -10,10 +10,12 @@ interface MetasSemana {
   flashcardsMeta: number;    // flashcards/semana
   simuladosMeta: number;     // simulados/semana
   horasEstudoMeta: number;   // horas/semana (via Pomodoro)
+  casosMeta: number;         // estudos de caso/semana
+  redacaoMeta: number;       // redações/semana
 }
 
 async function getMetas(userId: string): Promise<MetasSemana> {
-  const defaults: MetasSemana = { questoesMeta: 50, flashcardsMeta: 30, simuladosMeta: 1, horasEstudoMeta: 10 };
+  const defaults: MetasSemana = { questoesMeta: 50, flashcardsMeta: 30, simuladosMeta: 1, horasEstudoMeta: 10, casosMeta: 2, redacaoMeta: 1 };
   const { data } = await db.from("Note").select("content").eq("userId", userId).eq("subjectId", PREFIX).single();
   try { return data?.content ? { ...defaults, ...JSON.parse(data.content) } : defaults; }
   catch { return defaults; }
@@ -70,6 +72,20 @@ export async function GET() {
     .eq("userId", dbUser.id)
     .gte("createdAt", startIso).lte("createdAt", endIso) as unknown as { count: number };
 
+  // Estudos de caso feitos nessa semana (via Note com prefix de caso)
+  const { count: casosCount } = await db.from("Note")
+    .select("id", { count: "exact", head: true })
+    .eq("userId", dbUser.id)
+    .like("subjectId", "__CASO__%")
+    .gte("createdAt", startIso).lte("createdAt", endIso) as unknown as { count: number };
+
+  // Redações feitas nessa semana (via Note com prefix de redação)
+  const { count: redacaoCount } = await db.from("Note")
+    .select("id", { count: "exact", head: true })
+    .eq("userId", dbUser.id)
+    .like("subjectId", "__REDACAO__%")
+    .gte("createdAt", startIso).lte("createdAt", endIso) as unknown as { count: number };
+
   // Horas de estudo via sessões Pomodoro desta semana
   const { data: pomodoroNotes } = await db
     .from("Note")
@@ -94,6 +110,8 @@ export async function GET() {
       flashcards:  flashcardsCount,
       simulados:   simCount ?? 0,
       horasEstudo,
+      casos:       casosCount ?? 0,
+      redacao:     redacaoCount ?? 0,
     },
     semanaInicio: startIso,
   });

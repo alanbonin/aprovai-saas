@@ -293,8 +293,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
   const [celebrate, setCelebrate] = useState<{ msg: string } | null>(null);
   const [upgradeModal, setUpgradeModal] = useState<string | null>(null); // nome do recurso bloqueado
   const [metas, setMetas] = useState<{
-    metas: { questoesMeta: number; flashcardsMeta: number; simuladosMeta: number };
-    progresso: { questoes: number; flashcards: number; simulados: number };
+    metas: { questoesMeta: number; flashcardsMeta: number; simuladosMeta: number; casosMeta: number; redacaoMeta: number };
+    progresso: { questoes: number; flashcards: number; simulados: number; casos: number; redacao: number };
   } | null>(null);
   const [editingMetas, setEditingMetas] = useState(false);
   const [simuladoHistory, setSimuladoHistory] = useState<{ id: number; total: number; correct: number; timeSecs: number; createdAt: string }[]>([]);
@@ -676,6 +676,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         { key: "questoesMeta" as const, label: "Questões/semana", icon: "🎯", max: 200 },
                         { key: "flashcardsMeta" as const, label: "Flashcards/semana", icon: "🃏", max: 100 },
                         { key: "simuladosMeta" as const, label: "Simulados/semana", icon: "📋", max: 5 },
+                        { key: "casosMeta" as const, label: "Casos/semana", icon: "🔍", max: 20 },
+                        { key: "redacaoMeta" as const, label: "Redações/semana", icon: "✍️", max: 10 },
                       ]).map(({ key, label, icon, max }) => (
                         <div key={key} className="flex items-center gap-3">
                           <span className="text-sm w-5">{icon}</span>
@@ -702,6 +704,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         { label: "Questões", done: metas.progresso.questoes, meta: metas.metas.questoesMeta, color: "#6366f1" },
                         { label: "Flashcards", done: metas.progresso.flashcards, meta: metas.metas.flashcardsMeta, color: "#10b981" },
                         { label: "Simulados", done: metas.progresso.simulados, meta: metas.metas.simuladosMeta, color: "#f59e0b" },
+                        { label: "Casos", done: metas.progresso.casos ?? 0, meta: metas.metas.casosMeta ?? 2, color: "#06b6d4" },
+                        { label: "Redação", done: metas.progresso.redacao ?? 0, meta: metas.metas.redacaoMeta ?? 1, color: "#ec4899" },
                       ]).map(({ label, done, meta, color }) => {
                         const pct = Math.min(100, Math.round((done / meta) * 100));
                         const done_ = pct >= 100;

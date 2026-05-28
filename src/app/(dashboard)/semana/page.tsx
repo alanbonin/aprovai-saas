@@ -148,11 +148,11 @@ export default function BriefingSemanaPage() {
 
   async function load(forceRefresh = false) {
     if (forceRefresh) setRefreshing(true);
+    // Sempre GET — o digest é compartilhado com Briefing do Dia (cache 6h)
+    // POST forçaria nova geração IA e criaria texto diferente do Briefing do Dia
     const [metasRes, digestRes] = await Promise.all([
       fetch("/api/workspace/metas"),
-      fetch(forceRefresh ? "/api/relatorio/semanal" : "/api/relatorio/semanal", {
-        method: forceRefresh ? "POST" : "GET",
-      }),
+      fetch("/api/relatorio/semanal", { method: "GET" }),
     ]);
     if (metasRes.ok) setMetas(await metasRes.json());
     if (digestRes.ok) {
