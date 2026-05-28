@@ -4,13 +4,11 @@ import { TopicosAdmin } from "./topicos-client";
 export const dynamic = "force-dynamic";
 
 export default async function TopicosAdminPage() {
-  const [{ data: subjects }, { data: topics, count }] = await Promise.all([
+  const [{ data: subjects }, { data: topics, count }, { data: questoesCounts }] = await Promise.all([
     db.from("Subject").select("id, name, slug, categoria").order("categoria").order("name"),
-    db.from("Topic").select("*", { count: "exact" }).order("subjectId").order("ordem"),
+    db.from("Topic").select("*", { count: "exact" }).order("subjectId").order("ordem").range(0, 9999),
+    db.rpc("get_question_counts_by_topic"),
   ]);
-
-  // Questões por tópico — via função SQL para evitar limite de 1000 linhas do Supabase
-  const { data: questoesCounts } = await db.rpc("get_question_counts_by_topic");
 
   const qPorTopico: Record<string, number> = {};
   for (const row of (questoesCounts ?? []) as { topic_id: string; question_count: number }[]) {
