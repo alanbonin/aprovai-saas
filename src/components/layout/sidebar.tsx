@@ -23,6 +23,8 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/questoes",      label: "Questões",         icon: "📝" },
       { href: "/adaptativo",    label: "Adaptativo",       icon: "🧠" },
       { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰" },
+      { href: "/caso",          label: "Casos",            icon: "🔍" },
+      { href: "/redacao",       label: "Redação",          icon: "✍️" },
     ],
   },
   {
@@ -51,8 +53,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/mentor",    label: "Mentores",    icon: "🎓" },
       { href: "/glossario", label: "Glossário IA",icon: "📖" },
       { href: "/artigos",   label: "Artigos IA",  icon: "📜" },
-      { href: "/caso",      label: "Casos",       icon: "🔍" },
-      { href: "/redacao",   label: "Redação",     icon: "✍️" },
     ],
   },
   {
