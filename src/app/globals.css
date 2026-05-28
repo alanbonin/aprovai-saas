@@ -177,3 +177,78 @@ html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
   color: rgba(255,255,255,0.45) !important;
   -webkit-text-fill-color: rgba(255,255,255,0.45) !important;
 }
+
+/* ── force-dark-theme: páginas com fundo escuro fixo (onboarding, dashboard hero, etc)
+      Reverte as inversões de cor do modo claro dentro dessas áreas ──────────── */
+html.light .force-dark-theme .text-white,
+html.light .force-dark-theme .text-gray-50,
+html.light .force-dark-theme .text-gray-100,
+html.light .force-dark-theme .text-slate-50,
+html.light .force-dark-theme .text-slate-100     { color: #ffffff !important; }
+
+html.light .force-dark-theme .text-gray-200,
+html.light .force-dark-theme .text-gray-300,
+html.light .force-dark-theme .text-slate-200,
+html.light .force-dark-theme .text-slate-300     { color: #e2e8f0 !important; }
+
+html.light .force-dark-theme .text-gray-400,
+html.light .force-dark-theme .text-slate-400     { color: #94a3b8 !important; }
+
+html.light .force-dark-theme .text-gray-500,
+html.light .force-dark-theme .text-slate-500     { color: #64748b !important; }
+
+html.light .force-dark-theme .text-gray-600,
+html.light .force-dark-theme .text-slate-600     { color: #475569 !important; }
+
+/* Backgrounds com opacidade — restaura versão dark */
+html.light .force-dark-theme .bg-white\/\[0\.02\],
+html.light .force-dark-theme .bg-white\/\[0\.03\],
+html.light .force-dark-theme .bg-white\/\[0\.04\],
+html.light .force-dark-theme .bg-white\/\[0\.05\],
+html.light .force-dark-theme .bg-white\/2,
+html.light .force-dark-theme .bg-white\/3         { background-color: rgba(255,255,255,0.03) !important; }
+html.light .force-dark-theme .bg-white\/5,
+html.light .force-dark-theme .bg-white\/\[0\.05\] { background-color: rgba(255,255,255,0.05) !important; }
+html.light .force-dark-theme .bg-white\/8         { background-color: rgba(255,255,255,0.08) !important; }
+html.light .force-dark-theme .bg-white\/10        { background-color: rgba(255,255,255,0.10) !important; }
+html.light .force-dark-theme .bg-white\/20        { background-color: rgba(255,255,255,0.20) !important; }
+
+/* Bordas com opacidade — restaura versão dark */
+html.light .force-dark-theme .border-white\/\[0\.04\],
+html.light .force-dark-theme .border-white\/\[0\.05\],
+html.light .force-dark-theme .border-white\/\[0\.06\],
+html.light .force-dark-theme .border-white\/\[0\.07\],
+html.light .force-dark-theme .border-white\/\[0\.08\],
+html.light .force-dark-theme .border-white\/\[0\.09\],
+html.light .force-dark-theme .border-white\/\[0\.10\],
+html.light .force-dark-theme .border-white\/5,
+html.light .force-dark-theme .border-white\/6,
+html.light .force-dark-theme .border-white\/7,
+html.light .force-dark-theme .border-white\/8,
+html.light .force-dark-theme .border-white\/10   { border-color: rgba(255,255,255,0.10) !important; }
+
+/* Inputs dentro de área dark */
+html.light .force-dark-theme input,
+html.light .force-dark-theme textarea,
+html.light .force-dark-theme select {
+  background-color: rgba(255,255,255,0.06) !important;
+  color: #ffffff !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+html.light .force-dark-theme ::placeholder { color: rgba(255,255,255,0.35) !important; }
+
+/* Botões e chips com bg escuro hardcoded */
+html.light .force-dark-theme .bg-\[\#080c18\],
+html.light .force-dark-theme .bg-\[\#0a0d14\],
+html.light .force-dark-theme .bg-\[\#0d1117\],
+html.light .force-dark-theme .bg-\[\#0f1117\],
+html.light .force-dark-theme .bg-\[\#0a0a0a\],
+html.light .force-dark-theme .bg-\[\#060914\] {
+  background-color: rgba(255,255,255,0.06) !important;
+}
+html.light .force-dark-theme .bg-\[\#1a1f2e\],
+html.light .force-dark-theme .bg-\[\#111827\],
+html.light .force-dark-theme .bg-\[\#0f172a\],
+html.light .force-dark-theme .bg-\[\#1e2433\] {
+  background-color: rgba(255,255,255,0.04) !important;
+}

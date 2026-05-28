@@ -236,7 +236,7 @@ export function OnboardingClient({ userId, userName }: Props) {
   }, [step]);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-10"
+    <div className="force-dark-theme min-h-screen flex flex-col items-center justify-center px-4 py-10"
       style={{ background: "radial-gradient(ellipse at 20% 20%, rgba(10,181,189,0.08) 0%, transparent 60%), #0a0d12" }}>
 
       <div className="w-full max-w-2xl">
