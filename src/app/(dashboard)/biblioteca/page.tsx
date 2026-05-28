@@ -11,7 +11,7 @@ const PdfViewer = dynamic(
   { ssr: false, loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-indigo-400" /></div> }
 );
 
-interface Subject { id: string; name: string; categoria: string }
+interface Subject { id: string; name: string; ids?: string[] }
 interface Doc {
   id: string; title: string; description?: string;
   subjectId?: string; topicId?: string;
@@ -36,15 +36,15 @@ export default function BibliotecaPage() {
   const [urlExpired, setUrlExpired]           = useState(false);
 
   useEffect(() => {
-    // Busca matérias e email do usuário
+    // Busca matérias matriculadas do aluno + email do usuário
     Promise.all([
       fetch("/api/biblioteca").then(r => r.json()),
       fetch("/api/configuracoes").then(r => r.json()),
-      fetch("/api/admin/subjects-list").then(r => r.json()).catch(() => []),
-    ]).then(([docsData, user, subjectsData]) => {
+      fetch("/api/workspace/materias").then(r => r.json()).catch(() => ({ subjects: [] })),
+    ]).then(([docsData, user, materiasData]) => {
       setDocs(Array.isArray(docsData) ? docsData : []);
       setUserEmail(user?.email ?? "");
-      setSubjects(Array.isArray(subjectsData) ? subjectsData : []);
+      setSubjects(materiasData?.subjects ?? []);
       setLoading(false);
     });
   }, []);
@@ -52,11 +52,19 @@ export default function BibliotecaPage() {
   const fetchDocs = useCallback(() => {
     const params = new URLSearchParams();
     if (search) params.set("q", search);
-    if (selectedSubject) params.set("subjectId", selectedSubject);
+    if (selectedSubject) {
+      // Suporta matérias com múltiplos IDs (cross-categoria)
+      const sub = subjects.find(s => s.id === selectedSubject);
+      if (sub?.ids && sub.ids.length > 1) {
+        params.set("subjectIds", sub.ids.join(","));
+      } else {
+        params.set("subjectId", selectedSubject);
+      }
+    }
     fetch(`/api/biblioteca?${params}`).then(r => r.json()).then(d => {
       setDocs(Array.isArray(d) ? d : []);
     });
-  }, [search, selectedSubject]);
+  }, [search, selectedSubject, subjects]);
 
   useEffect(() => {
     const t = setTimeout(fetchDocs, 300);
@@ -96,12 +104,7 @@ export default function BibliotecaPage() {
     setLoadingPdf(false);
   }
 
-  const grouped = subjects.reduce<Record<string, Subject[]>>((acc, s) => {
-    const cat = s.categoria ?? "Outros";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(s);
-    return acc;
-  }, {});
+  // subjects já vêm ordenados alfabeticamente de /api/workspace/materias
 
   return (
     <div className="flex h-[calc(100vh-64px)] overflow-hidden">
@@ -141,22 +144,22 @@ export default function BibliotecaPage() {
             Todas as matérias
           </button>
 
-          {Object.entries(grouped).map(([cat, subs]) => (
-            <div key={cat} className="mb-3">
-              <p className="text-[10px] font-bold text-gray-600 uppercase tracking-wider px-3 py-1">{cat}</p>
-              {subs.map(s => (
-                <button
-                  key={s.id}
-                  onClick={() => setSelectedSubject(s.id === selectedSubject ? "" : s.id)}
-                  className={cn(
-                    "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors",
-                    selectedSubject === s.id ? "bg-indigo-600/20 text-indigo-300" : "text-gray-400 hover:bg-white/5 hover:text-white"
-                  )}
-                >
-                  {s.name}
-                </button>
-              ))}
-            </div>
+          {subjects.length === 0 && !loading && (
+            <p className="text-xs text-gray-600 px-3 py-2">
+              Adicione matérias em Estudar para filtrar aqui.
+            </p>
+          )}
+          {subjects.map(s => (
+            <button
+              key={s.id}
+              onClick={() => setSelectedSubject(s.id === selectedSubject ? "" : s.id)}
+              className={cn(
+                "w-full text-left px-3 py-1.5 rounded-lg text-xs transition-colors",
+                selectedSubject === s.id ? "bg-indigo-600/20 text-indigo-300" : "text-gray-400 hover:bg-white/5 hover:text-white"
+              )}
+            >
+              {s.name}
+            </button>
           ))}
         </div>
       </aside>
