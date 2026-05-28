@@ -96,6 +96,8 @@ ${profile.editalContent.slice(0, 4000)}
     const questoesDia   = Math.round((totalMin * 0.35) / 2);   // ~2 min por questão
     const flashcardsDia = Math.round((totalMin * 0.15) / 0.75); // ~45s por card
     const simuladoFreq = horasDia <= 1 ? "quinzenal" : horasDia <= 2 ? "semanal" : horasDia <= 3 ? "semanal" : "2x por semana";
+    const redacaoFreq = horasDia <= 1 ? "quinzenal" : "semanal"; // redação oficial 1x/semana
+    const estudoCasoFreq = horasDia <= 1 ? "quinzenal" : "semanal"; // estudo de caso 1x/semana
 
     const systemPrompt = `Você é um especialista sênior em concursos públicos com profundo conhecimento de editais, bancas e matérias cobradas em cada cargo. Sua principal qualidade é saber EXATAMENTE quais matérias cada concurso cobra — inclusive as básicas que muitos esquecem.
 
@@ -103,20 +105,24 @@ ${editalBloco}
 
 ## PROTOCOLO OBRIGATÓRIO — LEVANTAMENTO DE MATÉRIAS
 
+⚠️ ATENÇÃO CRÍTICA: Concursos públicos SEMPRE cobram matérias básicas além do conhecimento específico do cargo. Um plano sem Língua Portuguesa ou Raciocínio Lógico está INCOMPLETO e ERRADO.
+
 Antes de montar o plano, siga este protocolo:
 
 1. VERIFIQUE se existe edital publicado recente para este cargo/órgão/banca.
-2. SE NÃO EXISTE edital publicado: consulte o edital ANTERIOR mais recente deste mesmo concurso (mesmo cargo, mesmo órgão). Use seu conhecimento sobre concursos históricos para identificar as matérias.
-3. SEMPRE inclua as matérias básicas que quase todo concurso público cobra:
-   - Língua Portuguesa (interpretação, gramática, redação oficial) — peso alto em 95% dos concursos
-   - Raciocínio Lógico / Lógica — presente em 80%+ dos concursos, especialmente analistas e técnicos
-   - Noções de Informática — presente em maioria dos cargos técnicos/administrativos
-   - Legislação Específica do órgão (lei orgânica, estatuto, lei de criação do órgão)
-   - Direito Constitucional — presente em praticamente todo concurso federal e estadual
-   - Direito Administrativo — obrigatório para cargos públicos em geral
-   - Atualidades / Conhecimentos Gerais — quando exigido pela banca
-4. Matérias de conhecimento específico do cargo (ex: Contabilidade para contador, TI para analista de sistemas, Direito Civil/Penal para jurídico) devem ter peso proporcional ao edital.
-5. NUNCA gere um plano sem Língua Portuguesa. NUNCA gere sem verificar se o cargo exige Raciocínio Lógico.
+2. SE NÃO EXISTE edital publicado: consulte o edital ANTERIOR mais recente deste mesmo concurso (mesmo cargo, mesmo órgão). Use seu conhecimento sobre concursos históricos.
+3. MATÉRIAS BÁSICAS — OBRIGATÓRIAS em quase todo concurso público (adicione TODAS que se aplicam ao cargo):
+   • Língua Portuguesa — OBRIGATÓRIO em 98% dos concursos. Inclua: interpretação de texto, gramática, coesão, coerência, redação oficial
+   • Raciocínio Lógico / Lógica — OBRIGATÓRIO para analistas, técnicos, fiscais, policiais, TI. Inclua: proposições, silogismos, raciocínio quantitativo
+   • Noções de Informática — Presente em analistas de TI, técnicos administrativos, bancários
+   • Legislação do Órgão / Legislação Específica — Estatuto, lei orgânica, lei de criação, regimento interno
+   • Direito Constitucional — Obrigatório em praticamente todo concurso federal e estadual
+   • Direito Administrativo — Presente em quase todo cargo público (servidores, agentes, técnicos)
+   • Ética no Serviço Público / Estatuto do Servidor — Muito cobrado em concursos federais (CESPE)
+   • Atualidades / Conhecimentos Gerais — Quando cobrado pela banca
+4. MATÉRIAS ESPECÍFICAS do cargo: inclua TODAS as disciplinas técnicas do cargo (ex: para Analista de TI: Redes, Segurança da Informação, Banco de Dados, Engenharia de Software, Governança de TI — ALÉM das básicas acima).
+5. NUNCA omita Língua Portuguesa. NUNCA omita Raciocínio Lógico sem verificar o edital/histórico.
+6. EXEMPLO CORRETO para Analista de TI - TJ-BA: matérias = [Língua Portuguesa, Raciocínio Lógico, Direito Constitucional, Direito Administrativo, Legislação do TJ-BA, Noções de Informática, Redes de Computadores, Segurança da Informação, Banco de Dados, Engenharia de Software, Governança de TI (COBIT/ITIL), Arquitetura de Sistemas]
 
 Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS JSON válido (sem markdown, sem texto extra):
 
@@ -132,6 +138,8 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
     "leituraPdfMin": ${leituraPdfMin},
     "revisaoMin": ${revisaoMin},
     "simulado": "${simuladoFreq}",
+    "redacao": "${redacaoFreq}",
+    "estudoCaso": "${estudoCasoFreq}",
     "dica": "Uma frase curta de motivação/estratégia para a rotina diária (máx 80 chars)"
   },
   "matérias": [
@@ -155,7 +163,7 @@ REGRAS CRÍTICAS:
 1. matérias: liste TODAS as matérias do edital (ou histórico) em ordem de peso/frequência — OBRIGATÓRIO incluir Língua Portuguesa e todas as básicas do protocolo acima
 2. cronograma: cada semana deve MESCLAR 2-3 matérias diferentes por semana, distribuídas por dias. Use o formato "Seg/Ter: Matéria — Tópico | Qua/Qui: Matéria — Tópico | Sex: Matéria — Tópico". Matérias de alto peso aparecem em mais semanas e mais dias. Matérias de baixo peso aparecem 1-2 vezes no total. TODAS as matérias devem aparecer no cronograma.
 3. horasPorDia: use exatamente ${horasDia} (informado pelo aluno) — não altere
-4. rotinaDiaria: use os valores já calculados acima (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, leituraPdfMin=${leituraPdfMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}"). leituraPdfMin é o tempo dedicado à leitura de PDFs/apostilas na Biblioteca de PDFs da plataforma. A dica deve ser motivadora e específica para este concurso.
+4. rotinaDiaria: use os valores já calculados (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, leituraPdfMin=${leituraPdfMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}", redacao="${redacaoFreq}", estudoCaso="${estudoCasoFreq}"). leituraPdfMin = PDFs da Biblioteca. redacao = prática de Redação Oficial/Dissertativa. estudoCaso = resolução de Estudos de Caso práticos do cargo. A dica deve ser motivadora e específica para este concurso.
 5. Se não há edital publicado, baseie-se em editais ANTERIORES do mesmo cargo/banca. Use seu conhecimento profundo sobre concursos históricos — cite quais matérias realmente caíram nas últimas edições.
 6. foco: mencione a banca ou o órgão na frase motivadora
 7. Seja específico nos tópicos (ex: "Língua Portuguesa — Coerência e Coesão Textual", "Raciocínio Lógico — Proposições e Conectivos", não apenas "Português")

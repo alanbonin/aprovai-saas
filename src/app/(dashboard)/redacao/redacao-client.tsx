@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   FileText, Send, ChevronDown, CheckCircle2, AlertCircle,
-  Camera, PenLine, Loader2, X, ImageIcon,
+  Camera, PenLine, Loader2, X, ImageIcon, Sparkles,
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,12 +22,14 @@ interface Resultado {
 type InputMode = "texto" | "foto";
 
 const TIPOS_FALLBACK: TipoDoc[] = [
-  { id: "oficio",       label: "Ofício",          desc: "Comunicação entre órgãos" },
-  { id: "memorando",    label: "Memorando",        desc: "Comunicação interna" },
-  { id: "relatorio",    label: "Relatório",        desc: "Relatório técnico/administrativo" },
-  { id: "requerimento", label: "Requerimento",     desc: "Pedido formal à autoridade" },
-  { id: "portaria",     label: "Portaria",         desc: "Ato normativo interno" },
-  { id: "despacho",     label: "Despacho",         desc: "Decisão em processo" },
+  { id: "dissertacao",      label: "Dissertação",          desc: "Texto argumentativo com tese" },
+  { id: "argumentacao",     label: "Argumentação",         desc: "Defesa de ponto de vista" },
+  { id: "oficio",           label: "Ofício",               desc: "Comunicação entre órgãos" },
+  { id: "memorando",        label: "Memorando",            desc: "Comunicação interna" },
+  { id: "relatorio",        label: "Relatório",            desc: "Relatório técnico/administrativo" },
+  { id: "requerimento",     label: "Requerimento",         desc: "Pedido formal à autoridade" },
+  { id: "portaria",         label: "Portaria",             desc: "Ato normativo interno" },
+  { id: "despacho",         label: "Despacho",             desc: "Decisão em processo" },
 ];
 
 // ─── Barra de nota ────────────────────────────────────────────────────────────
@@ -95,6 +97,11 @@ export function RedacaoClient() {
   const [error, setError] = useState("");
   const [showCorrigida, setShowCorrigida] = useState(false);
 
+  // Geração de tema por IA
+  const [temasIA, setTemasIA] = useState<string[]>([]);
+  const [gerandoTema, setGerandoTema] = useState(false);
+  const [showTemas, setShowTemas] = useState(false);
+
   // Carrega tipos personalizados pelo perfil do aluno
   useEffect(() => {
     setTiposLoading(true);
@@ -138,6 +145,24 @@ export function RedacaoClient() {
     setFotoError("");
     setFotoTentativas(0);
     setShowCorrigida(false);
+  }
+
+  async function gerarTemaIA() {
+    setGerandoTema(true);
+    setShowTemas(false);
+    try {
+      const res = await fetch("/api/redacao", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "gerar_tema", tipo }),
+      });
+      const d = await res.json() as { temas?: string[] };
+      if (d.temas?.length) {
+        setTemasIA(d.temas);
+        setShowTemas(true);
+      }
+    } catch { /* ignore */ }
+    finally { setGerandoTema(false); }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -237,16 +262,47 @@ export function RedacaoClient() {
 
           {/* Tema */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-300 mb-1">
-              Tema / contexto <span className="text-gray-600 font-normal">(opcional)</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-sm font-medium text-gray-300">
+                Tema / contexto <span className="text-gray-600 font-normal">(opcional)</span>
+              </label>
+              <button
+                type="button"
+                onClick={gerarTemaIA}
+                disabled={gerandoTema}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-medium hover:bg-violet-500/20 transition-colors disabled:opacity-50"
+              >
+                {gerandoTema
+                  ? <Loader2 className="w-3 h-3 animate-spin" />
+                  : <Sparkles className="w-3 h-3" />}
+                {gerandoTema ? "Gerando..." : "Gerar tema via IA"}
+              </button>
+            </div>
+
             <input
               type="text"
               value={tema}
-              onChange={e => setTema(e.target.value)}
+              onChange={e => { setTema(e.target.value); setShowTemas(false); }}
               placeholder={`Ex: Solicitar ao chefe do departamento o afastamento para capacitação`}
               className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
             />
+
+            {/* Temas sugeridos pela IA */}
+            {showTemas && temasIA.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                <p className="text-[11px] text-violet-400 font-medium">Escolha um tema:</p>
+                {temasIA.map((t, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => { setTema(t); setShowTemas(false); }}
+                    className="w-full text-left px-3 py-2.5 rounded-lg bg-violet-500/[0.06] border border-violet-500/15 text-sm text-gray-200 hover:bg-violet-500/15 hover:border-violet-500/30 transition-colors"
+                  >
+                    <span className="text-violet-400 font-semibold mr-1.5">{i + 1}.</span>{t}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Input mode toggle */}

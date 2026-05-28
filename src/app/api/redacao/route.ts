@@ -32,12 +32,14 @@ function imgBlock(base64: string, type: string): ImageBlockParam {
 
 // Tipos genéricos de fallback (usados quando não há perfil)
 const TIPOS_GENERICOS = [
-  { id: "oficio",       label: "Ofício",          desc: "Comunicação oficial entre órgãos" },
-  { id: "memorando",    label: "Memorando",        desc: "Comunicação interna entre setores" },
-  { id: "relatorio",    label: "Relatório",        desc: "Relatório técnico ou administrativo" },
-  { id: "requerimento", label: "Requerimento",     desc: "Pedido formal dirigido a autoridade" },
-  { id: "portaria",     label: "Portaria",         desc: "Ato normativo interno de autoridade" },
-  { id: "despacho",     label: "Despacho",         desc: "Decisão em processo administrativo" },
+  { id: "dissertacao",      label: "Dissertação",          desc: "Texto argumentativo com tese e desenvolvimento" },
+  { id: "argumentacao",     label: "Argumentação",         desc: "Defesa de ponto de vista com argumentos" },
+  { id: "oficio",           label: "Ofício",               desc: "Comunicação oficial entre órgãos" },
+  { id: "memorando",        label: "Memorando",            desc: "Comunicação interna entre setores" },
+  { id: "relatorio",        label: "Relatório",            desc: "Relatório técnico ou administrativo" },
+  { id: "requerimento",     label: "Requerimento",         desc: "Pedido formal dirigido a autoridade" },
+  { id: "portaria",         label: "Portaria",             desc: "Ato normativo interno de autoridade" },
+  { id: "despacho",         label: "Despacho",             desc: "Decisão em processo administrativo" },
 ];
 
 export async function POST(req: Request) {
@@ -52,6 +54,7 @@ export async function POST(req: Request) {
     texto?: string;
     fotoBase64?: string;
     fotoType?: string;
+    cargo?: string; // contexto extra opcional
   };
 
   // ── Sugerir tipos de documento por cargo ──────────────────────────────────────
@@ -66,17 +69,22 @@ export async function POST(req: Request) {
 
     const perfilDesc = `${cargo}${orgao ? ` (${orgao})` : ""}`;
 
-    const prompt = `Liste os 6 tipos de documento de redação oficial mais relevantes para o cargo: ${perfilDesc}
+    const prompt = `Liste os 8 tipos de redação/documento mais relevantes para o cargo: ${perfilDesc}
 
-Regras:
-- Policial/Segurança Pública: auto de prisão, relatório de inteligência, boletim de ocorrência, ofício, portaria, despacho
-- TI/Tecnologia: nota técnica, termo de referência, memorando técnico, relatório de incidente, ofício, plano de trabalho
-- Bancário/Financeiro: relatório de compliance, ofício ao Banco Central, memorando interno, parecer técnico, comunicado, relatório de auditoria
-- Saúde: relatório técnico, ofício sanitário, memorando, portaria, nota informativa, relatório de vigilância
-- Jurídico: petição, ofício, memorando, despacho, portaria, nota de rodapé jurídica
-- Administrativo/Geral: ofício, memorando, relatório, requerimento, portaria, despacho
-- Sempre inclua pelo menos 1 tipo genérico (ofício ou memorando)
-- "desc" deve ser uma frase curtíssima (máx. 6 palavras)
+REGRAS OBRIGATÓRIAS:
+1. SEMPRE inclua pelo menos 2 tipos dissertativos/argumentativos (cobrados em todas as bancas):
+   - Dissertação Argumentativa (CESPE, VUNESP, FCC, FGV — quase universal)
+   - Texto Argumentativo / Redação Discursiva
+2. Inclua os tipos de redação oficial específicos do cargo:
+   - Policial/Segurança Pública: auto de prisão, boletim de ocorrência, relatório de inteligência, ofício, portaria
+   - TI/Tecnologia: nota técnica, termo de referência, memorando técnico, relatório de incidente, plano de trabalho
+   - Bancário/Financeiro: parecer técnico, relatório de compliance, ofício, memorando, relatório de auditoria
+   - Saúde/Revalida: relatório técnico, nota informativa, ofício sanitário, memorando, portaria
+   - Jurídico/OAB: petição inicial, peça processual, ofício, memorando, despacho, parecer jurídico
+   - Administrativo/Geral: ofício, memorando, relatório, requerimento, portaria, despacho
+   - Judiciário (Analista/Técnico): dissertação argumentativa, nota técnica, ofício, memorando, despacho, relatório
+3. "desc" deve ser frase curtíssima (máx. 5 palavras)
+4. id deve ser slug simples (sem acentos, hífen para espaços)
 
 Retorne APENAS JSON válido:
 {"tipos":[{"id":"slug","label":"Nome do tipo","desc":"descrição curta"}]}`;
@@ -96,6 +104,41 @@ Retorne APENAS JSON válido:
     }
   }
 
+  // ── Gerar tema via IA para o tipo/cargo do aluno ────────────────────────────
+  if (body.action === "gerar_tema") {
+    const profile = await getProfile(user.id);
+    const cargo = profile?.cargo ?? "";
+    const orgao = profile?.orgao ?? "";
+    const tipoDoc = body.tipo ?? "dissertacao";
+
+    const perfilDesc = cargo ? `${cargo}${orgao ? ` (${orgao})` : ""}` : "servidor público em geral";
+
+    const prompt = `Gere 3 temas/situações para redação do tipo "${tipoDoc}" adequados para o concurso de ${perfilDesc}.
+
+Regras:
+- Temas devem ser realistas e compatíveis com as atribuições do cargo
+- Para dissertação/argumentação: tema de relevância pública, contemporâneo, com foco nas políticas/problemas da área
+- Para redação oficial (ofício, memorando, relatório etc.): situação funcional real e específica do cargo
+- Cada tema deve ser curto (1-2 frases), direto e estimulante
+- Varie o grau de dificuldade: 1 fácil, 1 médio, 1 difícil
+
+Retorne APENAS JSON válido:
+{"temas":["Tema 1 completo aqui","Tema 2 completo aqui","Tema 3 completo aqui"]}`;
+
+    try {
+      const msg = await createWithCache({
+        model: MODELS.haiku, maxTokens: 400, systemPrompt: REDACAO_SYSTEM, cacheSystem: false,
+        messages: [{ role: "user", content: prompt }],
+      });
+      const raw = (msg.content[0] as { type: string; text: string }).text.trim();
+      const parsed = extractJSON<{ temas: string[] }>(raw);
+      return NextResponse.json({ temas: parsed.temas ?? [] });
+    } catch (e) {
+      log.error("ai.redacao_gerar_tema_error", {}, e);
+      return NextResponse.json({ temas: [] });
+    }
+  }
+
   // ── Avaliar redação (texto digitado ou foto manuscrita) ──────────────────────
   const { tipo, tema, texto, fotoBase64, fotoType } = body;
 
@@ -108,7 +151,17 @@ Retorne APENAS JSON válido:
   const cargo = profile?.cargo ?? "";
   const cargoLine = cargo ? `\nCargo do candidato: ${cargo}` : "";
 
-  const CRITERIOS = [
+  // Critérios adaptados ao tipo de redação
+  const tiposDissertativo = ["dissertacao", "argumentacao", "redacao-discursiva", "texto-argumentativo", "dissertativa"];
+  const isDissertativo = tiposDissertativo.some(t => tipo?.toLowerCase().includes(t.replace("-", "")));
+
+  const CRITERIOS = isDissertativo ? [
+    "Estrutura dissertativa (introdução, desenvolvimento, conclusão)",
+    "Argumentação e fundamentação das ideias",
+    "Correção gramatical e ortográfica",
+    "Coerência e coesão textual",
+    "Repertório sociocultural e proposta de intervenção",
+  ] : [
     "Adequação ao tipo documental (estrutura, formalidade, partes obrigatórias)",
     "Clareza e objetividade da linguagem",
     "Correção gramatical e ortográfica",
