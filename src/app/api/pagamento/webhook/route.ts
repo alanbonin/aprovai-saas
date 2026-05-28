@@ -118,7 +118,21 @@ export async function POST(req: Request) {
       }
 
       if (status === "approved") {
-        await activateSubscription(userId, planId, String(paymentData.id));
+        // Idempotência: verifica se este pagamento já foi processado
+        const mpPaymentIdStr = String(paymentData.id);
+        const { data: alreadyProcessed } = await db
+          .from("Subscription")
+          .select("id")
+          .eq("mpPaymentId", mpPaymentIdStr)
+          .eq("status", "ACTIVE")
+          .maybeSingle();
+
+        if (alreadyProcessed) {
+          await log("payment_duplicate_ignored", { userId, planId, paymentId: paymentData.id });
+          return NextResponse.json({ ok: true });
+        }
+
+        await activateSubscription(userId, planId, mpPaymentIdStr);
         await log("payment_approved", { userId, planId, paymentId: paymentData.id });
         slog.info(LogEvent.PAYMENT_APPROVED, { userId, planId });
       } else if (status === "refunded" || status === "cancelled" || status === "charged_back") {

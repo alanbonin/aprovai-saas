@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 import { log, LogEvent } from "@/lib/logger";
 
 /**
@@ -19,11 +19,6 @@ function checkAuth(req: Request): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) return null;
-  return new Resend(key);
-}
 
 function buildExpiradoHtml(name: string, appUrl: string): string {
   const firstName = name.split(" ")[0];
@@ -50,9 +45,9 @@ p{font-size:14px;color:#94a3b8;line-height:1.6;margin:0 0 14px}
 </div>
 <p>Escolha o plano ideal para sua preparação:</p>
 <ul style="list-style:none;padding:0;margin:0 0 20px">
-<li style="font-size:13px;color:#94a3b8;padding:4px 0">⚡ <strong style="color:#f8fafc">Focado</strong> — R$ 49/mês · 1 concurso, 30 msgs/semana</li>
-<li style="font-size:13px;color:#94a3b8;padding:4px 0">🏆 <strong style="color:#f8fafc">Aprovação</strong> — R$ 89/mês · 2 concursos, 80 msgs/semana</li>
-<li style="font-size:13px;color:#94a3b8;padding:4px 0">🚀 <strong style="color:#f8fafc">Elite</strong> — R$ 149/mês · ilimitado</li>
+<li style="font-size:13px;color:#94a3b8;padding:4px 0">⚡ <strong style="color:#f8fafc">Focado</strong> — R$ 69/mês · 1 concurso, 80 msgs/semana</li>
+<li style="font-size:13px;color:#94a3b8;padding:4px 0">🏆 <strong style="color:#f8fafc">Aprovação</strong> — R$ 99/mês · 2 concursos, 300 msgs/semana</li>
+<li style="font-size:13px;color:#94a3b8;padding:4px 0">🚀 <strong style="color:#f8fafc">Elite</strong> — R$ 149,90/mês · ilimitado</li>
 </ul>
 <a href="${appUrl}/planos" class="cta">Ver planos e assinar →</a>
 </div>
@@ -84,7 +79,7 @@ p{font-size:14px;color:#94a3b8;line-height:1.6;margin:0 0 14px}
 <h1>${firstName}, seu trial está acabando!</h1>
 <p>Faltam <strong style="color:#f8fafc">${diasLabel}</strong> para o fim do seu período gratuito. Assine agora para não perder o acesso e continuar sua preparação sem interrupção.</p>
 <a href="${appUrl}/planos" class="cta">Assinar agora e continuar →</a>
-<p style="font-size:12px;color:#6b7280;margin-top:8px">Planos a partir de R$ 49/mês · cancele quando quiser.</p>
+<p style="font-size:12px;color:#6b7280;margin-top:8px">Planos a partir de R$ 69/mês · cancele quando quiser.</p>
 </div>
 <div class="footer">
 <p>© ${new Date().getFullYear()} Aprovai · <a href="${appUrl}/workspace/perfil">Gerenciar e-mails</a></p>
@@ -119,14 +114,14 @@ export async function GET(req: Request) {
       .select("id, name, email")
       .in("id", expiradaUserIds);
 
-    const resend = getResend();
+    
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.app";
     const from = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.app>";
 
     for (const user of users ?? []) {
       try {
-        if (!resend) break;
-        await resend.emails.send({
+        // resend migrado para sendEmail via SMTP Titan
+        await sendEmail({
           from,
           to: user.email,
           subject: "⏰ Seu trial Aprovai expirou — continue estudando!",
@@ -169,7 +164,7 @@ export async function GET(req: Request) {
         .select("id, name, email")
         .in("id", trialUserIds);
 
-      const resend = getResend();
+      
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.app";
       const from = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.app>";
 
@@ -179,8 +174,8 @@ export async function GET(req: Request) {
           ? (new Date(sub.endDate).getTime() - now.getTime()) / (1000 * 60 * 60)
           : 24;
         try {
-          if (!resend) break;
-          await resend.emails.send({
+          // resend migrado para sendEmail via SMTP Titan
+          await sendEmail({
             from,
             to: user.email,
             subject: "⚠️ Seu trial Aprovai expira amanhã — não perca o acesso!",

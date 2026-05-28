@@ -1,16 +1,10 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 import { log } from "@/lib/logger";
 
 // ── Email de boas-vindas enviado após registro do usuário ─────────────────────
 // Chamado internamente por /api/auth/register após criar o User no banco.
-
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurada.");
-  return new Resend(key);
-}
 
 function buildBoasVindasHtml({ name, appUrl }: { name: string; appUrl: string }): string {
   const firstName = name.split(" ")[0] ?? name;
@@ -58,7 +52,7 @@ function buildBoasVindasHtml({ name, appUrl }: { name: string; appUrl: string })
       <a href="${appUrl}/workspace?welcome=1" class="cta">Começar a estudar →</a>
 
       <p style="font-size: 13px; margin-top: 8px;">
-        Aproveite os 7 dias de trial para explorar tudo. Caso queira continuar, nossos planos partem de R$ 49/mês.
+        Aproveite os 7 dias de trial para explorar tudo. Caso queira continuar, nossos planos partem de R$ 69/mês.
       </p>
     </div>
     <div class="footer">
@@ -89,15 +83,12 @@ export async function POST(req: Request) {
   // Envia e-mail de boas-vindas
   let emailOk = false;
   try {
-    const resend = getResend();
-    const from = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.app>";
-    const { error } = await resend.emails.send({
-      from,
+    const { error } = await sendEmail({
       to: email,
-      subject: "🎓 Bem-vindo ao Aprovai! Seu trial de 7 dias começou",
+      subject: "🎓 Bem-vindo ao Aprovai360! Seu trial de 7 dias começou",
       html: buildBoasVindasHtml({ name, appUrl }),
     });
-    if (error) throw new Error(error.message);
+    if (error) throw error;
     emailOk = true;
   } catch (err) {
     log.error("email.boas_vindas_send_error", {}, err);

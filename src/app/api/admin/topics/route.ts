@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { log } from "@/lib/logger";
 
 // Verifica se usuário é ADMIN
 async function requireAdmin() {
@@ -33,7 +34,8 @@ export async function POST(req: NextRequest) {
     if (error.code === "23505") {
       return NextResponse.json({ error: "Slug já existe nessa matéria" }, { status: 409 });
     }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    log.error("admin.topics.create_error", {}, error);
+    return NextResponse.json({ error: "Erro interno ao criar tópico" }, { status: 500 });
   }
 
   return NextResponse.json(data, { status: 201 });
@@ -50,7 +52,10 @@ export async function GET(req: NextRequest) {
   if (subjectId) query = query.eq("subjectId", subjectId);
 
   const { data, error } = await query;
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    log.error("admin.topics.list_error", {}, error);
+    return NextResponse.json({ error: "Erro interno ao listar tópicos" }, { status: 500 });
+  }
 
   return NextResponse.json(data);
 }

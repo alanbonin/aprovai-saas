@@ -16,6 +16,7 @@ interface Prefs {
 interface Config {
   name: string;
   email: string;
+  phone: string;
   cargo: string;
   orgao: string;
   dataProva: string | null;
@@ -225,6 +226,19 @@ export default function ConfiguracoesPage() {
                   className="w-full bg-white/3 border border-white/5 rounded-lg px-3 py-2 text-sm text-gray-500 cursor-not-allowed"
                 />
               </div>
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1.5 block">
+                Celular <span className="text-gray-600">(opcional — para autenticação por SMS no futuro)</span>
+              </label>
+              <input
+                type="tel"
+                value={config.phone}
+                onChange={e => setConfig(c => c ? { ...c, phone: e.target.value } : c)}
+                placeholder="(11) 99999-9999"
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+              />
+              <p className="text-xs text-gray-600 mt-1">Será usado para autenticação via WhatsApp/SMS em breve.</p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>

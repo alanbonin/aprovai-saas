@@ -40,6 +40,7 @@ model User {
   email           String   @unique
   role            Role     @default(STUDENT)
   avatarUrl       String?
+  phone           String?  // celular com DDD, ex: +5511999999999 (para SMS 2FA futuro)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -121,10 +122,30 @@ model AiUsage {
   @@unique([userId, agentId, weekStart])
 }
 
+// ─── Assuntos / Tópicos dentro de Matérias ─────────────────
+// Subject 1→N Topic 1→N Question
+model Topic {
+  id              String   @id @default(uuid())
+  subjectId       String
+  name            String
+  slug            String
+  description     String?
+  ordem           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  questions       Question[]
+  progress        Progress[]
+
+  @@unique([subjectId, slug])
+  @@index([subjectId])
+}
+
 // ─── Questões ──────────────────────────────────────────────
 model Question {
   id              Int      @id @default(autoincrement())
   subjectId       String
+  topicId         String?  // null = questão sem tópico classificado ainda
   banca           String?
   year            Int?
   level           String   @default("medio")
@@ -138,8 +159,12 @@ model Question {
   explanation     String?  @db.Text
   source          String   @default("ia")
   analysis        String?  @db.Text
+  artigo          String?  // artigo/dispositivo legal cobrado (ex: "Art. 5º, CF/88")
+  dicaBanca       String?  // dica específica sobre como a banca cobra esse conteúdo
+  aprovado        Boolean  @default(true)
   createdAt       DateTime @default(now())
 
+  topic           Topic?   @relation(fields: [topicId], references: [id])
   progress        Progress[]
 }
 
@@ -149,6 +174,7 @@ model Progress {
   userId          String
   profileId       String?  // null = dados legados (aparecem em todos os perfis)
   questionId      Int
+  topicId         String?  // denormalizado para facilitar stats por assunto
   correct         Boolean
   reviewedAt      DateTime?
   nextReview      DateTime?
@@ -158,6 +184,7 @@ model Progress {
 
   user            User     @relation(fields: [userId], references: [id])
   question        Question @relation(fields: [questionId], references: [id])
+  topic           Topic?   @relation(fields: [topicId], references: [id])
   // @@unique gerenciado via índices parciais no DB (ver migration-multiprofile.sql)
 }
 

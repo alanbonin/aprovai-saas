@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 import webpush from "web-push";
 
 const PUSH_PREFIX = "__PUSH_SUBSCRIPTION__";
@@ -51,11 +51,6 @@ async function sendPushToUser(userId: string, payload: object): Promise<number> 
  * com header Authorization: Bearer CRON_SECRET
  */
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurada.");
-  return new Resend(key);
-}
 
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.com.br>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.com.br";
@@ -118,7 +113,7 @@ function checkAuth(req: Request): boolean {
 
 async function runCron() {
   try {
-    const resend = getResend();
+    
     const pushEnabled = configurePush();
 
     // Busca usuários ativos com assinatura ativa
@@ -191,7 +186,7 @@ async function runCron() {
           ? `🃏 ${flashcardsDue} flashcard${flashcardsDue > 1 ? "s" : ""} aguardando revisão — Aprovai`
           : "🔥 Não perca sua sequência de estudos — Aprovai";
 
-        await resend.emails.send({
+        await sendEmail({
           from: FROM_EMAIL,
           to: user.email,
           subject,

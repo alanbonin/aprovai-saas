@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 
 /**
  * GET /api/email/reativacao
@@ -20,11 +20,6 @@ function checkAuth(req: Request): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurada");
-  return new Resend(key);
-}
 
 function buildHtml({
   name,
@@ -123,7 +118,7 @@ function buildHtml({
 }
 
 async function runCron() {
-  const resend = getResend();
+  
   const now = new Date();
 
   // Janela de inatividade: 7-30 dias atrás
@@ -229,7 +224,7 @@ async function runCron() {
         totalQuestoes: totalQuestoes ?? 0,
       });
 
-      await resend.emails.send({
+      await sendEmail({
         from: FROM,
         to: user.email,
         subject: `${user.name.split(" ")[0]}, você está perdendo tempo de estudo ⏰ — Aprovai`,

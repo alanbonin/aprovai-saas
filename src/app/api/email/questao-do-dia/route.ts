@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 
 /**
  * GET /api/email/questao-do-dia
@@ -19,11 +19,6 @@ function checkAuth(req: Request): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurada");
-  return new Resend(key);
-}
 
 function levelLabel(level: string): string {
   return level === "facil" ? "🟢 Fácil" : level === "medio" ? "🟡 Médio" : "🔴 Difícil";
@@ -99,7 +94,7 @@ function buildHtml({
 }
 
 async function runCron() {
-  const resend = getResend();
+  
   const now = new Date();
 
   // Seleção determinística da questão do dia
@@ -153,7 +148,7 @@ async function runCron() {
   for (const u of users ?? []) {
     if (!u.email) { skipped++; continue; }
     try {
-      await resend.emails.send({
+      await sendEmail({
         from: FROM,
         to: u.email,
         subject: `🎯 Questão do Dia — ${now.toLocaleDateString("pt-BR", { weekday: "long", day: "2-digit", month: "long" })}`,

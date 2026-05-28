@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 
 /**
  * GET /api/email/admin-semanal
@@ -27,11 +27,6 @@ function checkAuth(req: Request): boolean {
   return auth === `Bearer ${secret}`;
 }
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurado");
-  return new Resend(key);
-}
 
 function getWeekBounds() {
   const now = new Date();
@@ -211,8 +206,8 @@ async function runCron() {
     weekLabel,
   });
 
-  const resend = getResend();
-  const { error } = await resend.emails.send({
+  
+  const { error } = await sendEmail({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
     subject: `📊 Relatório Semanal Aprovai — ${weekLabel}`,

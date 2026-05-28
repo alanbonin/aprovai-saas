@@ -11,6 +11,18 @@ interface Prefs {
   emailReativacao: boolean;
 }
 
+// Normaliza celular: aceita (11) 99999-9999, 11999999999, +5511999999999 → +5511999999999
+function normalizePhone(raw: string): string | null {
+  if (!raw) return null;
+  const digits = raw.replace(/\D/g, "");
+  if (digits.length === 0) return null;
+  // se já tem código do país (55 + 10/11 dígitos)
+  if (digits.length === 12 || digits.length === 13) return `+${digits}`;
+  // DDD + número (10 ou 11 dígitos)
+  if (digits.length === 10 || digits.length === 11) return `+55${digits}`;
+  return null; // formato inválido — ignora
+}
+
 const DEFAULT_PREFS: Prefs = {
   emailQuestaoDodia: true,
   emailRelatorioSemanal: true,
@@ -46,6 +58,7 @@ export async function GET() {
   return NextResponse.json({
     name: dbUser.name ?? "",
     email: dbUser.email ?? "",
+    phone: (dbUser as unknown as { phone?: string | null }).phone ?? "",
     cargo: profile.data?.cargo ?? "",
     orgao: profile.data?.orgao ?? "",
     dataProva: profile.data?.dataProva ?? null,
@@ -68,6 +81,7 @@ export async function PATCH(req: Request) {
 
   const body = await req.json() as {
     name?: string;
+    phone?: string;
     cargo?: string;
     orgao?: string;
     dataProva?: string | null;
@@ -78,11 +92,15 @@ export async function PATCH(req: Request) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const updates: PromiseLike<any>[] = [];
 
-  // Atualiza nome do usuário
-  if (body.name !== undefined) {
-    updates.push(
-      db.from("User").update({ name: body.name.trim() || dbUser.name }).eq("id", dbUser.id)
-    );
+  // Atualiza nome e/ou celular do usuário
+  const userFields: Record<string, unknown> = {};
+  if (body.name !== undefined) userFields.name = body.name.trim() || dbUser.name;
+  if (body.phone !== undefined) {
+    const normalized = normalizePhone(body.phone);
+    userFields.phone = normalized; // null se vazio/inválido
+  }
+  if (Object.keys(userFields).length > 0) {
+    updates.push(db.from("User").update(userFields).eq("id", dbUser.id));
   }
 
   // Atualiza StudentProfile

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { Resend } from "resend";
+import { sendEmail } from "@/lib/mailer";
 
 /**
  * GET /api/email/relatorio-semanal
@@ -20,11 +20,6 @@ function checkAuth(req: Request): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-function getResend() {
-  const key = process.env.RESEND_API_KEY;
-  if (!key) throw new Error("RESEND_API_KEY não configurada");
-  return new Resend(key);
-}
 
 function getWeekBounds() {
   const now = new Date();
@@ -143,7 +138,7 @@ function buildHtml({
 }
 
 async function runCron() {
-  const resend = getResend();
+  
   const { start, end } = getWeekBounds();
 
   // Busca usuários com assinatura ativa
@@ -245,7 +240,7 @@ async function runCron() {
         piorSubject,
       });
 
-      await resend.emails.send({
+      await sendEmail({
         from: FROM,
         to: user.email,
         subject: `📊 Seu resumo da semana — ${acertos}/${questoes} acertos — Aprovai`,
