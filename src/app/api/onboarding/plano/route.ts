@@ -97,9 +97,26 @@ ${profile.editalContent.slice(0, 4000)}
     const flashcardsDia = Math.round((totalMin * 0.15) / 0.75); // ~45s por card
     const simuladoFreq = horasDia <= 1 ? "quinzenal" : horasDia <= 2 ? "semanal" : horasDia <= 3 ? "semanal" : "2x por semana";
 
-    const systemPrompt = `Você é um especialista sênior em concursos públicos com profundo conhecimento de editais, bancas e matérias cobradas em cada cargo.
+    const systemPrompt = `Você é um especialista sênior em concursos públicos com profundo conhecimento de editais, bancas e matérias cobradas em cada cargo. Sua principal qualidade é saber EXATAMENTE quais matérias cada concurso cobra — inclusive as básicas que muitos esquecem.
 
 ${editalBloco}
+
+## PROTOCOLO OBRIGATÓRIO — LEVANTAMENTO DE MATÉRIAS
+
+Antes de montar o plano, siga este protocolo:
+
+1. VERIFIQUE se existe edital publicado recente para este cargo/órgão/banca.
+2. SE NÃO EXISTE edital publicado: consulte o edital ANTERIOR mais recente deste mesmo concurso (mesmo cargo, mesmo órgão). Use seu conhecimento sobre concursos históricos para identificar as matérias.
+3. SEMPRE inclua as matérias básicas que quase todo concurso público cobra:
+   - Língua Portuguesa (interpretação, gramática, redação oficial) — peso alto em 95% dos concursos
+   - Raciocínio Lógico / Lógica — presente em 80%+ dos concursos, especialmente analistas e técnicos
+   - Noções de Informática — presente em maioria dos cargos técnicos/administrativos
+   - Legislação Específica do órgão (lei orgânica, estatuto, lei de criação do órgão)
+   - Direito Constitucional — presente em praticamente todo concurso federal e estadual
+   - Direito Administrativo — obrigatório para cargos públicos em geral
+   - Atualidades / Conhecimentos Gerais — quando exigido pela banca
+4. Matérias de conhecimento específico do cargo (ex: Contabilidade para contador, TI para analista de sistemas, Direito Civil/Penal para jurídico) devem ter peso proporcional ao edital.
+5. NUNCA gere um plano sem Língua Portuguesa. NUNCA gere sem verificar se o cargo exige Raciocínio Lógico.
 
 Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS JSON válido (sem markdown, sem texto extra):
 
@@ -118,9 +135,13 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
     "dica": "Uma frase curta de motivação/estratégia para a rotina diária (máx 80 chars)"
   },
   "matérias": [
-    "Matéria 1 (peso alto)",
-    "Matéria 2 (peso alto)",
-    "Matéria 3 (peso médio)",
+    "Língua Portuguesa (peso alto)",
+    "Raciocínio Lógico (peso médio/alto)",
+    "Matéria específica do cargo 1 (peso alto)",
+    "Matéria específica do cargo 2 (peso médio)",
+    "Direito Constitucional (peso médio)",
+    "Direito Administrativo (peso médio)",
+    "Legislação Específica (peso médio)",
     "..."
   ],
   "cronograma": [
@@ -131,16 +152,17 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
 }
 
 REGRAS CRÍTICAS:
-1. matérias: liste TODAS as matérias do edital (ou histórico) em ordem de peso/frequência — sem limite máximo
+1. matérias: liste TODAS as matérias do edital (ou histórico) em ordem de peso/frequência — OBRIGATÓRIO incluir Língua Portuguesa e todas as básicas do protocolo acima
 2. cronograma: cada semana deve MESCLAR 2-3 matérias diferentes por semana, distribuídas por dias. Use o formato "Seg/Ter: Matéria — Tópico | Qua/Qui: Matéria — Tópico | Sex: Matéria — Tópico". Matérias de alto peso aparecem em mais semanas e mais dias. Matérias de baixo peso aparecem 1-2 vezes no total. TODAS as matérias devem aparecer no cronograma.
 3. horasPorDia: use exatamente ${horasDia} (informado pelo aluno) — não altere
 4. rotinaDiaria: use os valores já calculados acima (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, leituraPdfMin=${leituraPdfMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}"). leituraPdfMin é o tempo dedicado à leitura de PDFs/apostilas na Biblioteca de PDFs da plataforma. A dica deve ser motivadora e específica para este concurso.
-5. Se não há edital publicado, baseie-se 100% em editais anteriores para este cargo/banca específicos
+5. Se não há edital publicado, baseie-se em editais ANTERIORES do mesmo cargo/banca. Use seu conhecimento profundo sobre concursos históricos — cite quais matérias realmente caíram nas últimas edições.
 6. foco: mencione a banca ou o órgão na frase motivadora
-7. Seja específico nos tópicos (ex: "Dir. Constitucional — Controle de constitucionalidade", não apenas "Direito Constitucional")
+7. Seja específico nos tópicos (ex: "Língua Portuguesa — Coerência e Coesão Textual", "Raciocínio Lógico — Proposições e Conectivos", não apenas "Português")
 8. Para aluno ${nivelLabel[nivel]}, ajuste o nível dos tópicos (mais básico para iniciante, mais avançado para avançado)
 9. Número de semanas: calcule com base no tempo disponível e volume de conteúdo — entre 8 e 20 semanas normalmente
-10. IMPORTANTE — banco de questões cross-categoria: o banco agrupa questões pelo NOME do tópico independente da categoria (ex: "Língua Portuguesa" engloba questões de todas as bancas). Ao recomendar tópicos no cronograma, use o NOME EXATO do tópico — o aluno terá acesso a questões desse tópico de todas as bancas automaticamente.`;
+10. IMPORTANTE — banco de questões cross-categoria: o banco agrupa questões pelo NOME do tópico independente da categoria (ex: "Língua Portuguesa" engloba questões de todas as bancas). Ao recomendar tópicos no cronograma, use o NOME EXATO do tópico — o aluno terá acesso a questões desse tópico de todas as bancas automaticamente.
+11. VERIFICAÇÃO FINAL antes de retornar: confira se o plano contém Língua Portuguesa, se contém as matérias específicas do cargo, e se o cronograma cobre TODAS as matérias listadas. Se alguma faltou, adicione antes de retornar.`;
 
     const userMsg = modalidade === "ENEM"
       ? `Modalidade: ENEM\nNome: ${profile?.nomePreferido ?? "Não informado"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva}` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
@@ -150,7 +172,7 @@ REGRAS CRÍTICAS:
 
     const response = await createWithCache({
       model: MODELS.sonnet, // Sonnet tem conhecimento real de editais, Haiku não
-      maxTokens: 2500,       // mais tokens para cronograma completo + rotinaDiaria
+      maxTokens: 3500,       // tokens suficientes para todas as matérias + cronograma completo
       systemPrompt,
       cacheSystem: true,
       messages: [{ role: "user", content: userMsg }],
