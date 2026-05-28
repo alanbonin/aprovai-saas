@@ -791,7 +791,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               {showSubjectManager && (
                 <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
                   onClick={e => { if (e.target === e.currentTarget) setShowSubjectManager(false); }}>
-                  <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/15"
+                  <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden bg-white dark:bg-[#252b3b] border border-gray-200 dark:border-white/20"
                     style={{ maxHeight: "85vh" }}>
 
                     {/* Header */}
@@ -848,18 +848,18 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                             className={cn(
                               "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all text-left",
                               isActive
-                                ? "bg-indigo-50 dark:bg-indigo-600/30 border-indigo-300 dark:border-indigo-400/50 hover:bg-indigo-100 dark:hover:bg-indigo-600/40"
-                                : "bg-gray-50 dark:bg-white/[0.06] border-gray-200 dark:border-white/[0.12] hover:bg-gray-100 dark:hover:bg-white/[0.10]"
+                                ? "bg-indigo-50 dark:bg-indigo-600/25 border-indigo-300 dark:border-indigo-400/60 hover:bg-indigo-100 dark:hover:bg-indigo-600/35"
+                                : "bg-gray-50 dark:bg-white/[0.09] border-gray-200 dark:border-white/20 hover:bg-gray-100 dark:hover:bg-white/[0.14]"
                             )}>
                             <div className={cn(
                               "w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 border-2 transition-all",
-                              isActive ? "bg-indigo-500 border-indigo-400" : "border-gray-300 dark:border-gray-500 bg-white dark:bg-white/5"
+                              isActive ? "bg-indigo-500 border-indigo-400" : "border-gray-400 dark:border-gray-400 bg-white dark:bg-white/10"
                             )}>
                               {isActive && <Check size={13} className="text-white" strokeWidth={3} />}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{s.name}</p>
-                              {s.categoria && <p className="text-[11px] text-gray-500 dark:text-gray-400 capitalize mt-0.5">{s.categoria.replace(/-/g, " ")}</p>}
+                              {s.categoria && <p className="text-[11px] text-gray-500 dark:text-gray-300 capitalize mt-0.5">{s.categoria.replace(/-/g, " ")}</p>}
                             </div>
                           </button>
                         );
