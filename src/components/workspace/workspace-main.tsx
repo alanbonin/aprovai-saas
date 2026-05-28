@@ -742,8 +742,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias <span className="text-gray-600 normal-case font-normal">({subjects.length})</span></p>
                   <button onClick={openSubjectManager}
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition-all active:scale-95 shadow-md">
-                    <Plus size={13} />
-                    + Matérias
+                    Adicionar / Remover
                   </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -792,35 +791,35 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               {showSubjectManager && (
                 <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
                   onClick={e => { if (e.target === e.currentTarget) setShowSubjectManager(false); }}>
-                  <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
-                    style={{ background: "#1a1f2e", maxHeight: "85vh", border: "1px solid rgba(255,255,255,0.15)" }}>
+                  <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden bg-white dark:bg-[#1a1f2e] border border-gray-200 dark:border-white/15"
+                    style={{ maxHeight: "85vh" }}>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/[0.10] flex-shrink-0">
+                    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-200 dark:border-white/10 flex-shrink-0">
                       <div>
-                        <p className="text-base font-bold text-white">Gerenciar Matérias</p>
-                        <p className="text-sm text-indigo-300 mt-0.5 font-medium">{activeSubjectIds.size} selecionada{activeSubjectIds.size !== 1 ? "s" : ""}</p>
+                        <p className="text-base font-bold text-gray-900 dark:text-white">Gerenciar Matérias</p>
+                        <p className="text-sm text-indigo-600 dark:text-indigo-300 mt-0.5 font-medium">{activeSubjectIds.size} selecionada{activeSubjectIds.size !== 1 ? "s" : ""}</p>
                       </div>
                       <button onClick={() => setShowSubjectManager(false)}
-                        className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/20 transition-all">
+                        className="w-9 h-9 rounded-xl bg-gray-100 dark:bg-white/10 flex items-center justify-center text-gray-500 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-white/20 transition-all">
                         <X size={18} />
                       </button>
                     </div>
 
                     {/* Search */}
                     <div className="px-4 py-3 flex-shrink-0">
-                      <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5">
-                        <Search size={15} className="text-gray-300 flex-shrink-0" />
+                      <div className="flex items-center gap-2 bg-gray-100 dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl px-3 py-2.5">
+                        <Search size={15} className="text-gray-400 dark:text-gray-300 flex-shrink-0" />
                         <input
                           type="text"
                           placeholder="Buscar matéria..."
                           value={subjectSearch}
                           onChange={e => setSubjectSearch(e.target.value)}
-                          className="flex-1 bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none"
+                          className="flex-1 bg-transparent text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none"
                           autoFocus
                         />
                         {subjectSearch && (
-                          <button onClick={() => setSubjectSearch("")} className="text-gray-400 hover:text-white">
+                          <button onClick={() => setSubjectSearch("")} className="text-gray-400 hover:text-gray-700 dark:hover:text-white">
                             <X size={13} />
                           </button>
                         )}
@@ -849,18 +848,18 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                             className={cn(
                               "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all text-left",
                               isActive
-                                ? "bg-indigo-600/30 border-indigo-400/50 hover:bg-indigo-600/40"
-                                : "bg-white/[0.06] border-white/[0.12] hover:bg-white/[0.10]"
+                                ? "bg-indigo-50 dark:bg-indigo-600/30 border-indigo-300 dark:border-indigo-400/50 hover:bg-indigo-100 dark:hover:bg-indigo-600/40"
+                                : "bg-gray-50 dark:bg-white/[0.06] border-gray-200 dark:border-white/[0.12] hover:bg-gray-100 dark:hover:bg-white/[0.10]"
                             )}>
                             <div className={cn(
                               "w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 border-2 transition-all",
-                              isActive ? "bg-indigo-500 border-indigo-400" : "border-gray-500 bg-white/5"
+                              isActive ? "bg-indigo-500 border-indigo-400" : "border-gray-300 dark:border-gray-500 bg-white dark:bg-white/5"
                             )}>
                               {isActive && <Check size={13} className="text-white" strokeWidth={3} />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-white truncate">{s.name}</p>
-                              {s.categoria && <p className="text-[11px] text-gray-400 capitalize mt-0.5">{s.categoria.replace(/-/g, " ")}</p>}
+                              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{s.name}</p>
+                              {s.categoria && <p className="text-[11px] text-gray-500 dark:text-gray-400 capitalize mt-0.5">{s.categoria.replace(/-/g, " ")}</p>}
                             </div>
                           </button>
                         );
@@ -868,18 +867,18 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                           <>
                             {ativas.length > 0 && (
                               <>
-                                <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest px-1 pt-1 pb-1.5">✓ Ativas ({ativas.length})</p>
+                                <p className="text-xs text-indigo-600 dark:text-indigo-300 font-bold uppercase tracking-widest px-1 pt-1 pb-1.5">✓ Ativas ({ativas.length})</p>
                                 {ativas.map(s => renderItem(s, true))}
                               </>
                             )}
                             {inativas.length > 0 && (
                               <>
-                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-1 pt-3 pb-1.5">Disponíveis para adicionar ({inativas.length})</p>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest px-1 pt-3 pb-1.5">Disponíveis para adicionar ({inativas.length})</p>
                                 {inativas.map(s => renderItem(s, false))}
                               </>
                             )}
                             {filtered.length === 0 && (
-                              <p className="text-center text-gray-600 text-sm py-8">Nenhuma matéria encontrada</p>
+                              <p className="text-center text-gray-400 dark:text-gray-600 text-sm py-8">Nenhuma matéria encontrada</p>
                             )}
                           </>
                         );
@@ -887,9 +886,9 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     </div>
 
                     {/* Footer */}
-                    <div className="px-4 py-4 border-t border-white/[0.12] flex gap-2 flex-shrink-0">
+                    <div className="px-4 py-4 border-t border-gray-200 dark:border-white/[0.12] flex gap-2 flex-shrink-0">
                       <button onClick={() => setShowSubjectManager(false)}
-                        className="flex-1 py-3.5 rounded-xl border border-white/20 text-gray-300 text-sm font-semibold hover:bg-white/10 transition-all">
+                        className="flex-1 py-3.5 rounded-xl border border-gray-300 dark:border-white/20 text-gray-600 dark:text-gray-300 text-sm font-semibold hover:bg-gray-100 dark:hover:bg-white/10 transition-all">
                         Cancelar
                       </button>
                       <button onClick={saveSubjects} disabled={savingSubjects || activeSubjectIds.size === 0}
