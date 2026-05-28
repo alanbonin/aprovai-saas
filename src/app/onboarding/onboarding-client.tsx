@@ -147,6 +147,10 @@ export function OnboardingClient({ userId, userName }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
 
+  // Ref sempre atualizado com o state mais recente — evita stale closure no setTimeout
+  const stateRef = useRef(state);
+  useEffect(() => { stateRef.current = state; }, [state]);
+
   // Barra de progresso (exclui gerando/pronto)
   const visibleSteps = STEPS.filter(s => {
     if (s === "gerando" || s === "pronto") return false;
@@ -157,8 +161,9 @@ export function OnboardingClient({ userId, userName }: Props) {
   const visibleIdx = visibleSteps.indexOf(step);
   const progress = Math.round(((visibleIdx) / (visibleSteps.length - 1)) * 100);
 
-  function goNext() { setStep(s => nextStep(s, state)); }
-  function goBack() { setStep(s => prevStep(s, state)); }
+  // Usa stateRef para sempre ter o estado atual, mesmo dentro de setTimeout
+  function goNext() { setStep(s => nextStep(s, stateRef.current)); }
+  function goBack() { setStep(s => prevStep(s, stateRef.current)); }
 
   function getCategoriaByModalidade(): string | null {
     if (state.modalidade === "ENEM") return "enem";
