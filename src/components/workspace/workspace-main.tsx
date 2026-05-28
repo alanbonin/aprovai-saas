@@ -565,7 +565,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 const atLimit = !isPremium && today >= limit;
                 return (
                   <div className="mx-4 mt-2 rounded-xl border px-4 py-2.5"
-                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : "rgba(13,17,23,0.8)", borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
+                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : "rgba(255,255,255,0.03)", borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.07)" }}>
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-xs font-semibold text-gray-300">🎯 {atLimit ? "Limite diário atingido" : "Questões hoje"}</span>
                       <span className="text-xs font-bold" style={{ color: atLimit ? "#a5b4fc" : "#6366f1" }}>
