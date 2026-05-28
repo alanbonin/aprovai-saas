@@ -105,6 +105,16 @@ export const CARGOS: Cargo[] = [
   // TJDFT
   { id: "analista-tjdft",      nome: "Analista Judiciário — TJDFT",               orgao: "Tribunal de Justiça do DF (TJDFT)", sigla: "TJDFT", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
   { id: "tecnico-tjdft",       nome: "Técnico Judiciário — TJDFT",                orgao: "Tribunal de Justiça do DF (TJDFT)", sigla: "TJDFT", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
+  // TI dentro do Judiciário
+  { id: "ti-jud-stf",          nome: "Analista Judiciário — TI / STF",             orgao: "Supremo Tribunal Federal (STF)",        sigla: "STF",    area: "judiciario", banca: "FGV",            categoria: "tecnologia-informacao" },
+  { id: "ti-jud-stj",          nome: "Analista Judiciário — TI / STJ",             orgao: "Superior Tribunal de Justiça (STJ)",    sigla: "STJ",    area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-jud-tse",          nome: "Analista Judiciário — TI / TSE",             orgao: "Tribunal Superior Eleitoral (TSE)",     sigla: "TSE",    area: "judiciario", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-jud-tst",          nome: "Analista Judiciário — TI / TST",             orgao: "Tribunal Superior do Trabalho (TST)",   sigla: "TST",    area: "judiciario", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-jud-trf",          nome: "Analista Judiciário — TI / TRF",             orgao: "Tribunal Regional Federal (TRF)",       sigla: "TRF",    area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-jud-trt",          nome: "Analista Judiciário — TI / TRT",             orgao: "Tribunal Regional do Trabalho (TRT)",   sigla: "TRT",    area: "judiciario", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-jud-tre",          nome: "Analista Judiciário — TI / TRE",             orgao: "Tribunal Regional Eleitoral (TRE)",     sigla: "TRE",    area: "judiciario", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-jud-tj",           nome: "Analista Judiciário — TI / TJ Estadual",     orgao: "Tribunal de Justiça Estadual (TJ)",     sigla: "TJ",     area: "judiciario", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-jud-tjdft",        nome: "Analista Judiciário — TI / TJDFT",           orgao: "Tribunal de Justiça do DF (TJDFT)",     sigla: "TJDFT",  area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // JURÍDICO / AGU / DPU
@@ -112,9 +122,11 @@ export const CARGOS: Cargo[] = [
   { id: "procurador-federal",  nome: "Procurador Federal",                        orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
   { id: "advogado-uniao",      nome: "Advogado da União",                         orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
   { id: "analista-agu",        nome: "Analista / Técnico Administrativo — AGU",   orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "ti-jur-agu",          nome: "Analista de TI — AGU",                      orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   { id: "defensor-dpu",        nome: "Defensor Público Federal",                  orgao: "Defensoria Pública da União (DPU)",sigla: "DPU",  area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
   { id: "analista-dpu",        nome: "Analista / Técnico — DPU",                  orgao: "Defensoria Pública da União (DPU)",sigla: "DPU",  area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "ti-jur-dpu",          nome: "Analista de TI — DPU",                      orgao: "Defensoria Pública da União (DPU)",sigla: "DPU",  area: "juridico", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   { id: "procurador-pge",      nome: "Procurador do Estado",                      orgao: "Procuradoria-Geral do Estado (PGE)",sigla: "PGE", area: "juridico", hasEstado: true, banca: "VUNESP", categoria: "direito" },
 
@@ -132,9 +144,12 @@ export const CARGOS: Cargo[] = [
 
   { id: "promotor-estadual",   nome: "Promotor de Justiça",                       orgao: "Ministério Público Estadual (MP)",  sigla: "MP",  area: "mp", hasEstado: true, banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
   { id: "analista-mp-est",     nome: "Analista / Técnico — MP Estadual",          orgao: "Ministério Público Estadual (MP)",  sigla: "MP",  area: "mp", hasEstado: true, categoria: "ministerio-publico" },
+  { id: "ti-mp-estadual",      nome: "Analista de TI — MP Estadual",              orgao: "Ministério Público Estadual (MP)",  sigla: "MP",  area: "mp", hasEstado: true, categoria: "tecnologia-informacao" },
 
   { id: "promotor-mpdft",      nome: "Promotor de Justiça — MPDFT",               orgao: "MP do Distrito Federal (MPDFT)",    sigla: "MPDFT", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
   { id: "analista-mpdft",      nome: "Analista / Técnico — MPDFT",                orgao: "MP do Distrito Federal (MPDFT)",    sigla: "MPDFT", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+  { id: "ti-mpdft",            nome: "Analista de TI — MPDFT",                    orgao: "MP do Distrito Federal (MPDFT)",    sigla: "MPDFT", area: "mp", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-mpf-cargo",        nome: "Analista de TI — MPF",                      orgao: "Ministério Público Federal (MPF)",  sigla: "MPF",   area: "mp", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // POLICIAL / SEGURANÇA PÚBLICA
@@ -185,9 +200,11 @@ export const CARGOS: Cargo[] = [
 
   { id: "analista-bacen",      nome: "Analista do Banco Central",                 orgao: "Banco Central do Brasil (BACEN)",   sigla: "BACEN", area: "bancario", banca: "CESPE/CEBRASPE", categoria: "banco-central" },
   { id: "tecnico-bacen",       nome: "Técnico do Banco Central",                  orgao: "Banco Central do Brasil (BACEN)",   sigla: "BACEN", area: "bancario", banca: "CESPE/CEBRASPE", categoria: "banco-central" },
+  { id: "ti-banc-bacen",       nome: "Analista de TI — Banco Central",            orgao: "Banco Central do Brasil (BACEN)",   sigla: "BACEN", area: "bancario", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   { id: "analista-bndes",      nome: "Analista — BNDES",                          orgao: "BNDES",                             sigla: "BNDES", area: "bancario", banca: "CESGRANRIO",  categoria: "bancario" },
   { id: "tecnico-bndes",       nome: "Técnico Administrativo — BNDES",            orgao: "BNDES",                             sigla: "BNDES", area: "bancario", banca: "CESGRANRIO",  categoria: "bancario" },
+  { id: "ti-banc-bndes",       nome: "Analista de TI — BNDES",                    orgao: "BNDES",                             sigla: "BNDES", area: "bancario", banca: "CESGRANRIO",  categoria: "tecnologia-informacao" },
 
   { id: "analista-brb",        nome: "Analista / Técnico — BRB",                  orgao: "Banco de Brasília (BRB)",           sigla: "BRB", area: "bancario", banca: "IADES",          categoria: "bancario" },
 
@@ -205,6 +222,10 @@ export const CARGOS: Cargo[] = [
 
   { id: "auditor-tce",         nome: "Auditor de Controle Externo — TCE",         orgao: "Tribunal de Contas Estadual (TCE)", sigla: "TCE", area: "controle", hasEstado: true, categoria: "controle-auditoria" },
   { id: "analista-tce",        nome: "Analista / Técnico — TCE",                  orgao: "Tribunal de Contas Estadual (TCE)", sigla: "TCE", area: "controle", hasEstado: true, categoria: "controle-auditoria" },
+  // TI dentro do Controle
+  { id: "ti-ctrl-tcu",         nome: "Analista de Controle Externo — TI / TCU",   orgao: "Tribunal de Contas da União (TCU)", sigla: "TCU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-ctrl-cgu",         nome: "Analista de TI — CGU",                       orgao: "Controladoria-Geral da União (CGU)",sigla: "CGU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-ctrl-tce",         nome: "Analista de TI — TCE Estadual",              orgao: "Tribunal de Contas Estadual (TCE)", sigla: "TCE", area: "controle", hasEstado: true, categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // PREVIDÊNCIA SOCIAL
@@ -212,6 +233,7 @@ export const CARGOS: Cargo[] = [
   { id: "tecnico-inss",        nome: "Técnico do Seguro Social — INSS",           orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
   { id: "analista-inss",       nome: "Analista do Seguro Social — INSS",          orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
   { id: "perito-inss",         nome: "Perito Médico Federal — INSS",              orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
+  { id: "ti-prev-inss",        nome: "Analista do Seguro Social — TI / INSS",     orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // TECNOLOGIA DA INFORMAÇÃO
@@ -223,9 +245,68 @@ export const CARGOS: Cargo[] = [
 
   { id: "analista-ti-gov",     nome: "Analista de Tecnologia da Informação — Gov. Federal", orgao: "Governo Federal (Ministérios / Autarquias)", sigla: "Gov-TI", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
-  { id: "analista-ti-trf",     nome: "Analista Judiciário — TI / TRF",            orgao: "Tribunal Regional Federal (TRF)",  sigla: "TRF",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
-  { id: "analista-ti-bb",      nome: "Analista de TI — Banco do Brasil",          orgao: "Banco do Brasil (BB)",              sigla: "BB-TI",area: "ti", banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
-  { id: "analista-ti-cef",     nome: "Analista de TI — Caixa Econômica",          orgao: "Caixa Econômica Federal (CEF)",    sigla: "CEF-TI",area: "ti", banca: "CESGRANRIO",    categoria: "tecnologia-informacao" },
+  { id: "analista-ti-trf",     nome: "Analista Judiciário — TI / TRF",            orgao: "Tribunal Regional Federal (TRF)",        sigla: "TRF",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "analista-ti-bb",      nome: "Analista de TI — Banco do Brasil",          orgao: "Banco do Brasil (BB)",                  sigla: "BB-TI",  area: "ti", banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
+  { id: "analista-ti-cef",     nome: "Analista de TI — Caixa Econômica",          orgao: "Caixa Econômica Federal (CEF)",         sigla: "CEF-TI", area: "ti", banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
+
+  // Tribunais Superiores — TI
+  { id: "ti-stf",              nome: "Analista Judiciário — TI / STF",             orgao: "Supremo Tribunal Federal (STF)",        sigla: "STF",    area: "ti", banca: "FGV",            categoria: "tecnologia-informacao" },
+  { id: "ti-stj",              nome: "Analista Judiciário — TI / STJ",             orgao: "Superior Tribunal de Justiça (STJ)",    sigla: "STJ",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-tse",              nome: "Analista Judiciário — TI / TSE",             orgao: "Tribunal Superior Eleitoral (TSE)",     sigla: "TSE",    area: "ti", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-tst",              nome: "Analista Judiciário — TI / TST",             orgao: "Tribunal Superior do Trabalho (TST)",   sigla: "TST",    area: "ti", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-trt",              nome: "Analista Judiciário — TI / TRT",             orgao: "Tribunal Regional do Trabalho (TRT)",   sigla: "TRT",    area: "ti", banca: "FCC",            categoria: "tecnologia-informacao" },
+  { id: "ti-tre",              nome: "Analista Judiciário — TI / TRE",             orgao: "Tribunal Regional Eleitoral (TRE)",     sigla: "TRE",    area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-tj",               nome: "Analista Judiciário — TI / TJ Estadual",     orgao: "Tribunal de Justiça Estadual (TJ)",     sigla: "TJ",     area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-tjdft",            nome: "Analista Judiciário — TI / TJDFT",           orgao: "Tribunal de Justiça do DF (TJDFT)",     sigla: "TJDFT",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Ministério Público — TI
+  { id: "ti-mpf",              nome: "Analista de TI — MPF",                       orgao: "Ministério Público Federal (MPF)",      sigla: "MPF",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-mp-est",           nome: "Analista de TI — MP Estadual",               orgao: "Ministério Público Estadual (MP)",      sigla: "MP",     area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-mpdft",            nome: "Analista de TI — MPDFT",                     orgao: "MP do Distrito Federal (MPDFT)",        sigla: "MPDFT",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Controle / Auditoria — TI
+  { id: "ti-tcu",              nome: "Analista de Controle Externo — TI / TCU",    orgao: "Tribunal de Contas da União (TCU)",     sigla: "TCU",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-cgu",              nome: "Analista de TI — CGU",                       orgao: "Controladoria-Geral da União (CGU)",    sigla: "CGU",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-tce",              nome: "Analista de TI — TCE Estadual",              orgao: "Tribunal de Contas Estadual (TCE)",     sigla: "TCE",    area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+
+  // Previdência — TI
+  { id: "ti-inss",             nome: "Analista do Seguro Social — TI / INSS",      orgao: "INSS",                                  sigla: "INSS",   area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Jurídico — TI
+  { id: "ti-agu",              nome: "Analista de TI — AGU",                       orgao: "Advocacia-Geral da União (AGU)",        sigla: "AGU",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-dpu",              nome: "Analista de TI — DPU",                       orgao: "Defensoria Pública da União (DPU)",     sigla: "DPU",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Policial — TI
+  { id: "ti-pf",               nome: "Perito Digital / Analista de TI — PF",       orgao: "Polícia Federal (PF)",                  sigla: "PF",     area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-pcdf",             nome: "Analista de TI — PCDF",                      orgao: "Polícia Civil do DF (PCDF)",            sigla: "PCDF",   area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Bancário — TI
+  { id: "ti-bacen",            nome: "Analista de TI — Banco Central",             orgao: "Banco Central do Brasil (BACEN)",       sigla: "BACEN",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-bndes",            nome: "Analista de TI — BNDES",                     orgao: "BNDES",                                 sigla: "BNDES",  area: "ti", banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
+
+  // Fiscal — TI
+  { id: "ti-rfb",              nome: "Analista de Sistemas / TI — RFB",            orgao: "Receita Federal do Brasil (RFB)",       sigla: "RFB",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-sefaz",            nome: "Analista de TI — SEFAZ Estadual",            orgao: "Secretaria de Fazenda Estadual (SEFAZ)",sigla: "SEFAZ",  area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+
+  // Ambiental / Infraestrutura — TI
+  { id: "ti-ibge",             nome: "Analista de TI — IBGE",                      orgao: "IBGE",                                  sigla: "IBGE",   area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-ibama",            nome: "Analista de TI — IBAMA",                     orgao: "IBAMA",                                 sigla: "IBAMA",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-incra",            nome: "Analista de TI — INCRA",                     orgao: "INCRA",                                 sigla: "INCRA",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-dnit",             nome: "Analista de TI — DNIT",                      orgao: "DNIT",                                  sigla: "DNIT",   area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Saúde — TI
+  { id: "ti-anvisa",           nome: "Analista de TI — ANVISA",                    orgao: "ANVISA",                                sigla: "ANVISA", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-ans",              nome: "Analista de TI — ANS",                       orgao: "ANS — Agência Nacional de Saúde",       sigla: "ANS",    area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-fiocruz",          nome: "Analista de TI — FIOCRUZ",                   orgao: "FIOCRUZ",                               sigla: "FIOCRUZ",area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  // Administrativo / Estatais — TI
+  { id: "ti-petrobras",        nome: "Analista de TI / Sistemas — Petrobras",      orgao: "Petrobras",                             sigla: "Petrobras", area: "ti", banca: "CESGRANRIO",  categoria: "tecnologia-informacao" },
+  { id: "ti-correios",         nome: "Analista de TI — Correios",                  orgao: "Correios (ECT)",                        sigla: "ECT",    area: "ti",                          categoria: "tecnologia-informacao" },
+  { id: "ti-anatel",           nome: "Analista de TI — ANATEL",                    orgao: "ANATEL",                                sigla: "ANATEL", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-aneel",            nome: "Analista de TI — ANEEL",                     orgao: "ANEEL",                                 sigla: "ANEEL",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-antt",             nome: "Analista de TI — ANTT",                      orgao: "ANTT",                                  sigla: "ANTT",   area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-prefeitura",       nome: "Analista / Técnico de TI — Prefeitura",      orgao: "Prefeitura Municipal",                  sigla: "Pref",   area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
+  { id: "ti-gov-estadual",     nome: "Analista / Técnico de TI — Gov. Estadual",   orgao: "Governo Estadual",                      sigla: "Gov",    area: "ti", hasEstado: true,          categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // DIPLOMÁTICO / ITAMARATY
@@ -283,6 +364,9 @@ export const CARGOS: Cargo[] = [
   { id: "ibge-analista",       nome: "Analista — IBGE",                           orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
   { id: "ibge-tecnico",        nome: "Técnico em Informações Geográficas — IBGE", orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
   { id: "ibge-agente",         nome: "Agente de Pesquisas e Mapeamento — IBGE",   orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "ti-amb-ibge",         nome: "Analista de TI — IBGE",                     orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-amb-ibama",        nome: "Analista de TI — IBAMA",                    orgao: "IBAMA",                             sigla: "IBAMA",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "ti-amb-dnit",         nome: "Analista de TI — DNIT",                     orgao: "DNIT",                              sigla: "DNIT",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
 
   // ══════════════════════════════════════════════════════════
   // ADMINISTRATIVO / GERAL
@@ -305,7 +389,11 @@ export const CARGOS: Cargo[] = [
   { id: "analista-mpu-adm",    nome: "Analista / Técnico Administrativo — MPU",    orgao: "Ministério Público da União (MPU)",sigla: "MPU",   area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
 
   { id: "analista-prefeitura", nome: "Agente / Analista Administrativo Municipal", orgao: "Prefeitura Municipal",             sigla: "Pref",  area: "administrativo", hasEstado: true, categoria: "gestao-publica" },
-  { id: "analista-gov-est",    nome: "Analista / Técnico Administrativo Estadual", orgao: "Governo Estadual",                 sigla: "Gov",   area: "administrativo", hasEstado: true, categoria: "gestao-publica" },
+  { id: "ti-adm-prefeitura",   nome: "Analista / Técnico de TI — Prefeitura",     orgao: "Prefeitura Municipal",             sigla: "Pref",  area: "administrativo", hasEstado: true, categoria: "tecnologia-informacao" },
+  { id: "analista-gov-est",    nome: "Analista / Técnico Administrativo Estadual", orgao: "Governo Estadual",                sigla: "Gov",   area: "administrativo", hasEstado: true, categoria: "gestao-publica" },
+  { id: "ti-adm-gov-est",      nome: "Analista / Técnico de TI — Gov. Estadual",  orgao: "Governo Estadual",                sigla: "Gov",   area: "administrativo", hasEstado: true, categoria: "tecnologia-informacao" },
+  { id: "ti-adm-petrobras",    nome: "Analista de TI / Sistemas — Petrobras",     orgao: "Petrobras",                       sigla: "Petrobras", area: "administrativo", banca: "CESGRANRIO", categoria: "tecnologia-informacao" },
+  { id: "ti-adm-correios",     nome: "Analista de TI — Correios",                 orgao: "Correios (ECT)",                  sigla: "ECT",   area: "administrativo",              categoria: "tecnologia-informacao" },
 ];
 
 /** Retorna cargos agrupados por área */
