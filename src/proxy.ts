@@ -1,14 +1,27 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// ── Rotas de cron — exigem CRON_SECRET no header Authorization ───────────────
+// Verificado no middleware para bloquear antes de chegar na route handler
+const CRON_PATHS_PREFIX = "/api/cron/";
+
+function checkCronAuth(request: NextRequest): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return true; // sem secret configurado = dev local, deixa passar
+  return request.headers.get("authorization") === `Bearer ${secret}`;
+}
+
 // ── Rotas públicas (sem auth) ────────────────────────────────────────────────
 const PUBLIC_PATHS = new Set([
   "/",
   "/login",
   "/cadastro",
   "/reset-senha",
+  "/confirmar-email",
   "/termos",
   "/privacidade",
+  "/instalar",
+  "/suporte",
   "/planos",
   "/planos/sucesso",
   "/planos/pendente",
@@ -48,9 +61,21 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, { status: 301 });
   }
 
+  // ── Proteção de rotas de cron (produção) ─────────────────────────────────
+  if (pathname.startsWith(CRON_PATHS_PREFIX) && process.env.NODE_ENV === "production") {
+    if (!checkCronAuth(request)) {
+      return new NextResponse(JSON.stringify({ error: "Não autorizado" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
   // ── Injeta pathname nos headers para server components ───────────────────
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-pathname", pathname);
+  // X-Request-Id: rastreável em logs (correlação request ↔ erro/auditoria)
+  requestHeaders.set("x-request-id", crypto.randomUUID());
 
   let supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } });
 
