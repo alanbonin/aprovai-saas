@@ -79,20 +79,23 @@ export async function POST(req: Request) {
   }
 
   // Salva metas semanais proporcionais às horas de estudo informadas
-  // (mesma fórmula do onboarding/plano: 35% do tempo em questões, ~2 min/questão)
+  // Distribuição: questões 35% | leitura PDF 15% | flashcards 15% | teoria 20% | revisão 15%
   if (body.horasEstudo && body.horasEstudo > 0) {
     const totalMin    = body.horasEstudo * 60;
-    const questoesDia = Math.round((totalMin * 0.35) / 2);   // questões/dia
+    const questoesDia = Math.round((totalMin * 0.35) / 2);   // ~2 min/questão
     const questoesMeta    = questoesDia * 5;                  // semana (5 dias úteis)
     const flashcardsDia   = Math.round((totalMin * 0.15) / 0.75);
     const flashcardsMeta  = flashcardsDia * 5;
     const horasEstudoMeta = body.horasEstudo * 5;
+    const leituraPdfMin   = Math.round(totalMin * 0.15);      // min/dia para PDFs
+    const leituraPdfMeta  = leituraPdfMin * 5;                // min/semana
 
     const metasContent = JSON.stringify({
       questoesMeta:   Math.max(questoesMeta, 10),   // mínimo 10/semana
       flashcardsMeta: Math.max(flashcardsMeta, 10),
       simuladosMeta:  body.horasEstudo >= 2 ? 1 : 1,
       horasEstudoMeta,
+      leituraPdfMeta: Math.max(leituraPdfMeta, 15), // mínimo 15 min/semana
     });
 
     const PREFIX_METAS = "__METAS_SEMANAIS__";

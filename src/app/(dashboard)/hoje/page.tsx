@@ -19,6 +19,7 @@ interface HojeData {
   streak: number;
   streakAtRisk: boolean;
   metaQuestoesHoje: number;
+  metaLeituraPdfHoje: number; // minutos de leitura de PDFs recomendados
   progressoPct: number;
   prioridade: { subjectName: string; erros: number } | null;
   estudouHoje: boolean;
@@ -275,6 +276,13 @@ export default function HojePage() {
           icon={<Zap className="w-5 h-5 text-amber-400" />}
           title="Desafio Diário"
           desc="1 questão cronometrada por dia — XP bônus"
+        />
+
+        <ActionCard
+          href="/biblioteca"
+          icon={<BookOpen className="w-5 h-5 text-emerald-400" />}
+          title="Leitura de PDFs"
+          desc={`Meta: ${d.metaLeituraPdfHoje ?? 18} min na Biblioteca de materiais`}
         />
 
         <ActionCard

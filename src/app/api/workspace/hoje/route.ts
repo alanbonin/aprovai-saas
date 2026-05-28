@@ -35,7 +35,7 @@ export async function GET() {
     metasRes,
   ] = await Promise.all([
     db.from("StudentProfile")
-      .select("streak, lastStudyDate, xp")
+      .select("streak, lastStudyDate, xp, horasEstudo")
       .eq("userId", dbUser.id)
       .single(),
     // Questões respondidas hoje
@@ -78,12 +78,19 @@ export async function GET() {
   }
 
   // Meta diária derivada da meta semanal
-  let metaQuestoesHoje = 10; // default
+  // Fallback: calcula com base nas horas de estudo do perfil se Note não existir
+  const horasEstudo = (profile?.horasEstudo as number | null) ?? 2;
+  const totalMinFallback = horasEstudo * 60;
+  const fallbackQuestoesDia  = Math.round((totalMinFallback * 0.35) / 2); // ~35% do tempo, 2 min/questão
+  const fallbackLeituraPdfMin = Math.round(totalMinFallback * 0.15);       // 15% para PDFs
+  let metaQuestoesHoje   = Math.max(5, fallbackQuestoesDia);
+  let metaLeituraPdfHoje = Math.max(5, fallbackLeituraPdfMin); // min/dia
   try {
     const metasContent = metasRes.data?.content;
     if (metasContent) {
-      const metas = JSON.parse(metasContent) as { questoesMeta?: number };
-      if (metas.questoesMeta) metaQuestoesHoje = Math.ceil(metas.questoesMeta / 5);
+      const metas = JSON.parse(metasContent) as { questoesMeta?: number; leituraPdfMeta?: number };
+      if (metas.questoesMeta)   metaQuestoesHoje   = Math.ceil(metas.questoesMeta / 5);
+      if (metas.leituraPdfMeta) metaLeituraPdfHoje = Math.ceil(metas.leituraPdfMeta / 5);
     }
   } catch { /* ignore */ }
 
@@ -122,6 +129,7 @@ export async function GET() {
     streak,
     streakAtRisk,
     metaQuestoesHoje,
+    metaLeituraPdfHoje, // minutos de leitura de PDFs recomendados hoje
     progressoPct: Math.min(100, Math.round((questoesHoje / metaQuestoesHoje) * 100)),
     prioridade,
     estudouHoje: lastStudy === todayStr,

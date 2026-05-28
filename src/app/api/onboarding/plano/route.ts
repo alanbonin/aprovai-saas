@@ -88,11 +88,12 @@ ${profile.editalContent.slice(0, 4000)}
     // Calcula rotina diária proporcional às horas disponíveis
     // Referência: 1h = 60min | cada questão ≈ 2min | cada flashcard ≈ 45s
     // Distribuição alvo por hora:
-    //   leitura/teoria: ~35% | questões: ~35% | revisão/flashcards: ~30%
+    //   teoria/aula: ~20% | PDF biblioteca: ~15% | questões: ~35% | revisão: ~15% | flashcards: ~15%
     const totalMin = horasDia * 60;
-    const leituraMin   = Math.round(totalMin * 0.35);
-    const revisaoMin   = Math.round(totalMin * 0.15);
-    const questoesDia  = Math.round((totalMin * 0.35) / 2);   // ~2 min por questão
+    const leituraMin    = Math.round(totalMin * 0.20); // teoria e aulas escritas
+    const leituraPdfMin = Math.round(totalMin * 0.15); // leitura de PDFs da biblioteca
+    const revisaoMin    = Math.round(totalMin * 0.15);
+    const questoesDia   = Math.round((totalMin * 0.35) / 2);   // ~2 min por questão
     const flashcardsDia = Math.round((totalMin * 0.15) / 0.75); // ~45s por card
     const simuladoFreq = horasDia <= 1 ? "quinzenal" : horasDia <= 2 ? "semanal" : horasDia <= 3 ? "semanal" : "2x por semana";
 
@@ -111,6 +112,7 @@ Gere um plano de estudos REALISTA e ESPECÍFICO para este aluno. Retorne APENAS 
     "questoes": ${questoesDia},
     "flashcards": ${flashcardsDia},
     "leituraMin": ${leituraMin},
+    "leituraPdfMin": ${leituraPdfMin},
     "revisaoMin": ${revisaoMin},
     "simulado": "${simuladoFreq}",
     "dica": "Uma frase curta de motivação/estratégia para a rotina diária (máx 80 chars)"
@@ -132,7 +134,7 @@ REGRAS CRÍTICAS:
 1. matérias: liste TODAS as matérias do edital (ou histórico) em ordem de peso/frequência — sem limite máximo
 2. cronograma: cada semana deve MESCLAR 2-3 matérias diferentes por semana, distribuídas por dias. Use o formato "Seg/Ter: Matéria — Tópico | Qua/Qui: Matéria — Tópico | Sex: Matéria — Tópico". Matérias de alto peso aparecem em mais semanas e mais dias. Matérias de baixo peso aparecem 1-2 vezes no total. TODAS as matérias devem aparecer no cronograma.
 3. horasPorDia: use exatamente ${horasDia} (informado pelo aluno) — não altere
-4. rotinaDiaria: use os valores já calculados acima (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}"). A dica deve ser motivadora e específica para este concurso.
+4. rotinaDiaria: use os valores já calculados acima (questoes=${questoesDia}, flashcards=${flashcardsDia}, leituraMin=${leituraMin}, leituraPdfMin=${leituraPdfMin}, revisaoMin=${revisaoMin}, simulado="${simuladoFreq}"). leituraPdfMin é o tempo dedicado à leitura de PDFs/apostilas na Biblioteca de PDFs da plataforma. A dica deve ser motivadora e específica para este concurso.
 5. Se não há edital publicado, baseie-se 100% em editais anteriores para este cargo/banca específicos
 6. foco: mencione a banca ou o órgão na frase motivadora
 7. Seja específico nos tópicos (ex: "Dir. Constitucional — Controle de constitucionalidade", não apenas "Direito Constitucional")
