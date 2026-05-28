@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { BookOpen, Target, Layers, ChevronRight, Clock, CheckCircle2, XCircle, RotateCcw, ClipboardList, Filter, Pause, Play, ArrowLeft, Flame, RefreshCw, Calendar, Sparkles, TrendingUp, AlertCircle, Brain, Lock, X } from "lucide-react";
+import { BookOpen, Target, Layers, ChevronRight, Clock, CheckCircle2, XCircle, RotateCcw, ClipboardList, Filter, Pause, Play, ArrowLeft, Flame, RefreshCw, Calendar, Sparkles, TrendingUp, AlertCircle, Brain, Lock, X, Search, Plus, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SimuladoClient } from "@/app/(dashboard)/simulado/simulado-client";
 import { SimuladoBanca } from "@/components/workspace/simulado-banca";
@@ -297,16 +297,31 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     progresso: { questoes: number; flashcards: number; simulados: number; casos: number; redacao: number };
   } | null>(null);
   const [editingMetas, setEditingMetas] = useState(false);
-  const [editingSubjects, setEditingSubjects] = useState(false);
-  const [hiddenSubjectIds, setHiddenSubjectIds] = useState<Set<string>>(() => {
-    try { return new Set(JSON.parse(localStorage.getItem("hidden-subjects") || "[]") as string[]); }
-    catch { return new Set<string>(); }
-  });
-  function hideSubject(id: string) {
-    setHiddenSubjectIds(prev => { const n = new Set(prev); n.add(id); localStorage.setItem("hidden-subjects", JSON.stringify([...n])); return n; });
+  const [showSubjectManager, setShowSubjectManager] = useState(false);
+  const [allSubjects, setAllSubjects] = useState<{ id: string; name: string; categoria?: string }[]>([]);
+  const [activeSubjectIds, setActiveSubjectIds] = useState<Set<string>>(new Set(subjects.map(s => s.id)));
+  const [subjectSearch, setSubjectSearch] = useState("");
+  const [savingSubjects, setSavingSubjects] = useState(false);
+
+  async function openSubjectManager() {
+    setShowSubjectManager(true);
+    setActiveSubjectIds(new Set(subjects.map(s => s.id)));
+    if (allSubjects.length === 0) {
+      const res = await fetch("/api/subjects");
+      if (res.ok) { const d = await res.json(); setAllSubjects(d.subjects ?? []); }
+    }
   }
-  function showSubject(id: string) {
-    setHiddenSubjectIds(prev => { const n = new Set(prev); n.delete(id); localStorage.setItem("hidden-subjects", JSON.stringify([...n])); return n; });
+
+  async function saveSubjects() {
+    setSavingSubjects(true);
+    await fetch("/api/workspace/materias", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subjectIds: [...activeSubjectIds] }),
+    });
+    setSavingSubjects(false);
+    setShowSubjectManager(false);
+    window.location.reload();
   }
   const [simuladoHistory, setSimuladoHistory] = useState<{ id: number; total: number; correct: number; timeSecs: number; createdAt: string }[]>([]);
   const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number; maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number; maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number; hasEditalDecoder?: boolean; hasPdfLibrary?: boolean; hasGroupStudy?: boolean; hasLongTermMemory?: boolean; features: string[]; active: boolean }[]>([]);
@@ -724,17 +739,15 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               {/* ── Matérias ── */}
               <div className="px-4 mt-4 pb-24">
                 <div className="flex items-center justify-between mb-3">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias</p>
-                  <button onClick={() => setEditingSubjects(v => !v)}
-                    className={cn("text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all",
-                      editingSubjects ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" : "text-gray-500 hover:text-gray-300")}>
-                    {editingSubjects ? "✓ Concluído" : "✏️ Editar"}
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias <span className="text-gray-600 normal-case font-normal">({subjects.length})</span></p>
+                  <button onClick={openSubjectManager}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold hover:bg-indigo-600/30 transition-all active:scale-95">
+                    <Plus size={13} />
+                    Adicionar / Remover
                   </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {subjects.map((s, idx) => {
-                    const isHidden = hiddenSubjectIds.has(s.id);
-                    if (isHidden && !editingSubjects) return null;
                     const color = getSubjectColor(idx);
                     const abbr = getSubjectAbbr(s.name);
                     const ss = homeStats?.subjectStats.find(x => x.subjectId === s.id);
@@ -742,63 +755,152 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     const ringColor = pct >= 70 ? "#34d399" : pct >= 40 ? color : ss?.total ? "#ef4444" : "rgba(255,255,255,0.12)";
                     const badge = getDifficultyBadge(ss?.total ? ss.accuracy : null);
                     return (
-                      <div key={s.id} className="relative">
-                        {/* Botão de ocultar/mostrar em modo edição */}
-                        {editingSubjects && (
-                          <button onClick={() => isHidden ? showSubject(s.id) : hideSubject(s.id)}
-                            className={cn(
-                              "absolute -top-1.5 -right-1.5 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-lg transition-all",
-                              isHidden ? "bg-green-500 text-white" : "bg-red-500 text-white"
-                            )}>
-                            {isHidden ? "+" : "×"}
-                          </button>
-                        )}
-                        <button
-                          onClick={() => { if (!editingSubjects && !isHidden) { setSelectedSubject(s); setActiveTab("questoes"); } }}
-                          className={cn(
-                            "w-full flex flex-col p-3 rounded-2xl border transition-all text-left group active:scale-[0.97]",
-                            isHidden
-                              ? "opacity-40 border-white/[0.04] bg-white/[0.02]"
-                              : "border-white/[0.07] bg-[#0d1117] hover:bg-[#131820] hover:border-white/12"
-                          )}
-                          style={{ transition: "all .15s ease" }}>
-                          <div className="flex items-start justify-between mb-2">
-                            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black flex-shrink-0"
-                              style={{ background: color + "1a", border: `1px solid ${color}30`, color }}>
-                              {abbr}
-                            </div>
-                            <div className="flex flex-col items-center gap-0.5">
-                              <div className="relative">
-                                <CircularProgress pct={pct} color={ringColor} size={30} stroke={2.5} />
-                                <div className="absolute inset-0 flex items-center justify-center"
-                                  style={{ fontSize: 6.5, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
-                                  {pct > 0 ? `${pct}%` : "—"}
-                                </div>
+                      <button key={s.id}
+                        onClick={() => { setSelectedSubject(s); setActiveTab("questoes"); }}
+                        className="flex flex-col p-3 rounded-2xl border border-white/[0.07] bg-[#0d1117] hover:bg-[#131820] hover:border-white/12 transition-all text-left group active:scale-[0.97]"
+                        style={{ transition: "all .15s ease" }}>
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black flex-shrink-0"
+                            style={{ background: color + "1a", border: `1px solid ${color}30`, color }}>
+                            {abbr}
+                          </div>
+                          <div className="flex flex-col items-center gap-0.5">
+                            <div className="relative">
+                              <CircularProgress pct={pct} color={ringColor} size={30} stroke={2.5} />
+                              <div className="absolute inset-0 flex items-center justify-center"
+                                style={{ fontSize: 6.5, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
+                                {pct > 0 ? `${pct}%` : "—"}
                               </div>
-                              <span className="text-[7px] text-gray-500 leading-none">acerto</span>
                             </div>
+                            <span className="text-[7px] text-gray-500 leading-none">acerto</span>
                           </div>
-                          <p className="text-[12px] font-semibold text-white leading-tight mb-1.5 line-clamp-2">{s.name}</p>
-                          <div className="flex items-center justify-between mt-auto">
-                            <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-0.5", badge.color)}>
-                              {badge.emoji} {badge.label}
-                            </span>
-                            <span className="text-[9px] text-gray-500">{ss?.total ? `${ss.total} feitas` : "Iniciar →"}</span>
-                          </div>
-                        </button>
-                      </div>
+                        </div>
+                        <p className="text-[12px] font-semibold text-white leading-tight mb-1.5 line-clamp-2">{s.name}</p>
+                        <div className="flex items-center justify-between mt-auto">
+                          <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-0.5", badge.color)}>
+                            {badge.emoji} {badge.label}
+                          </span>
+                          <span className="text-[9px] text-gray-500">{ss?.total ? `${ss.total} feitas` : "Iniciar →"}</span>
+                        </div>
+                      </button>
                     );
                   })}
                 </div>
-                {hiddenSubjectIds.size > 0 && !editingSubjects && (
-                  <p className="text-center text-[11px] text-gray-600 mt-3">
-                    {hiddenSubjectIds.size} matéria{hiddenSubjectIds.size > 1 ? "s" : ""} oculta{hiddenSubjectIds.size > 1 ? "s" : ""} —{" "}
-                    <button onClick={() => setEditingSubjects(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors">
-                      editar
-                    </button>
-                  </p>
-                )}
               </div>
+
+              {/* ── Modal gerenciador de matérias ── */}
+              {showSubjectManager && (
+                <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+                  onClick={e => { if (e.target === e.currentTarget) setShowSubjectManager(false); }}>
+                  <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
+                    style={{ background: "#0d1117", maxHeight: "85vh", border: "1px solid rgba(255,255,255,0.08)" }}>
+
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/[0.06] flex-shrink-0">
+                      <div>
+                        <p className="text-base font-bold text-white">Gerenciar Matérias</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{activeSubjectIds.size} selecionada{activeSubjectIds.size !== 1 ? "s" : ""}</p>
+                      </div>
+                      <button onClick={() => setShowSubjectManager(false)}
+                        className="w-8 h-8 rounded-xl bg-white/[0.06] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Search */}
+                    <div className="px-4 py-3 flex-shrink-0">
+                      <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5">
+                        <Search size={14} className="text-gray-500 flex-shrink-0" />
+                        <input
+                          type="text"
+                          placeholder="Buscar matéria..."
+                          value={subjectSearch}
+                          onChange={e => setSubjectSearch(e.target.value)}
+                          className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
+                          autoFocus
+                        />
+                        {subjectSearch && (
+                          <button onClick={() => setSubjectSearch("")} className="text-gray-600 hover:text-gray-400">
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Lista */}
+                    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1">
+                      {allSubjects.length === 0 ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      ) : (() => {
+                        const filtered = allSubjects.filter(s =>
+                          s.name.toLowerCase().includes(subjectSearch.toLowerCase())
+                        );
+                        // Agrupa: ativas primeiro, depois inativas
+                        const ativas = filtered.filter(s => activeSubjectIds.has(s.id));
+                        const inativas = filtered.filter(s => !activeSubjectIds.has(s.id));
+                        const renderItem = (s: { id: string; name: string; categoria?: string }, isActive: boolean) => (
+                          <button key={s.id}
+                            onClick={() => setActiveSubjectIds(prev => {
+                              const n = new Set(prev);
+                              if (isActive) n.delete(s.id); else n.add(s.id);
+                              return n;
+                            })}
+                            className={cn(
+                              "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
+                              isActive
+                                ? "bg-indigo-600/15 border-indigo-500/30 hover:bg-indigo-600/20"
+                                : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.05]"
+                            )}>
+                            <div className={cn(
+                              "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border transition-all",
+                              isActive ? "bg-indigo-600 border-indigo-500" : "border-white/20 bg-transparent"
+                            )}>
+                              {isActive && <Check size={11} className="text-white" />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className={cn("text-sm font-medium truncate", isActive ? "text-white" : "text-gray-400")}>{s.name}</p>
+                              {s.categoria && <p className="text-[10px] text-gray-600 capitalize">{s.categoria.replace(/-/g, " ")}</p>}
+                            </div>
+                          </button>
+                        );
+                        return (
+                          <>
+                            {ativas.length > 0 && (
+                              <>
+                                <p className="text-[10px] text-indigo-400 font-semibold uppercase tracking-widest px-1 pt-1 pb-1">✓ Ativas ({ativas.length})</p>
+                                {ativas.map(s => renderItem(s, true))}
+                              </>
+                            )}
+                            {inativas.length > 0 && (
+                              <>
+                                <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest px-1 pt-3 pb-1">Disponíveis ({inativas.length})</p>
+                                {inativas.map(s => renderItem(s, false))}
+                              </>
+                            )}
+                            {filtered.length === 0 && (
+                              <p className="text-center text-gray-600 text-sm py-8">Nenhuma matéria encontrada</p>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </div>
+
+                    {/* Footer */}
+                    <div className="px-4 py-4 border-t border-white/[0.06] flex gap-2 flex-shrink-0">
+                      <button onClick={() => setShowSubjectManager(false)}
+                        className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm font-medium hover:bg-white/5 transition-all">
+                        Cancelar
+                      </button>
+                      <button onClick={saveSubjects} disabled={savingSubjects || activeSubjectIds.size === 0}
+                        className="flex-2 flex-grow-[2] py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+                        {savingSubjects ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Salvando...</> : `Salvar (${activeSubjectIds.size} matérias)`}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
