@@ -221,8 +221,6 @@ export function DesafioSemanalInner() {
           {/* Question card */}
           <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-4">
             <div className="flex flex-wrap gap-2 mb-2">
-              {q.banca && <span className="text-[10px] text-gray-600">{q.banca}</span>}
-              {q.year && <span className="text-[10px] text-gray-600">{q.year}</span>}
               <span className="text-[10px] px-1.5 py-0.5 rounded border bg-red-500/10 border-red-500/20 text-red-400">Difícil</span>
             </div>
             <p className="text-sm text-gray-200 leading-relaxed">{q.statement}</p>

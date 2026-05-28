@@ -215,11 +215,6 @@ export function AdaptativoInner() {
           <span className="text-[11px] text-gray-500 bg-white/5 px-2 py-0.5 rounded-full">
             {questao.subjectName}
           </span>
-          {questao.banca && (
-            <span className="text-[11px] text-gray-600 bg-white/5 px-2 py-0.5 rounded-full">
-              {questao.banca}{questao.year ? ` · ${questao.year}` : ""}
-            </span>
-          )}
           <span className={cn("text-[11px] px-2 py-0.5 rounded-full ml-auto",
             questao.level === "easy"   ? "text-green-400 bg-green-500/10" :
             questao.level === "hard"   ? "text-red-400 bg-red-500/10"     : "text-yellow-400 bg-yellow-500/10"

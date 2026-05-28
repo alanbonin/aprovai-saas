@@ -424,8 +424,6 @@ export default function DesafioPage() {
       {/* Question card */}
       <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6">
         <div className="flex items-center gap-2 mb-4">
-          {q.banca && <span className="text-xs text-indigo-400 font-medium">{q.banca}</span>}
-          {q.year && <span className="text-xs text-gray-600">{q.year}</span>}
           {q.level && (
             <span className={cn("text-xs font-medium",
               q.level === "facil" ? "text-green-400" : q.level === "medio" ? "text-amber-400" : "text-red-400"

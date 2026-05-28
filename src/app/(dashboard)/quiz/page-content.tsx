@@ -284,7 +284,6 @@ export function QuizInner() {
       {/* Questão */}
       <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-4">
         <div className="flex items-center gap-2 mb-2">
-          {q.banca && <span className="text-[10px] text-gray-600">{q.banca}</span>}
           <span className="text-[10px] font-mono text-amber-500">Q{current + 1}/{QUIZ_SIZE}</span>
         </div>
         <p className="text-sm text-gray-200 leading-relaxed">{q.statement}</p>
