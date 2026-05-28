@@ -278,7 +278,7 @@ function PushToggleCompact() {
 export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, subjects, profile, userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired = false }: Props) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [activeNav, setActiveNav] = useState<NavId>("estudar");
-  const [activeTab, setActiveTab] = useState<Tab>("materiais");
+  const [activeTab, setActiveTab] = useState<Tab>("questoes");
   const [content, setContent] = useState<{ materiais: unknown[]; questoes: unknown[]; flashcards: unknown[] }>({ materiais: [], questoes: [], flashcards: [] });
   const [loadingContent, setLoadingContent] = useState(false);
   // (old floating pomodoro state removed — Pomodoro now has its own full tab/component)
@@ -916,14 +916,13 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               {/* Tabs */}
               {(() => {
                 const tabs = [
-                  { id: "materiais" as Tab,  label: "Materiais",  icon: BookOpen,     count: content.materiais.length },
-                  { id: "questoes" as Tab,   label: "Questões",   icon: Target,       count: content.questoes.length },
-                  { id: "flashcards" as Tab, label: "Flashcards", icon: Layers,       count: content.flashcards.length },
-                  { id: "simulados" as Tab,  label: "Simulados",  icon: ClipboardList, count: 0 },
+                  { id: "questoes" as Tab,   label: "Questões",   icon: Target },
+                  { id: "flashcards" as Tab, label: "Flashcards", icon: Layers },
+                  { id: "simulados" as Tab,  label: "Simulados",  icon: ClipboardList },
                 ];
                 return (
                   <div className="flex border-b border-white/[0.06] bg-[#0a0d14] flex-shrink-0 overflow-x-auto bottom-tabs-scroll">
-                    {tabs.map(({ id, label, icon: Icon, count }) => (
+                    {tabs.map(({ id, label, icon: Icon }) => (
                       <button key={id} onClick={() => setActiveTab(id)}
                         className={cn(
                           "flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0",
@@ -931,7 +930,6 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         )}>
                         <Icon className="w-4 h-4" />
                         {label}
-                        {count > 0 && <span className="text-xs bg-white/10 px-1.5 rounded-full">{count}</span>}
                       </button>
                     ))}
                   </div>
@@ -942,8 +940,6 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   <div className="flex items-center justify-center h-full">
                     <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
                   </div>
-                ) : activeTab === "materiais" ? (
-                  <MateriaisTab items={content.materiais as Material[]} subjectName={selectedSubject.name} />
                 ) : activeTab === "questoes" ? (
                   <QuestoesAdaptativasToggle
                     subjectId={selectedSubject.id}
@@ -1295,10 +1291,10 @@ function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUp
 }
 
 // ── Filtros avançados de questões ─────────────────────────────────────────────
-function QuestoesFiltros({ bancas, filterBanca, filterLevel, filterStatus, onBanca, onLevel, onStatus, count, total, favCount }: {
-  bancas: string[]; filterBanca: string; filterLevel: string;
+function QuestoesFiltros({ filterLevel, filterStatus, onLevel, onStatus, count, total, favCount }: {
+  filterLevel: string;
   filterStatus: "todas" | "pendentes" | "revisadas" | "favoritas";
-  onBanca: (v: string) => void; onLevel: (v: string) => void;
+  onLevel: (v: string) => void;
   onStatus: (v: "todas" | "pendentes" | "revisadas" | "favoritas") => void;
   count: number; total: number; favCount: number;
 }) {
@@ -1312,14 +1308,6 @@ function QuestoesFiltros({ bancas, filterBanca, filterLevel, filterStatus, onBan
           {s === "todas" ? `Todas (${total})` : s === "pendentes" ? "🔴 Pendentes" : s === "revisadas" ? "✅ Revisadas" : `⭐ Favoritas (${favCount})`}
         </button>
       ))}
-      {/* Filtro banca */}
-      {bancas.length > 0 && (
-        <select value={filterBanca} onChange={e => onBanca(e.target.value)}
-          className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-gray-300 focus:outline-none">
-          <option value="">Banca: todas</option>
-          {bancas.map(b => <option key={b} value={b}>{b}</option>)}
-        </select>
-      )}
       {/* Filtro nível */}
       <select value={filterLevel} onChange={e => onLevel(e.target.value)}
         className="bg-white/5 border border-white/10 rounded-full px-3 py-1 text-xs text-gray-300 focus:outline-none">
@@ -1328,7 +1316,7 @@ function QuestoesFiltros({ bancas, filterBanca, filterLevel, filterStatus, onBan
         <option value="medio">🟡 Médio</option>
         <option value="dificil">🔴 Difícil</option>
       </select>
-      {(filterBanca || filterLevel || filterStatus !== "todas") && (
+      {(filterLevel || filterStatus !== "todas") && (
         <span className="text-xs text-gray-500 self-center">{count} questão(ões)</span>
       )}
     </div>
@@ -1354,7 +1342,6 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [answered, setAnswered] = useState<Set<number>>(new Set());
   const [dailyLimitHit, setDailyLimitHit] = useState(!isPremium && todayCount >= DAILY_LIMIT);
-  const [filterBanca, setFilterBanca] = useState("");
   const [filterLevel, setFilterLevel] = useState("");
   const [filterStatus, setFilterStatus] = useState<"todas" | "pendentes" | "revisadas" | "favoritas">("todas");
   const [favoritos, setFavoritos] = useState<Set<number>>(new Set());
@@ -1417,10 +1404,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     return a;
   }
 
-  const bancas = Array.from(new Set(items.map(q => q.banca).filter(Boolean) as string[]));
-
   let filtered = items;
-  if (filterBanca) filtered = filtered.filter(q => q.banca === filterBanca);
   if (filterLevel) filtered = filtered.filter(q => q.level === filterLevel);
   if (filterStatus === "pendentes") filtered = filtered.filter(q => !q._seen || !q._nextReview || new Date(q._nextReview).getTime() <= Date.now());
   if (filterStatus === "revisadas") filtered = filtered.filter(q => q._seen && q._nextReview && new Date(q._nextReview).getTime() > Date.now());
@@ -1599,8 +1583,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   if (filtered.length === 0) return (
     <div>
       {/* Filtros mesmo vazio */}
-      <QuestoesFiltros bancas={bancas} filterBanca={filterBanca} filterLevel={filterLevel} filterStatus={filterStatus}
-        onBanca={v => { setFilterBanca(v); resetFilters(); }} onLevel={v => { setFilterLevel(v); resetFilters(); }}
+      <QuestoesFiltros filterLevel={filterLevel} filterStatus={filterStatus}
+        onLevel={v => { setFilterLevel(v); resetFilters(); }}
         onStatus={v => { setFilterStatus(v); resetFilters(); }} count={0} total={items.length} favCount={favoritos.size} />
       <EmptyState label={filterStatus === "favoritas" ? "Nenhuma questão favoritada ainda." : `Nenhuma questão encontrada com esses filtros.`} />
     </div>
@@ -1609,8 +1593,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   return (
     <div>
       {/* Filtros avançados */}
-      <QuestoesFiltros bancas={bancas} filterBanca={filterBanca} filterLevel={filterLevel} filterStatus={filterStatus}
-        onBanca={v => { setFilterBanca(v); resetFilters(); }} onLevel={v => { setFilterLevel(v); resetFilters(); }}
+      <QuestoesFiltros filterLevel={filterLevel} filterStatus={filterStatus}
+        onLevel={v => { setFilterLevel(v); resetFilters(); }}
         onStatus={v => { setFilterStatus(v); resetFilters(); }} count={filtered.length} total={items.length} favCount={favoritos.size} />
 
       {/* Header */}
@@ -1622,7 +1606,6 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
           {future.length > 0 && <span className="text-gray-600"> · {future.length} agendadas</span>}
         </span>
         <div className="flex items-center gap-2">
-          {q.banca && <span className="text-indigo-400">{q.banca}{q.year ? ` ${q.year}` : ""}</span>}
           <span className={cn("px-2 py-0.5 rounded-full text-xs", {
             "bg-green-500/10 text-green-400": q.level === "facil",
             "bg-yellow-500/10 text-yellow-400": q.level === "medio",
