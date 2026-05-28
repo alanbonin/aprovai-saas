@@ -63,9 +63,24 @@ export async function GET(req: Request) {
       .filter(Boolean);
   };
 
+  // Mescla subjects com mesmo nome (cross-categoria) para unificação visual
+  // Cada entry tem: id (primeiro encontrado), name, ids (todos os IDs com esse nome)
+  function mergeByName(list: { id: string; name: string; slug?: string; description?: string }[]) {
+    const map = new Map<string, { id: string; name: string; slug?: string; description?: string; ids: string[] }>();
+    for (const s of list) {
+      const key = s.name.toLowerCase().trim();
+      if (map.has(key)) {
+        map.get(key)!.ids.push(s.id);
+      } else {
+        map.set(key, { ...s, ids: [s.id] });
+      }
+    }
+    return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }
+
   if (categorias.length === 0) {
-    const subjects = await buildSubjectList();
-    return NextResponse.json({ subjects, profileId });
+    const rawSubjects = await buildSubjectList();
+    return NextResponse.json({ subjects: mergeByName(rawSubjects as { id: string; name: string }[]), profileId });
   }
 
   const { data: subjects } = await db
@@ -74,7 +89,7 @@ export async function GET(req: Request) {
     .in("categoria", categorias as string[])
     .order("ordem");
 
-  return NextResponse.json({ subjects: subjects ?? [], profileId });
+  return NextResponse.json({ subjects: mergeByName(subjects ?? []), profileId });
 }
 
 export async function POST(req: Request) {

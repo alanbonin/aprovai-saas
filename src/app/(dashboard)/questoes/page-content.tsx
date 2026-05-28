@@ -1,9 +1,9 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CheckCircle, XCircle, ChevronRight, RotateCcw, Filter,
-  Star, Zap, BookOpen, Trophy, Flag, X,
+  Star, Zap, BookOpen, Trophy, Flag, X, Lightbulb,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSessionState } from "@/lib/use-session-state";
@@ -29,6 +29,7 @@ interface Question {
 interface Subject {
   id: string;
   name: string;
+  ids?: string[]; // múltiplos IDs para o mesmo nome (cross-categoria)
 }
 
 const BANCAS = ["CESPE", "FGV", "VUNESP", "FCC", "IBFC", "CESGRANRIO", "AOCP"];
@@ -72,6 +73,12 @@ export function QuestoesInner() {
     searchParams.get("favoritos") === "1" || searchParams.get("erros") === "1"
   );
 
+  // Definição de palavras
+  const [defWord, setDefWord]       = useState<string | null>(null);
+  const [defText, setDefText]       = useState<string | null>(null);
+  const [defLoading, setDefLoading] = useState(false);
+  const defRef = useRef<HTMLDivElement>(null);
+
   // Reporte de questão
   const [reportModal, setReportModal]     = useState<number | null>(null); // questionId
   const [reportMotivo, setReportMotivo]   = useState("gabarito_errado");
@@ -101,7 +108,12 @@ export function QuestoesInner() {
     const params = new URLSearchParams();
     if (filterBanca)   params.set("banca", filterBanca);
     if (filterLevel)   params.set("level", filterLevel);
-    if (filterSubject) params.set("subjectId", filterSubject);
+    if (filterSubject) {
+      // Usa subjectIds (cross-categoria) se o subject tiver múltiplos IDs
+      const sub = subjects.find(s => s.id === filterSubject);
+      if (sub?.ids && sub.ids.length > 1) params.set("subjectIds", sub.ids.join(","));
+      else params.set("subjectId", filterSubject);
+    }
     if (filterYear)    params.set("year", filterYear);
     if (onlyFavs)      params.set("favoritos", "1");
     if (onlyErros)     params.set("erros", "1");
@@ -131,6 +143,9 @@ export function QuestoesInner() {
   function handleSelect(key: string) {
     if (selected) return;
     setSelected(key);
+    setShowResult(true); // abre explicação automaticamente
+    setDefWord(null);    // fecha qualquer definição aberta
+    setDefText(null);
     const isCorrect = key === q.answer;
     setScore(s => ({
       correct: s.correct + (isCorrect ? 1 : 0),
@@ -141,6 +156,29 @@ export function QuestoesInner() {
       setXpFlash(f => f + 1);
       setTimeout(() => setXpFlash(f => f - 1), 1500);
     }
+  }
+
+  async function fetchDefinicao(palavra: string) {
+    const termo = palavra.replace(/[^a-zA-ZÀ-ÿ\-]/g, "").trim();
+    if (!termo || termo.length < 3) return;
+    // Toggle off se já aberto
+    if (defWord === termo) { setDefWord(null); setDefText(null); return; }
+
+    setDefWord(termo);
+    setDefText(null);
+    setDefLoading(true);
+    try {
+      const res = await fetch(
+        `/api/questoes/definicao?termo=${encodeURIComponent(termo)}&contexto=${encodeURIComponent((q?.statement ?? "").slice(0, 200))}`
+      );
+      const data = await res.json() as { definicao?: string };
+      setDefText(data.definicao ?? "Definição não encontrada.");
+    } catch {
+      setDefText("Erro ao buscar definição.");
+    }
+    setDefLoading(false);
+    // scroll suave até o card de definição
+    setTimeout(() => defRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 100);
   }
 
   async function handleQuality(q_id: string) {
@@ -488,7 +526,56 @@ export function QuestoesInner() {
             </div>
           </div>
 
-          <p className="text-gray-200 leading-relaxed mb-6 text-sm">{q.statement}</p>
+          {/* Enunciado com palavras clicáveis para definição */}
+          <div className="mb-5">
+            <p className="text-gray-200 leading-relaxed text-sm select-none">
+              {q.statement.split(/(\s+)/).map((parte, i) => {
+                const limpa = parte.replace(/[^a-zA-ZÀ-ÿ\-]/g, "");
+                const isAtiva = !!defWord && limpa.toLowerCase() === defWord.toLowerCase();
+                const clicavel = !selected && limpa.length >= 3;
+                return (
+                  <span
+                    key={i}
+                    onClick={() => clicavel && fetchDefinicao(parte)}
+                    className={cn(
+                      "transition-colors rounded px-0.5 -mx-0.5",
+                      clicavel && "cursor-pointer hover:bg-white/10 hover:text-white",
+                      isAtiva && "bg-[#0ab5bd]/25 text-[#0ab5bd] font-medium"
+                    )}
+                  >
+                    {parte}
+                  </span>
+                );
+              })}
+            </p>
+            {/* Dica de definição (só antes de responder) */}
+            {!selected && (
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full
+                bg-[#0ab5bd]/10 border border-[#0ab5bd]/30
+                shadow-[0_0_12px_rgba(10,181,189,0.15)]">
+                <Lightbulb className="w-3.5 h-3.5 text-[#0ab5bd] flex-shrink-0 fill-[#0ab5bd]/30" />
+                <span className="text-xs text-[#0ab5bd] font-medium tracking-wide">
+                  Toque em qualquer palavra para ver a definição
+                </span>
+              </div>
+            )}
+
+            {/* Card de definição */}
+            {defWord && (
+              <div ref={defRef} className="mt-3 p-3.5 rounded-xl bg-[#0ab5bd]/10 border border-[#0ab5bd]/30 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-[#0ab5bd] uppercase tracking-wide">{defWord}</span>
+                  <button onClick={() => { setDefWord(null); setDefText(null); }} className="text-gray-600 hover:text-gray-400">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                {defLoading
+                  ? <div className="flex items-center gap-2 text-xs text-gray-500"><div className="w-3 h-3 border border-[#0ab5bd]/40 border-t-[#0ab5bd] rounded-full animate-spin" /> Buscando definição…</div>
+                  : <p className="text-xs text-gray-300 leading-relaxed">{defText}</p>
+                }
+              </div>
+            )}
+          </div>
 
           {/* Options */}
           <div className="space-y-2.5">
@@ -530,20 +617,22 @@ export function QuestoesInner() {
           {/* After answer */}
           {selected && (
             <div className="mt-5 space-y-3">
-              {/* Explanation toggle */}
+              {/* Explanation — abre automaticamente ao responder */}
               {q.explanation && (
-                <div
-                  onClick={() => setShowResult(r => !r)}
-                  className="cursor-pointer"
-                >
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1.5 hover:text-gray-400">
-                    <span>{showResult ? "Ocultar" : "Ver"} explicação</span>
+                <div>
+                  {/* Header clicável para ocultar/mostrar */}
+                  <button
+                    onClick={() => setShowResult(r => !r)}
+                    className="flex items-center gap-2 text-xs text-amber-400/80 hover:text-amber-300 mb-2 transition-colors"
+                  >
+                    <Lightbulb className="w-3.5 h-3.5" />
+                    <span className="font-medium">{showResult ? "Ocultar" : "Ver"} explicação</span>
                     <ChevronRight className={cn("w-3 h-3 transition-transform", showResult && "rotate-90")} />
-                  </div>
+                  </button>
                   {showResult && (
-                    <p className="text-xs text-gray-400 leading-relaxed p-3 rounded-lg bg-white/5 border border-white/5">
-                      {q.explanation}
-                    </p>
+                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                      <p className="text-xs text-amber-100 leading-relaxed">{q.explanation}</p>
+                    </div>
                   )}
                 </div>
               )}

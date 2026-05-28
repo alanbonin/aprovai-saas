@@ -78,6 +78,34 @@ export async function POST(req: Request) {
       .eq("id", dbUser.id);
   }
 
+  // Salva metas semanais proporcionais às horas de estudo informadas
+  // (mesma fórmula do onboarding/plano: 35% do tempo em questões, ~2 min/questão)
+  if (body.horasEstudo && body.horasEstudo > 0) {
+    const totalMin    = body.horasEstudo * 60;
+    const questoesDia = Math.round((totalMin * 0.35) / 2);   // questões/dia
+    const questoesMeta    = questoesDia * 5;                  // semana (5 dias úteis)
+    const flashcardsDia   = Math.round((totalMin * 0.15) / 0.75);
+    const flashcardsMeta  = flashcardsDia * 5;
+    const horasEstudoMeta = body.horasEstudo * 5;
+
+    const metasContent = JSON.stringify({
+      questoesMeta:   Math.max(questoesMeta, 10),   // mínimo 10/semana
+      flashcardsMeta: Math.max(flashcardsMeta, 10),
+      simuladosMeta:  body.horasEstudo >= 2 ? 1 : 1,
+      horasEstudoMeta,
+    });
+
+    const PREFIX_METAS = "__METAS_SEMANAIS__";
+    const { data: existingMeta } = await db
+      .from("Note").select("id").eq("userId", dbUser.id).eq("subjectId", PREFIX_METAS).single();
+    if (existingMeta?.id) {
+      await db.from("Note").update({ content: metasContent }).eq("id", existingMeta.id);
+    } else {
+      await db.from("Note").insert({ userId: dbUser.id, subjectId: PREFIX_METAS, content: metasContent });
+    }
+    log.info("onboarding.metas_saved", { userId: dbUser.id, questoesDia, questoesMeta });
+  }
+
   // Inscreve automaticamente nas matérias da categoria escolhida
   if (body.categoria) {
     const { data: subjects } = await db

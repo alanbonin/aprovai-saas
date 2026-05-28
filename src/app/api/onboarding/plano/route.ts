@@ -137,7 +137,8 @@ REGRAS CRÍTICAS:
 6. foco: mencione a banca ou o órgão na frase motivadora
 7. Seja específico nos tópicos (ex: "Dir. Constitucional — Controle de constitucionalidade", não apenas "Direito Constitucional")
 8. Para aluno ${nivelLabel[nivel]}, ajuste o nível dos tópicos (mais básico para iniciante, mais avançado para avançado)
-9. Número de semanas: calcule com base no tempo disponível e volume de conteúdo — entre 8 e 20 semanas normalmente`;
+9. Número de semanas: calcule com base no tempo disponível e volume de conteúdo — entre 8 e 20 semanas normalmente
+10. IMPORTANTE — banco de questões cross-categoria: o banco agrupa questões pelo NOME do tópico independente da categoria (ex: "Língua Portuguesa" engloba questões de todas as bancas). Ao recomendar tópicos no cronograma, use o NOME EXATO do tópico — o aluno terá acesso a questões desse tópico de todas as bancas automaticamente.`;
 
     const userMsg = modalidade === "ENEM"
       ? `Modalidade: ENEM\nNome: ${profile?.nomePreferido ?? "Não informado"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva}` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`

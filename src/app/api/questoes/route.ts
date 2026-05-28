@@ -11,6 +11,9 @@ export async function GET(req: Request) {
   const banca      = searchParams.get("banca");
   const level      = searchParams.get("level");
   const subjectId  = searchParams.get("subjectId");
+  // subjectIds aceita múltiplos IDs separados por vírgula (unificação cross-categoria)
+  const subjectIdsParam = searchParams.get("subjectIds");
+  const subjectIds = subjectIdsParam ? subjectIdsParam.split(",").filter(Boolean) : null;
   const year       = searchParams.get("year") ? parseInt(searchParams.get("year")!) : null;
   const onlyFavs   = searchParams.get("favoritos") === "1";
   const onlyErros  = searchParams.get("erros") === "1";
@@ -61,10 +64,11 @@ export async function GET(req: Request) {
   // Apenas questões aprovadas
   query = query.eq("aprovado", true);
 
-  if (banca)     query = query.ilike("banca", `%${banca}%`);
-  if (level)     query = query.eq("level", level);
-  if (subjectId) query = query.eq("subjectId", subjectId);
-  if (year)      query = query.eq("year", year);
+  if (banca)          query = query.ilike("banca", `%${banca}%`);
+  if (level)          query = query.eq("level", level);
+  if (subjectIds?.length) query = query.in("subjectId", subjectIds);   // múltiplos (cross-categoria)
+  else if (subjectId) query = query.eq("subjectId", subjectId);        // legado: ID único
+  if (year)           query = query.eq("year", year);
   if (favIds?.length)  query = query.in("id", favIds);
   if (erroIds?.length) query = query.in("id", erroIds);
 
