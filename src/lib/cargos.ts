@@ -1,14 +1,16 @@
 /**
  * Lista curada de cargos populares para concursos públicos brasileiros.
- * Organizada por área para exibição no onboarding wizard.
+ * Organizada por área para exibição no onboarding wizard (cascata: Área → Órgão → Cargo).
  */
 
 export interface Cargo {
   id: string;
   nome: string;
-  orgao: string;
+  orgao: string;       // nome do órgão (string)
+  sigla?: string;      // sigla do órgão (usado para montar "PC-BA", "PM-SP" etc.)
   area: AreaCargo;
-  banca?: string;      // banca mais comum para esse cargo
+  hasEstado?: boolean; // true = pede seleção de estado após cargo (PC, PM, SEFAZ, TJ, etc.)
+  banca?: string;      // banca sugerida (opcional — aluno confirma na etapa de banca)
   categoria?: string;  // slug da categoria no DB
 }
 
@@ -32,136 +34,278 @@ export interface GrupoArea {
   area: AreaCargo;
   label: string;
   emoji: string;
-  cor: string; // tailwind bg color
+  cor: string;
 }
 
 export const GRUPOS_AREA: GrupoArea[] = [
-  { area: "fiscal",       label: "Fiscal / Tributário",   emoji: "🏛️",  cor: "bg-amber-500/15 border-amber-500/30 text-amber-300" },
-  { area: "judiciario",   label: "Judiciário",             emoji: "⚖️",  cor: "bg-blue-500/15 border-blue-500/30 text-blue-300" },
-  { area: "juridico",     label: "Jurídico / AGU",         emoji: "📜",  cor: "bg-indigo-500/15 border-indigo-500/30 text-indigo-300" },
-  { area: "mp",           label: "Ministério Público",     emoji: "🔍",  cor: "bg-purple-500/15 border-purple-500/30 text-purple-300" },
-  { area: "policial",     label: "Policial / Segurança",   emoji: "🚔",  cor: "bg-red-500/15 border-red-500/30 text-red-300" },
-  { area: "bancario",     label: "Bancário / Financeiro",  emoji: "🏦",  cor: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" },
-  { area: "controle",     label: "Controle / Auditoria",   emoji: "🔎",  cor: "bg-cyan-500/15 border-cyan-500/30 text-cyan-300" },
-  { area: "previdencia",  label: "Previdência Social",     emoji: "🛡️",  cor: "bg-teal-500/15 border-teal-500/30 text-teal-300" },
-  { area: "ti",           label: "Tecnologia da Informação",emoji: "💻", cor: "bg-violet-500/15 border-violet-500/30 text-violet-300" },
-  { area: "militar",      label: "Militar / Defesa",       emoji: "🎖️",  cor: "bg-slate-500/15 border-slate-500/30 text-slate-300" },
-  { area: "diplomatico",  label: "Diplomacia / IRBr",      emoji: "🌍",  cor: "bg-sky-500/15 border-sky-500/30 text-sky-300" },
+  { area: "fiscal",        label: "Fiscal / Tributário",    emoji: "🏛️",  cor: "bg-amber-500/15 border-amber-500/30 text-amber-300" },
+  { area: "judiciario",   label: "Judiciário",              emoji: "⚖️",  cor: "bg-blue-500/15 border-blue-500/30 text-blue-300" },
+  { area: "juridico",     label: "Jurídico / AGU",          emoji: "📜",  cor: "bg-indigo-500/15 border-indigo-500/30 text-indigo-300" },
+  { area: "mp",           label: "Ministério Público",      emoji: "🔍",  cor: "bg-purple-500/15 border-purple-500/30 text-purple-300" },
+  { area: "policial",     label: "Policial / Segurança",    emoji: "🚔",  cor: "bg-red-500/15 border-red-500/30 text-red-300" },
+  { area: "bancario",     label: "Bancário / Financeiro",   emoji: "🏦",  cor: "bg-emerald-500/15 border-emerald-500/30 text-emerald-300" },
+  { area: "controle",     label: "Controle / Auditoria",    emoji: "🔎",  cor: "bg-cyan-500/15 border-cyan-500/30 text-cyan-300" },
+  { area: "previdencia",  label: "Previdência Social",      emoji: "🛡️",  cor: "bg-teal-500/15 border-teal-500/30 text-teal-300" },
+  { area: "ti",           label: "Tecnologia da Informação",emoji: "💻",  cor: "bg-violet-500/15 border-violet-500/30 text-violet-300" },
+  { area: "militar",      label: "Militar / Defesa",        emoji: "🎖️",  cor: "bg-slate-500/15 border-slate-500/30 text-slate-300" },
+  { area: "diplomatico",  label: "Diplomacia / Itamaraty",  emoji: "🌍",  cor: "bg-sky-500/15 border-sky-500/30 text-sky-300" },
   { area: "saude",        label: "Saúde",                   emoji: "⚕️",  cor: "bg-rose-500/15 border-rose-500/30 text-rose-300" },
-  { area: "ambiental",    label: "Ambiental / Agrário",    emoji: "🌿",  cor: "bg-green-500/15 border-green-500/30 text-green-300" },
-  { area: "administrativo",label: "Administrativo / Geral",emoji: "📋",  cor: "bg-orange-500/15 border-orange-500/30 text-orange-300" },
+  { area: "ambiental",    label: "Ambiental / Agrário",     emoji: "🌿",  cor: "bg-green-500/15 border-green-500/30 text-green-300" },
+  { area: "administrativo", label: "Administrativo / Geral",emoji: "📋",  cor: "bg-orange-500/15 border-orange-500/30 text-orange-300" },
 ];
 
 export const CARGOS: Cargo[] = [
-  // ── Fiscal / Tributário ──────────────────────────────────────────────────────
-  { id: "auditor-rfb",        nome: "Auditor-Fiscal da Receita Federal",       orgao: "RFB / Receita Federal",   area: "fiscal",    banca: "CESPE/CEBRASPE", categoria: "fiscal" },
-  { id: "analista-rfb",       nome: "Analista-Tributário da Receita Federal",  orgao: "RFB / Receita Federal",   area: "fiscal",    banca: "CESPE/CEBRASPE", categoria: "fiscal" },
-  { id: "auditor-sefaz-ba",   nome: "Auditor Fiscal — SEFAZ-BA",               orgao: "SEFAZ Bahia",             area: "fiscal",    banca: "CESPE/CEBRASPE", categoria: "fiscal" },
-  { id: "auditor-sefaz-sp",   nome: "Agente Fiscal de Rendas — SEFAZ-SP",      orgao: "SEFAZ São Paulo",         area: "fiscal",    banca: "FCC",            categoria: "fiscal" },
-  { id: "auditor-sefaz-mg",   nome: "Auditor Fiscal — SEFAZ-MG",               orgao: "SEFAZ Minas Gerais",      area: "fiscal",    banca: "FCC",            categoria: "fiscal" },
-  { id: "auditor-sefaz-rj",   nome: "Auditor Fiscal — SEFAZ-RJ",               orgao: "SEFAZ Rio de Janeiro",    area: "fiscal",    banca: "FGV",            categoria: "fiscal" },
-  { id: "ate-sefaz-rj",       nome: "Assistente Técnico Estadual — SEFAZ-RJ",  orgao: "SEFAZ Rio de Janeiro",    area: "fiscal",    banca: "FGV",            categoria: "fiscal" },
-  { id: "fiscal-iss",         nome: "Auditor Fiscal de Tributos Municipais",   orgao: "Prefeituras (ISS/IPTU)",  area: "fiscal",    banca: "VUNESP",         categoria: "fiscal" },
-  { id: "analista-receita-mg",nome: "Analista de Tributos Estaduais — MG",     orgao: "SEFAZ Minas Gerais",      area: "fiscal",    banca: "FCC",            categoria: "fiscal" },
 
-  // ── Judiciário ───────────────────────────────────────────────────────────────
-  { id: "analista-judiciario-trf",   nome: "Analista Judiciário — TRF",             orgao: "TRF (qualquer região)",  area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
-  { id: "tecnico-judiciario-trf",    nome: "Técnico Judiciário — TRF",              orgao: "TRF (qualquer região)",  area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
-  { id: "analista-trt",              nome: "Analista Judiciário — TRT",             orgao: "TRT (qualquer região)",  area: "judiciario", banca: "FCC",            categoria: "judiciario" },
-  { id: "tecnico-trt",               nome: "Técnico Judiciário — TRT",              orgao: "TRT (qualquer região)",  area: "judiciario", banca: "FCC",            categoria: "judiciario" },
-  { id: "analista-stj",              nome: "Analista Judiciário — STJ",             orgao: "Superior Tribunal de Justiça", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
-  { id: "analista-stf",              nome: "Analista Judiciário — STF",             orgao: "Supremo Tribunal Federal",    area: "judiciario", banca: "FGV",            categoria: "judiciario" },
-  { id: "analista-tse",              nome: "Analista Judiciário — TSE/TRE",         orgao: "Tribunal Superior Eleitoral", area: "judiciario", banca: "FCC",            categoria: "judiciario" },
-  { id: "escrivao-tjsp",             nome: "Escrevente / Oficial de Justiça — TJSP",orgao: "TJ São Paulo",           area: "judiciario", banca: "VUNESP",         categoria: "judiciario" },
-  { id: "analista-tjba",             nome: "Analista / Técnico Judiciário — TJBA",  orgao: "TJ Bahia",               area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
+  // ══════════════════════════════════════════════════════════
+  // FISCAL / TRIBUTÁRIO
+  // ══════════════════════════════════════════════════════════
+  { id: "auditor-rfb",         nome: "Auditor-Fiscal da Receita Federal",         orgao: "Receita Federal do Brasil (RFB)", sigla: "RFB",    area: "fiscal",   banca: "CESPE/CEBRASPE", categoria: "fiscal" },
+  { id: "analista-rfb",        nome: "Analista-Tributário da Receita Federal",    orgao: "Receita Federal do Brasil (RFB)", sigla: "RFB",    area: "fiscal",   banca: "CESPE/CEBRASPE", categoria: "fiscal" },
+  { id: "tecnico-rfb",         nome: "Técnico de Administração e Finanças — RFB", orgao: "Receita Federal do Brasil (RFB)", sigla: "RFB",    area: "fiscal",   banca: "CESPE/CEBRASPE", categoria: "fiscal" },
 
-  // ── Jurídico / AGU / PGR ────────────────────────────────────────────────────
-  { id: "procurador-federal",  nome: "Procurador Federal — AGU",              orgao: "Advocacia-Geral da União",    area: "juridico",  banca: "CESPE/CEBRASPE", categoria: "direito" },
-  { id: "advogado-uniao",      nome: "Advogado da União — AGU",              orgao: "Advocacia-Geral da União",    area: "juridico",  banca: "CESPE/CEBRASPE", categoria: "direito" },
-  { id: "defensor-publico",    nome: "Defensor Público Federal / Estadual",  orgao: "DPU / DPE",                   area: "juridico",  banca: "CESPE/CEBRASPE", categoria: "direito" },
-  { id: "procurador-estado",   nome: "Procurador do Estado",                 orgao: "PGE (estadual)",              area: "juridico",  banca: "VUNESP",         categoria: "direito" },
-  { id: "juiz-federal",        nome: "Juiz Federal",                         orgao: "TRF / CNJ",                   area: "juridico",  banca: "CESPE/CEBRASPE", categoria: "direito" },
-  { id: "juiz-estadual",       nome: "Juiz de Direito",                      orgao: "TJ (estadual)",               area: "juridico",  banca: "VUNESP",         categoria: "direito" },
-  { id: "oab",                 nome: "Exame de Ordem — OAB",                 orgao: "Conselho Federal da OAB",     area: "juridico",  banca: "FGV",            categoria: "oab" },
+  { id: "auditor-sefaz",       nome: "Auditor Fiscal de Tributos Estaduais",      orgao: "Secretaria de Fazenda Estadual (SEFAZ)", sigla: "SEFAZ", area: "fiscal", hasEstado: true, banca: "CESPE/CEBRASPE", categoria: "fiscal" },
+  { id: "analista-sefaz",      nome: "Analista Tributário / Agente Fiscal",       orgao: "Secretaria de Fazenda Estadual (SEFAZ)", sigla: "SEFAZ", area: "fiscal", hasEstado: true, categoria: "fiscal" },
+  { id: "tecnico-sefaz",       nome: "Técnico de Fazenda Estadual",               orgao: "Secretaria de Fazenda Estadual (SEFAZ)", sigla: "SEFAZ", area: "fiscal", hasEstado: true, categoria: "fiscal" },
 
-  // ── Ministério Público ───────────────────────────────────────────────────────
-  { id: "promotor",            nome: "Promotor de Justiça",                  orgao: "MP Estadual",                 area: "mp",        banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
-  { id: "procurador-mpf",      nome: "Procurador da República — MPF",        orgao: "Ministério Público Federal",  area: "mp",        banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
-  { id: "analista-mp",         nome: "Analista / Técnico do MP",             orgao: "MP Estadual / MPF",           area: "mp",        banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+  { id: "auditor-iss",         nome: "Auditor Fiscal de ISS / IPTU",              orgao: "Prefeitura Municipal (Fiscal)",   sigla: "Pref",   area: "fiscal", hasEstado: true, categoria: "fiscal" },
 
-  // ── Policial / Segurança ─────────────────────────────────────────────────────
-  { id: "delegado-pf",         nome: "Delegado de Polícia Federal",           orgao: "Polícia Federal",            area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "agente-pf",           nome: "Agente de Polícia Federal",             orgao: "Polícia Federal",            area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "escrivao-pf",         nome: "Escrivão de Polícia Federal",           orgao: "Polícia Federal",            area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "perito-pf",           nome: "Perito Criminal Federal",               orgao: "Polícia Federal",            area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "delegado-pc",         nome: "Delegado de Polícia Civil",             orgao: "Polícia Civil Estadual",     area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "investigador-pc",     nome: "Investigador / Agente de PC",           orgao: "Polícia Civil Estadual",     area: "policial",  banca: "VUNESP",         categoria: "policial" },
-  { id: "pm-oficial",          nome: "Oficial PM",                            orgao: "Polícia Militar Estadual",   area: "policial",  banca: "VUNESP",         categoria: "policial" },
-  { id: "pm-soldado",          nome: "Soldado / Cabo PM",                     orgao: "Polícia Militar Estadual",   area: "policial",  banca: "VUNESP",         categoria: "policial" },
-  { id: "prf",                 nome: "Policial Rodoviário Federal",           orgao: "PRF",                        area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
-  { id: "pcf-receita",         nome: "Perito Criminal Federal — Receita",     orgao: "RFB",                        area: "policial",  banca: "CESPE/CEBRASPE", categoria: "policial" },
+  // ══════════════════════════════════════════════════════════
+  // JUDICIÁRIO
+  // ══════════════════════════════════════════════════════════
+  // STF
+  { id: "analista-stf",        nome: "Analista Judiciário — STF",                 orgao: "Supremo Tribunal Federal (STF)", sigla: "STF",    area: "judiciario", banca: "FGV",            categoria: "judiciario" },
+  { id: "tecnico-stf",         nome: "Técnico Judiciário — STF",                  orgao: "Supremo Tribunal Federal (STF)", sigla: "STF",    area: "judiciario", banca: "FGV",            categoria: "judiciario" },
 
-  // ── Bancário / Financeiro ────────────────────────────────────────────────────
-  { id: "bb-escriturario",     nome: "Escriturário — Banco do Brasil",        orgao: "Banco do Brasil",            area: "bancario",  banca: "CESGRANRIO",     categoria: "bancario" },
-  { id: "bb-analista",         nome: "Analista — Banco do Brasil",            orgao: "Banco do Brasil",            area: "bancario",  banca: "CESGRANRIO",     categoria: "bancario" },
-  { id: "cef-tecnico",         nome: "Técnico Bancário — Caixa Econômica",    orgao: "Caixa Econômica Federal",    area: "bancario",  banca: "CESGRANRIO",     categoria: "bancario" },
-  { id: "bndes",               nome: "Analista / Técnico — BNDES",            orgao: "BNDES",                      area: "bancario",  banca: "CESGRANRIO",     categoria: "bancario" },
-  { id: "bacen-analista",      nome: "Analista do Banco Central",             orgao: "Banco Central do Brasil",    area: "bancario",  banca: "CESPE/CEBRASPE", categoria: "banco-central" },
-  { id: "bacen-tecnico",       nome: "Técnico do Banco Central",              orgao: "Banco Central do Brasil",    area: "bancario",  banca: "CESPE/CEBRASPE", categoria: "banco-central" },
-  { id: "brd-brb",             nome: "Analista / Técnico — BRB / BRDE",       orgao: "BRB / BRDE",                 area: "bancario",  banca: "IADES",          categoria: "bancario" },
+  // STJ
+  { id: "analista-stj",        nome: "Analista Judiciário — STJ",                 orgao: "Superior Tribunal de Justiça (STJ)", sigla: "STJ", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
+  { id: "tecnico-stj",         nome: "Técnico Judiciário — STJ",                  orgao: "Superior Tribunal de Justiça (STJ)", sigla: "STJ", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
 
-  // ── Controle / Auditoria ─────────────────────────────────────────────────────
-  { id: "auditor-tcu",         nome: "Auditor Federal de Controle Externo — TCU", orgao: "Tribunal de Contas da União",  area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
-  { id: "analista-tcu",        nome: "Analista de Controle Externo — TCU",        orgao: "Tribunal de Contas da União",  area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
-  { id: "auditor-cgu",         nome: "Auditor Federal — CGU",                     orgao: "CGU",                          area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
-  { id: "analista-cgu",        nome: "Analista de Finanças e Controle — CGU",     orgao: "CGU",                          area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
-  { id: "auditor-tce",         nome: "Auditor de Controle Externo — TCE",         orgao: "TCE Estadual",                 area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+  // TSE / TST
+  { id: "analista-tse",        nome: "Analista Judiciário — TSE",                 orgao: "Tribunal Superior Eleitoral (TSE)", sigla: "TSE",  area: "judiciario", banca: "FCC",            categoria: "judiciario" },
+  { id: "analista-tst",        nome: "Analista Judiciário — TST",                 orgao: "Tribunal Superior do Trabalho (TST)", sigla: "TST",area: "judiciario", banca: "FCC",            categoria: "judiciario" },
+  { id: "tecnico-tst",         nome: "Técnico Judiciário — TST",                  orgao: "Tribunal Superior do Trabalho (TST)", sigla: "TST",area: "judiciario", banca: "FCC",            categoria: "judiciario" },
 
-  // ── Previdência Social ───────────────────────────────────────────────────────
-  { id: "tecnico-inss",        nome: "Técnico do Seguro Social — INSS",        orgao: "INSS",                      area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
-  { id: "analista-inss",       nome: "Analista do Seguro Social — INSS",       orgao: "INSS",                      area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
-  { id: "perito-inss",         nome: "Perito Médico Federal — INSS",           orgao: "INSS",                      area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
+  // TRF
+  { id: "analista-trf",        nome: "Analista Judiciário — TRF",                 orgao: "Tribunal Regional Federal (TRF)",  sigla: "TRF",  area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
+  { id: "tecnico-trf",         nome: "Técnico Judiciário — TRF",                  orgao: "Tribunal Regional Federal (TRF)",  sigla: "TRF",  area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
 
-  // ── Tecnologia da Informação ─────────────────────────────────────────────────
-  { id: "analista-serpro",     nome: "Analista de TI — SERPRO",               orgao: "SERPRO",                    area: "ti",        banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
-  { id: "tecnico-serpro",      nome: "Técnico de TI — SERPRO",                orgao: "SERPRO",                    area: "ti",        banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
-  { id: "analista-sti",        nome: "Analista de TI — STI/MPDG",             orgao: "STI / Governo Federal",     area: "ti",        banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
-  { id: "analista-ti-trf",     nome: "Analista Judiciário — Tecnologia / TRF", orgao: "TRF",                      area: "ti",        banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
-  { id: "analista-ti-bb",      nome: "Analista de TI — Banco do Brasil",       orgao: "Banco do Brasil",          area: "ti",        banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
-  { id: "tecnico-ti-cef",      nome: "Analista de TI — Caixa Econômica",       orgao: "Caixa Econômica Federal",  area: "ti",        banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
+  // TRT
+  { id: "analista-trt",        nome: "Analista Judiciário — TRT",                 orgao: "Tribunal Regional do Trabalho (TRT)", sigla: "TRT",area: "judiciario", banca: "FCC",            categoria: "judiciario" },
+  { id: "tecnico-trt",         nome: "Técnico Judiciário — TRT",                  orgao: "Tribunal Regional do Trabalho (TRT)", sigla: "TRT",area: "judiciario", banca: "FCC",            categoria: "judiciario" },
 
-  // ── Diplomático ──────────────────────────────────────────────────────────────
-  { id: "diplomata",           nome: "Diplomata (CAE) — CACD / MRE",           orgao: "Ministério das Relações Exteriores", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
-  { id: "oficial-chancelaria", nome: "Oficial de Chancelaria — MRE",           orgao: "Ministério das Relações Exteriores", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
-  { id: "aux-chancelaria",     nome: "Assistente de Chancelaria — MRE",        orgao: "Ministério das Relações Exteriores", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
+  // TRE
+  { id: "analista-tre",        nome: "Analista Judiciário — TRE",                 orgao: "Tribunal Regional Eleitoral (TRE)", sigla: "TRE", area: "judiciario", hasEstado: true, banca: "FCC",  categoria: "judiciario" },
+  { id: "tecnico-tre",         nome: "Técnico Judiciário — TRE",                  orgao: "Tribunal Regional Eleitoral (TRE)", sigla: "TRE", area: "judiciario", hasEstado: true, banca: "FCC",  categoria: "judiciario" },
 
-  // ── Militar / Defesa ─────────────────────────────────────────────────────────
-  { id: "efomm",               nome: "Escola de Formação de Oficiais da MM",   orgao: "Marinha do Brasil",         area: "militar",   categoria: "militar" },
-  { id: "epcar",               nome: "EPCAR — Escola Preparatória de Cadetes do Ar", orgao: "Aeronáutica",        area: "militar",   categoria: "militar" },
-  { id: "espcex",              nome: "EsPCEx — Escola Prep. de Cadetes do Exército", orgao: "Exército Brasileiro", area: "militar",  categoria: "militar" },
-  { id: "afa",                 nome: "AFA — Academia da Força Aérea",          orgao: "Aeronáutica",               area: "militar",   categoria: "militar" },
-  { id: "aman",                nome: "AMAN — Academia Militar das Agulhas Negras", orgao: "Exército Brasileiro",  area: "militar",   categoria: "militar" },
-  { id: "en",                  nome: "EN — Escola Naval",                       orgao: "Marinha do Brasil",        area: "militar",   categoria: "militar" },
-  { id: "capf",                nome: "CAPF — Corpo de Bombeiros Federal",      orgao: "Corpo de Bombeiros",        area: "militar",   categoria: "militar" },
+  // TJ Estadual
+  { id: "analista-tj",         nome: "Analista Judiciário — TJ",                  orgao: "Tribunal de Justiça Estadual (TJ)", sigla: "TJ",  area: "judiciario", hasEstado: true, categoria: "judiciario" },
+  { id: "tecnico-tj",          nome: "Técnico Judiciário / Escrevente — TJ",      orgao: "Tribunal de Justiça Estadual (TJ)", sigla: "TJ",  area: "judiciario", hasEstado: true, categoria: "judiciario" },
+  { id: "oficial-justica-tj",  nome: "Oficial de Justiça — TJ",                   orgao: "Tribunal de Justiça Estadual (TJ)", sigla: "TJ",  area: "judiciario", hasEstado: true, categoria: "judiciario" },
 
-  // ── Saúde ─────────────────────────────────────────────────────────────────────
-  { id: "medico-concurso",     nome: "Médico em Concurso Público (diversas áreas)", orgao: "SUS / Hospitais / Prefeituras", area: "saude", banca: "CESPE/CEBRASPE", categoria: "saude" },
-  { id: "enfermeiro",          nome: "Enfermeiro em Concurso Público",          orgao: "SUS / Hospitais",          area: "saude",     banca: "CESPE/CEBRASPE", categoria: "saude" },
+  // TJDFT
+  { id: "analista-tjdft",      nome: "Analista Judiciário — TJDFT",               orgao: "Tribunal de Justiça do DF (TJDFT)", sigla: "TJDFT", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
+  { id: "tecnico-tjdft",       nome: "Técnico Judiciário — TJDFT",                orgao: "Tribunal de Justiça do DF (TJDFT)", sigla: "TJDFT", area: "judiciario", banca: "CESPE/CEBRASPE", categoria: "judiciario" },
 
-  // ── Ambiental / Agrário ──────────────────────────────────────────────────────
-  { id: "ibama-analista",      nome: "Analista Ambiental — IBAMA",             orgao: "IBAMA",                    area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
-  { id: "inca-agronomia",      nome: "Analista Agropecuário — MAPA",           orgao: "Ministério da Agricultura", area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
-  { id: "embrapa",             nome: "Pesquisador / Analista — EMBRAPA",       orgao: "EMBRAPA",                  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
-  { id: "icmbio",              nome: "Analista Ambiental — ICMBio",            orgao: "ICMBio",                   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  // ══════════════════════════════════════════════════════════
+  // JURÍDICO / AGU / DPU
+  // ══════════════════════════════════════════════════════════
+  { id: "procurador-federal",  nome: "Procurador Federal",                        orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "advogado-uniao",      nome: "Advogado da União",                         orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "analista-agu",        nome: "Analista / Técnico Administrativo — AGU",   orgao: "Advocacia-Geral da União (AGU)",  sigla: "AGU",   area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
 
-  // ── Administrativo / Geral ───────────────────────────────────────────────────
-  { id: "eppgg",               nome: "Especialista em Políticas Públicas — EPPGG", orgao: "MPDG / Governo Federal", area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
-  { id: "analista-mpu",        nome: "Analista / Técnico — MPU",               orgao: "Ministério Público da União", area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
-  { id: "anac",                nome: "Técnico / Analista — ANAC",              orgao: "Agência Nacional de Aviação Civil", area: "administrativo", banca: "FCC",       categoria: "gestao-publica" },
-  { id: "anatel",              nome: "Técnico / Analista — ANATEL",            orgao: "ANATEL",                   area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
-  { id: "ana",                 nome: "Técnico / Analista — ANA",               orgao: "Agência Nacional de Águas",area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
-  { id: "petrobras-tecnico",   nome: "Técnico de Administração — Petrobras",   orgao: "Petrobras",                area: "administrativo", banca: "CESGRANRIO",     categoria: "petrobras-estatais" },
-  { id: "petrobras-eng",       nome: "Engenheiro / Profissional Jr — Petrobras", orgao: "Petrobras",              area: "administrativo", banca: "CESGRANRIO",     categoria: "petrobras-estatais" },
+  { id: "defensor-dpu",        nome: "Defensor Público Federal",                  orgao: "Defensoria Pública da União (DPU)",sigla: "DPU",  area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "analista-dpu",        nome: "Analista / Técnico — DPU",                  orgao: "Defensoria Pública da União (DPU)",sigla: "DPU",  area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+
+  { id: "procurador-pge",      nome: "Procurador do Estado",                      orgao: "Procuradoria-Geral do Estado (PGE)",sigla: "PGE", area: "juridico", hasEstado: true, banca: "VUNESP", categoria: "direito" },
+
+  { id: "defensor-dpe",        nome: "Defensor Público Estadual",                 orgao: "Defensoria Pública Estadual (DPE)", sigla: "DPE", area: "juridico", hasEstado: true, banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "analista-dpe",        nome: "Analista / Técnico — DPE",                  orgao: "Defensoria Pública Estadual (DPE)", sigla: "DPE", area: "juridico", hasEstado: true, categoria: "direito" },
+
+  { id: "juiz-federal",        nome: "Juiz Federal",                              orgao: "Conselho da Justiça Federal (CJF)", sigla: "CJF", area: "juridico", banca: "CESPE/CEBRASPE", categoria: "direito" },
+  { id: "juiz-estadual",       nome: "Juiz de Direito",                           orgao: "Tribunal de Justiça Estadual (TJ)", sigla: "TJ",  area: "juridico", hasEstado: true, categoria: "direito" },
+
+  // ══════════════════════════════════════════════════════════
+  // MINISTÉRIO PÚBLICO
+  // ══════════════════════════════════════════════════════════
+  { id: "procurador-mpf",      nome: "Procurador da República — MPF",             orgao: "Ministério Público Federal (MPF)",  sigla: "MPF", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+  { id: "analista-mpf",        nome: "Analista / Técnico Administrativo — MPF",   orgao: "Ministério Público Federal (MPF)",  sigla: "MPF", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+
+  { id: "promotor-estadual",   nome: "Promotor de Justiça",                       orgao: "Ministério Público Estadual (MP)",  sigla: "MP",  area: "mp", hasEstado: true, banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+  { id: "analista-mp-est",     nome: "Analista / Técnico — MP Estadual",          orgao: "Ministério Público Estadual (MP)",  sigla: "MP",  area: "mp", hasEstado: true, categoria: "ministerio-publico" },
+
+  { id: "promotor-mpdft",      nome: "Promotor de Justiça — MPDFT",               orgao: "MP do Distrito Federal (MPDFT)",    sigla: "MPDFT", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+  { id: "analista-mpdft",      nome: "Analista / Técnico — MPDFT",                orgao: "MP do Distrito Federal (MPDFT)",    sigla: "MPDFT", area: "mp", banca: "CESPE/CEBRASPE", categoria: "ministerio-publico" },
+
+  // ══════════════════════════════════════════════════════════
+  // POLICIAL / SEGURANÇA PÚBLICA
+  // ══════════════════════════════════════════════════════════
+  // Polícia Federal
+  { id: "delegado-pf",         nome: "Delegado de Polícia Federal",               orgao: "Polícia Federal (PF)",              sigla: "PF",  area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "agente-pf",           nome: "Agente de Polícia Federal",                 orgao: "Polícia Federal (PF)",              sigla: "PF",  area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "escrivao-pf",         nome: "Escrivão de Polícia Federal",               orgao: "Polícia Federal (PF)",              sigla: "PF",  area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "perito-pf",           nome: "Perito Criminal Federal",                   orgao: "Polícia Federal (PF)",              sigla: "PF",  area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "papiloscopista-pf",   nome: "Papiloscopista Policial Federal",           orgao: "Polícia Federal (PF)",              sigla: "PF",  area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+
+  // PRF
+  { id: "prf",                 nome: "Policial Rodoviário Federal",               orgao: "Polícia Rodoviária Federal (PRF)",  sigla: "PRF", area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+
+  // Polícia Civil Estadual
+  { id: "delegado-pc",         nome: "Delegado de Polícia Civil",                 orgao: "Polícia Civil Estadual (PC)",       sigla: "PC",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "escrivao-pc",         nome: "Escrivão de Polícia Civil",                 orgao: "Polícia Civil Estadual (PC)",       sigla: "PC",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "agente-investigador-pc", nome: "Agente / Investigador de Polícia Civil", orgao: "Polícia Civil Estadual (PC)",       sigla: "PC",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "perito-pc",           nome: "Perito Criminal Estadual",                  orgao: "Polícia Civil Estadual (PC)",       sigla: "PC",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "papiloscopista-pc",   nome: "Papiloscopista / Identificador",            orgao: "Polícia Civil Estadual (PC)",       sigla: "PC",  area: "policial", hasEstado: true, categoria: "policial" },
+
+  // Polícia Militar Estadual
+  { id: "pm-soldado",          nome: "Soldado / Cabo PM",                         orgao: "Polícia Militar Estadual (PM)",     sigla: "PM",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "pm-sargento",         nome: "Sargento PM (CHO/CFS)",                     orgao: "Polícia Militar Estadual (PM)",     sigla: "PM",  area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "pm-oficial",          nome: "Oficial PM (CFO)",                          orgao: "Polícia Militar Estadual (PM)",     sigla: "PM",  area: "policial", hasEstado: true, categoria: "policial" },
+
+  // Corpo de Bombeiros Estadual
+  { id: "cbm-soldado",         nome: "Soldado / Combatente BM",                   orgao: "Corpo de Bombeiros Militar (CBM)", sigla: "CBM", area: "policial", hasEstado: true, categoria: "policial" },
+  { id: "cbm-oficial",         nome: "Oficial de Bombeiro Militar",               orgao: "Corpo de Bombeiros Militar (CBM)", sigla: "CBM", area: "policial", hasEstado: true, categoria: "policial" },
+
+  // PCDF / PMDF (DF — sem estado pois só é 1)
+  { id: "delegado-pcdf",       nome: "Delegado de Polícia Civil — PCDF",          orgao: "Polícia Civil do DF (PCDF)",        sigla: "PCDF",area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "agente-pcdf",         nome: "Agente / Escrivão — PCDF",                  orgao: "Polícia Civil do DF (PCDF)",        sigla: "PCDF",area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "pm-pmdf",             nome: "Policial Militar — PMDF",                   orgao: "Polícia Militar do DF (PMDF)",      sigla: "PMDF",area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+  { id: "cbm-cbmdf",           nome: "Bombeiro Militar — CBMDF",                  orgao: "Corpo de Bombeiros do DF (CBMDF)",  sigla: "CBMDF",area: "policial", banca: "CESPE/CEBRASPE", categoria: "policial" },
+
+  // Polícia Penal / Agente Penitenciário
+  { id: "policial-penal",      nome: "Policial Penal / Agente Penitenciário",     orgao: "Secretaria de Administração Penitenciária", sigla: "SAP", area: "policial", hasEstado: true, categoria: "policial" },
+
+  // ══════════════════════════════════════════════════════════
+  // BANCÁRIO / FINANCEIRO
+  // ══════════════════════════════════════════════════════════
+  { id: "escriturario-bb",     nome: "Escriturário — Banco do Brasil",            orgao: "Banco do Brasil (BB)",              sigla: "BB",  area: "bancario", banca: "CESGRANRIO",     categoria: "bancario" },
+  { id: "analista-bb",         nome: "Analista — Banco do Brasil",                orgao: "Banco do Brasil (BB)",              sigla: "BB",  area: "bancario", banca: "CESGRANRIO",     categoria: "bancario" },
+
+  { id: "tecnico-cef",         nome: "Técnico Bancário — Caixa Econômica",        orgao: "Caixa Econômica Federal (CEF)",     sigla: "CEF", area: "bancario", banca: "CESGRANRIO",     categoria: "bancario" },
+  { id: "analista-cef",        nome: "Analista — Caixa Econômica",                orgao: "Caixa Econômica Federal (CEF)",     sigla: "CEF", area: "bancario", banca: "CESGRANRIO",     categoria: "bancario" },
+
+  { id: "analista-bacen",      nome: "Analista do Banco Central",                 orgao: "Banco Central do Brasil (BACEN)",   sigla: "BACEN", area: "bancario", banca: "CESPE/CEBRASPE", categoria: "banco-central" },
+  { id: "tecnico-bacen",       nome: "Técnico do Banco Central",                  orgao: "Banco Central do Brasil (BACEN)",   sigla: "BACEN", area: "bancario", banca: "CESPE/CEBRASPE", categoria: "banco-central" },
+
+  { id: "analista-bndes",      nome: "Analista — BNDES",                          orgao: "BNDES",                             sigla: "BNDES", area: "bancario", banca: "CESGRANRIO",  categoria: "bancario" },
+  { id: "tecnico-bndes",       nome: "Técnico Administrativo — BNDES",            orgao: "BNDES",                             sigla: "BNDES", area: "bancario", banca: "CESGRANRIO",  categoria: "bancario" },
+
+  { id: "analista-brb",        nome: "Analista / Técnico — BRB",                  orgao: "Banco de Brasília (BRB)",           sigla: "BRB", area: "bancario", banca: "IADES",          categoria: "bancario" },
+
+  { id: "tecnico-banco-est",   nome: "Técnico / Analista — Banco Estadual",       orgao: "Banco Estadual (BANESE, BANRISUL…)", sigla: "BnkEst", area: "bancario", hasEstado: true, categoria: "bancario" },
+
+  // ══════════════════════════════════════════════════════════
+  // CONTROLE / AUDITORIA
+  // ══════════════════════════════════════════════════════════
+  { id: "auditor-tcu",         nome: "Auditor Federal de Controle Externo — TCU", orgao: "Tribunal de Contas da União (TCU)", sigla: "TCU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+  { id: "analista-tcu",        nome: "Analista de Controle Externo — TCU",        orgao: "Tribunal de Contas da União (TCU)", sigla: "TCU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+  { id: "tecnico-tcu",         nome: "Técnico de Controle Externo — TCU",         orgao: "Tribunal de Contas da União (TCU)", sigla: "TCU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+
+  { id: "auditor-cgu",         nome: "Auditor Federal — CGU",                     orgao: "Controladoria-Geral da União (CGU)",sigla: "CGU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+  { id: "analista-cgu",        nome: "Analista de Finanças e Controle — CGU",     orgao: "Controladoria-Geral da União (CGU)",sigla: "CGU", area: "controle", banca: "CESPE/CEBRASPE", categoria: "controle-auditoria" },
+
+  { id: "auditor-tce",         nome: "Auditor de Controle Externo — TCE",         orgao: "Tribunal de Contas Estadual (TCE)", sigla: "TCE", area: "controle", hasEstado: true, categoria: "controle-auditoria" },
+  { id: "analista-tce",        nome: "Analista / Técnico — TCE",                  orgao: "Tribunal de Contas Estadual (TCE)", sigla: "TCE", area: "controle", hasEstado: true, categoria: "controle-auditoria" },
+
+  // ══════════════════════════════════════════════════════════
+  // PREVIDÊNCIA SOCIAL
+  // ══════════════════════════════════════════════════════════
+  { id: "tecnico-inss",        nome: "Técnico do Seguro Social — INSS",           orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
+  { id: "analista-inss",       nome: "Analista do Seguro Social — INSS",          orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
+  { id: "perito-inss",         nome: "Perito Médico Federal — INSS",              orgao: "INSS",                              sigla: "INSS",area: "previdencia", banca: "CESPE/CEBRASPE", categoria: "previdencia-social" },
+
+  // ══════════════════════════════════════════════════════════
+  // TECNOLOGIA DA INFORMAÇÃO
+  // ══════════════════════════════════════════════════════════
+  { id: "analista-serpro",     nome: "Analista de Tecnologia — SERPRO",           orgao: "SERPRO",                            sigla: "SERPRO", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "tecnico-serpro",      nome: "Técnico de Tecnologia — SERPRO",            orgao: "SERPRO",                            sigla: "SERPRO", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  { id: "analista-dataprev",   nome: "Analista / Técnico de TI — DATAPREV",       orgao: "DATAPREV",                          sigla: "DATAPREV", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  { id: "analista-ti-gov",     nome: "Analista de Tecnologia da Informação — Gov. Federal", orgao: "Governo Federal (Ministérios / Autarquias)", sigla: "Gov-TI", area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+
+  { id: "analista-ti-trf",     nome: "Analista Judiciário — TI / TRF",            orgao: "Tribunal Regional Federal (TRF)",  sigla: "TRF",  area: "ti", banca: "CESPE/CEBRASPE", categoria: "tecnologia-informacao" },
+  { id: "analista-ti-bb",      nome: "Analista de TI — Banco do Brasil",          orgao: "Banco do Brasil (BB)",              sigla: "BB-TI",area: "ti", banca: "CESGRANRIO",     categoria: "tecnologia-informacao" },
+  { id: "analista-ti-cef",     nome: "Analista de TI — Caixa Econômica",          orgao: "Caixa Econômica Federal (CEF)",    sigla: "CEF-TI",area: "ti", banca: "CESGRANRIO",    categoria: "tecnologia-informacao" },
+
+  // ══════════════════════════════════════════════════════════
+  // DIPLOMÁTICO / ITAMARATY
+  // ══════════════════════════════════════════════════════════
+  { id: "diplomata",           nome: "Diplomata — CACD",                          orgao: "Ministério das Relações Exteriores (MRE)", sigla: "MRE", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
+  { id: "oficial-chancelaria", nome: "Oficial de Chancelaria — MRE",              orgao: "Ministério das Relações Exteriores (MRE)", sigla: "MRE", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
+  { id: "aux-chancelaria",     nome: "Assistente de Chancelaria — MRE",           orgao: "Ministério das Relações Exteriores (MRE)", sigla: "MRE", area: "diplomatico", banca: "CESPE/CEBRASPE", categoria: "diplomacia" },
+
+  // ══════════════════════════════════════════════════════════
+  // MILITAR / DEFESA
+  // ══════════════════════════════════════════════════════════
+  { id: "efomm",               nome: "EFOMM — Escola de Formação de Oficiais da MM", orgao: "Marinha do Brasil",               sigla: "MB",  area: "militar", categoria: "militar" },
+  { id: "en-marinha",          nome: "EN — Escola Naval",                         orgao: "Marinha do Brasil",                 sigla: "MB",  area: "militar", categoria: "militar" },
+  { id: "epcar",               nome: "EPCAR — Escola Prep. de Cadetes do Ar",    orgao: "Força Aérea Brasileira (FAB)",      sigla: "FAB", area: "militar", categoria: "militar" },
+  { id: "afa",                 nome: "AFA — Academia da Força Aérea",             orgao: "Força Aérea Brasileira (FAB)",      sigla: "FAB", area: "militar", categoria: "militar" },
+  { id: "espcex",              nome: "EsPCEx — Escola Prep. de Cadetes do Exército", orgao: "Exército Brasileiro",            sigla: "EB",  area: "militar", categoria: "militar" },
+  { id: "aman",                nome: "AMAN — Academia Militar das Agulhas Negras", orgao: "Exército Brasileiro",              sigla: "EB",  area: "militar", categoria: "militar" },
+  { id: "cbf-federal",         nome: "Bombeiro Militar Federal — CBMDF",          orgao: "Corpo de Bombeiros do DF (CBMDF)", sigla: "CBMDF", area: "militar", categoria: "militar" },
+
+  // ══════════════════════════════════════════════════════════
+  // SAÚDE
+  // ══════════════════════════════════════════════════════════
+  { id: "medico-sus",          nome: "Médico em Concurso Público",                orgao: "Prefeitura / SUS Municipal",        sigla: "SUS", area: "saude", hasEstado: true, banca: "CESPE/CEBRASPE", categoria: "saude" },
+  { id: "enfermeiro-sus",      nome: "Enfermeiro em Concurso Público",            orgao: "Prefeitura / SUS Municipal",        sigla: "SUS", area: "saude", hasEstado: true, categoria: "saude" },
+  { id: "farmaceutico-sus",    nome: "Farmacêutico em Concurso Público",          orgao: "Prefeitura / SUS Municipal",        sigla: "SUS", area: "saude", hasEstado: true, categoria: "saude" },
+  { id: "fisio-sus",           nome: "Fisioterapeuta em Concurso Público",        orgao: "Prefeitura / SUS Municipal",        sigla: "SUS", area: "saude", hasEstado: true, categoria: "saude" },
+
+  { id: "analista-anvisa",     nome: "Especialista / Técnico em Regulação — ANVISA", orgao: "ANVISA",                       sigla: "ANVISA", area: "saude", banca: "CESPE/CEBRASPE", categoria: "saude" },
+  { id: "analista-ans",        nome: "Técnico / Analista — ANS",                 orgao: "ANS — Agência Nacional de Saúde", sigla: "ANS", area: "saude", banca: "CESPE/CEBRASPE", categoria: "saude" },
+  { id: "pesquisador-fiocruz", nome: "Pesquisador / Tecnologista — FIOCRUZ",     orgao: "FIOCRUZ",                          sigla: "FIOCRUZ", area: "saude", banca: "CESPE/CEBRASPE", categoria: "saude" },
+
+  // ══════════════════════════════════════════════════════════
+  // AMBIENTAL / AGRÁRIO / INFRAESTRUTURA
+  // ══════════════════════════════════════════════════════════
+  { id: "ibama-analista",      nome: "Analista Ambiental — IBAMA",                orgao: "IBAMA",                             sigla: "IBAMA",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "ibama-tecnico",       nome: "Técnico Ambiental — IBAMA",                 orgao: "IBAMA",                             sigla: "IBAMA",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "icmbio-analista",     nome: "Analista Ambiental — ICMBio",               orgao: "ICMBio",                            sigla: "ICMBio", area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "incra-analista",      nome: "Analista em Reforma Agrária — INCRA",       orgao: "INCRA",                             sigla: "INCRA",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "incra-tecnico",       nome: "Técnico em Assuntos Fundiários — INCRA",    orgao: "INCRA",                             sigla: "INCRA",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "mapa-analista",       nome: "Analista Agropecuário — MAPA",              orgao: "Ministério da Agricultura (MAPA)",  sigla: "MAPA",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "mapa-tecnico",        nome: "Agente de Atividades Agropecuárias — MAPA", orgao: "Ministério da Agricultura (MAPA)", sigla: "MAPA",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "embrapa-pesquisador", nome: "Pesquisador — EMBRAPA",                     orgao: "EMBRAPA",                           sigla: "EMBRAPA",area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "embrapa-analista",    nome: "Analista Administrativo — EMBRAPA",         orgao: "EMBRAPA",                           sigla: "EMBRAPA",area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "funai-indigenista",   nome: "Indigenista Especializado — FUNAI",         orgao: "FUNAI",                             sigla: "FUNAI",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "funai-analista",      nome: "Analista Administrativo — FUNAI",           orgao: "FUNAI",                             sigla: "FUNAI",  area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "dnit-especialista",   nome: "Especialista em Infraestrutura de Transportes — DNIT", orgao: "DNIT",                   sigla: "DNIT",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "dnit-analista",       nome: "Analista Administrativo — DNIT",            orgao: "DNIT",                              sigla: "DNIT",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  { id: "ibge-analista",       nome: "Analista — IBGE",                           orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "ibge-tecnico",        nome: "Técnico em Informações Geográficas — IBGE", orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+  { id: "ibge-agente",         nome: "Agente de Pesquisas e Mapeamento — IBGE",   orgao: "IBGE",                              sigla: "IBGE",   area: "ambiental", banca: "CESPE/CEBRASPE", categoria: "ambiental-agro" },
+
+  // ══════════════════════════════════════════════════════════
+  // ADMINISTRATIVO / GERAL
+  // ══════════════════════════════════════════════════════════
+  { id: "eppgg",               nome: "Especialista em Políticas Públicas — EPPGG", orgao: "Governo Federal (EPPGG / SEGRT)", sigla: "EPPGG", area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+
+  { id: "petrobras-tecnico",   nome: "Técnico de Administração — Petrobras",       orgao: "Petrobras",                        sigla: "Petrobras", area: "administrativo", banca: "CESGRANRIO", categoria: "petrobras-estatais" },
+  { id: "petrobras-eng",       nome: "Engenheiro / Profissional Jr — Petrobras",   orgao: "Petrobras",                        sigla: "Petrobras", area: "administrativo", banca: "CESGRANRIO", categoria: "petrobras-estatais" },
+
+  { id: "correios-analista",   nome: "Analista de Correios",                       orgao: "Correios (ECT)",                   sigla: "ECT",  area: "administrativo", categoria: "gestao-publica" },
+  { id: "correios-tecnico",    nome: "Técnico de Suporte Operacional — Correios",  orgao: "Correios (ECT)",                   sigla: "ECT",  area: "administrativo", categoria: "gestao-publica" },
+
+  { id: "anatel-tecnico",      nome: "Técnico / Analista — ANATEL",                orgao: "ANATEL",                           sigla: "ANATEL", area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+  { id: "anac-tecnico",        nome: "Técnico / Analista — ANAC",                  orgao: "ANAC",                             sigla: "ANAC",   area: "administrativo", banca: "FCC",            categoria: "gestao-publica" },
+  { id: "aneel-tecnico",       nome: "Técnico / Analista — ANEEL",                 orgao: "ANEEL",                            sigla: "ANEEL",  area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+  { id: "antt-tecnico",        nome: "Técnico / Analista — ANTT",                  orgao: "ANTT",                             sigla: "ANTT",   area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+  { id: "antaq-tecnico",       nome: "Técnico / Analista — ANTAQ",                 orgao: "ANTAQ",                            sigla: "ANTAQ",  area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+  { id: "ana-tecnico",         nome: "Técnico / Analista — ANA",                   orgao: "ANA — Agência Nacional de Águas",  sigla: "ANA",    area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+
+  { id: "analista-mpu-adm",    nome: "Analista / Técnico Administrativo — MPU",    orgao: "Ministério Público da União (MPU)",sigla: "MPU",   area: "administrativo", banca: "CESPE/CEBRASPE", categoria: "gestao-publica" },
+
+  { id: "analista-prefeitura", nome: "Agente / Analista Administrativo Municipal", orgao: "Prefeitura Municipal",             sigla: "Pref",  area: "administrativo", hasEstado: true, categoria: "gestao-publica" },
+  { id: "analista-gov-est",    nome: "Analista / Técnico Administrativo Estadual", orgao: "Governo Estadual",                 sigla: "Gov",   area: "administrativo", hasEstado: true, categoria: "gestao-publica" },
 ];
 
 /** Retorna cargos agrupados por área */
@@ -174,12 +318,61 @@ export function getCargosAgrupados(): Record<AreaCargo, Cargo[]> {
   return grupos;
 }
 
-/** Busca cargos por texto (nome ou órgão) */
+/** Retorna lista única de órgãos para uma área */
+export function getOrgaosParaArea(area: AreaCargo): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const c of CARGOS) {
+    if (c.area === area && !seen.has(c.orgao)) {
+      seen.add(c.orgao);
+      result.push(c.orgao);
+    }
+  }
+  return result;
+}
+
+/** Retorna cargos para um órgão específico dentro de uma área */
+export function getCargosParaOrgao(area: AreaCargo, orgao: string): Cargo[] {
+  return CARGOS.filter(c => c.area === area && c.orgao === orgao);
+}
+
+/** Busca cargos por texto (nome ou órgão) — mantido para compatibilidade com meu-plano-section */
 export function buscarCargos(query: string): Cargo[] {
   const q = query.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   return CARGOS.filter(c => {
-    const nome = c.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const nome  = c.nome.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     const orgao = c.orgao.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
     return nome.includes(q) || orgao.includes(q);
   });
 }
+
+/** Estados brasileiros para seleção */
+export const ESTADOS = [
+  { sigla: "AC", nome: "Acre" },
+  { sigla: "AL", nome: "Alagoas" },
+  { sigla: "AP", nome: "Amapá" },
+  { sigla: "AM", nome: "Amazonas" },
+  { sigla: "BA", nome: "Bahia" },
+  { sigla: "CE", nome: "Ceará" },
+  { sigla: "DF", nome: "Distrito Federal" },
+  { sigla: "ES", nome: "Espírito Santo" },
+  { sigla: "GO", nome: "Goiás" },
+  { sigla: "MA", nome: "Maranhão" },
+  { sigla: "MT", nome: "Mato Grosso" },
+  { sigla: "MS", nome: "Mato Grosso do Sul" },
+  { sigla: "MG", nome: "Minas Gerais" },
+  { sigla: "PA", nome: "Pará" },
+  { sigla: "PB", nome: "Paraíba" },
+  { sigla: "PR", nome: "Paraná" },
+  { sigla: "PE", nome: "Pernambuco" },
+  { sigla: "PI", nome: "Piauí" },
+  { sigla: "RJ", nome: "Rio de Janeiro" },
+  { sigla: "RN", nome: "Rio Grande do Norte" },
+  { sigla: "RS", nome: "Rio Grande do Sul" },
+  { sigla: "RO", nome: "Rondônia" },
+  { sigla: "RR", nome: "Roraima" },
+  { sigla: "SC", nome: "Santa Catarina" },
+  { sigla: "SP", nome: "São Paulo" },
+  { sigla: "SE", nome: "Sergipe" },
+  { sigla: "TO", nome: "Tocantins" },
+];
