@@ -297,6 +297,17 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     progresso: { questoes: number; flashcards: number; simulados: number; casos: number; redacao: number };
   } | null>(null);
   const [editingMetas, setEditingMetas] = useState(false);
+  const [editingSubjects, setEditingSubjects] = useState(false);
+  const [hiddenSubjectIds, setHiddenSubjectIds] = useState<Set<string>>(() => {
+    try { return new Set(JSON.parse(localStorage.getItem("hidden-subjects") || "[]") as string[]); }
+    catch { return new Set<string>(); }
+  });
+  function hideSubject(id: string) {
+    setHiddenSubjectIds(prev => { const n = new Set(prev); n.add(id); localStorage.setItem("hidden-subjects", JSON.stringify([...n])); return n; });
+  }
+  function showSubject(id: string) {
+    setHiddenSubjectIds(prev => { const n = new Set(prev); n.delete(id); localStorage.setItem("hidden-subjects", JSON.stringify([...n])); return n; });
+  }
   const [simuladoHistory, setSimuladoHistory] = useState<{ id: number; total: number; correct: number; timeSecs: number; createdAt: string }[]>([]);
   const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number; maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number; maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number; hasEditalDecoder?: boolean; hasPdfLibrary?: boolean; hasGroupStudy?: boolean; hasLongTermMemory?: boolean; features: string[]; active: boolean }[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
@@ -510,118 +521,102 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
           {/* ───── ESTUDAR ───── */}
           {activeNav === "estudar" && !selectedSubject && (
             <div className="flex-1 overflow-y-auto">
-              {/* Countdown banner (PCBA style) */}
-              {profile.dataProva && (() => {
-                const d = daysUntil(profile.dataProva);
-                if (d === null) return null;
-                const color = d <= 7 ? "#ef4444" : d <= 30 ? "#f59e0b" : "#34d399";
-                const bgColor = d <= 7 ? "rgba(239,68,68,0.08)" : d <= 30 ? "rgba(245,158,11,0.08)" : "rgba(52,211,153,0.08)";
-                return (
-                  <div className="mx-5 mt-4 rounded-2xl border px-5 py-4 flex items-center justify-between"
-                    style={{ background: bgColor, borderColor: color + "33" }}>
-                    <div className="flex items-baseline gap-3">
-                      <span className="text-5xl font-black tabular-nums" style={{ color }}>{d}</span>
-                      <div>
-                        <p className="font-bold text-sm" style={{ color }}>dias para a prova</p>
-                        {profile.orgao && <p className="text-xs text-gray-500">{profile.orgao}</p>}
-                      </div>
-                    </div>
-                    <a href="/workspace/perfil" className="text-xs text-gray-600 hover:text-gray-400 border border-white/10 px-3 py-1.5 rounded-lg transition-colors">
-                      Editar
-                    </a>
-                  </div>
-                );
-              })()}
 
-              {/* Stats row */}
-              <div className="grid grid-cols-3 mx-5 mt-3 rounded-2xl border border-white/[0.06] bg-[#0d1117] overflow-hidden">
-                {[
-                  { label: "QUESTÕES",     value: String(homeStats?.totalAnswered ?? 0), color: "#f59e0b" },
-                  { label: "ACERTO",       value: homeStats ? `${homeStats.overallAccuracy}%` : "—", color: "#f59e0b" },
-                  { label: "DIAS SEGUIDOS",value: String(homeStats?.streak ?? 0), color: "#f59e0b" },
-                ].map((s, i) => (
-                  <div key={s.label} className={cn("py-3 text-center", i < 2 && "border-r border-white/[0.06]")}>
-                    <div className="text-2xl font-black tabular-nums" style={{ color: s.color }}>{s.value}</div>
-                    <div className="text-[9px] text-gray-600 uppercase tracking-widest mt-0.5">{s.label}</div>
-                  </div>
-                ))}
+              {/* ── Topo: countdown + stats numa linha só ── */}
+              <div className="mx-4 mt-3 flex gap-2">
+                {/* Countdown compacto */}
+                {profile.dataProva && (() => {
+                  const d = daysUntil(profile.dataProva);
+                  if (d === null) return null;
+                  const color = d <= 7 ? "#ef4444" : d <= 30 ? "#f59e0b" : "#34d399";
+                  return (
+                    <a href="/workspace/perfil"
+                      className="flex items-center gap-2 px-3 py-2 rounded-xl border flex-shrink-0 hover:opacity-80 transition-opacity"
+                      style={{ background: color + "12", borderColor: color + "30" }}>
+                      <span className="text-2xl font-black tabular-nums leading-none" style={{ color }}>{d}</span>
+                      <div className="leading-tight">
+                        <p className="text-[10px] font-bold leading-none" style={{ color }}>dias</p>
+                        <p className="text-[9px] text-gray-500 leading-none mt-0.5">{profile.orgao ?? "para a prova"}</p>
+                      </div>
+                    </a>
+                  );
+                })()}
+
+                {/* Stats row inline */}
+                <div className="flex-1 grid grid-cols-3 rounded-xl border border-white/[0.07] bg-[#0d1117] overflow-hidden">
+                  {[
+                    { label: "Questões", value: String(homeStats?.totalAnswered ?? 0), color: "#a78bfa" },
+                    { label: "Acerto",   value: homeStats ? `${homeStats.overallAccuracy}%` : "—", color: "#34d399" },
+                    { label: "Sequência",value: `${homeStats?.streak ?? 0}d`, color: "#fb923c" },
+                  ].map((s, i) => (
+                    <div key={s.label} className={cn("py-2.5 text-center", i < 2 && "border-r border-white/[0.06]")}>
+                      <div className="text-lg font-black tabular-nums" style={{ color: s.color }}>{s.value}</div>
+                      <div className="text-[9px] text-gray-500 mt-0.5">{s.label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Meta do dia */}
+              {/* ── Meta do dia ── */}
               {(() => {
                 const today = homeStats?.todayCount ?? 0;
                 const limit = 20;
                 const pct = Math.min(100, (today / limit) * 100);
                 const atLimit = !isPremium && today >= limit;
                 return (
-                  <div className="mx-5 mt-3 rounded-2xl border px-4 py-3 bg-[#0d1117]"
-                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : undefined, borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium">🎯 {atLimit ? "Limite diário atingido" : "Questões hoje"}</span>
-                      <span className="text-xs font-semibold" style={{ color: atLimit ? "#a5b4fc" : "#6b7280" }}>
+                  <div className="mx-4 mt-2 rounded-xl border px-4 py-2.5"
+                    style={{ background: atLimit ? "rgba(99,102,241,0.07)" : "rgba(13,17,23,0.8)", borderColor: atLimit ? "rgba(99,102,241,0.25)" : "rgba(255,255,255,0.06)" }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="text-xs font-semibold text-gray-300">🎯 {atLimit ? "Limite diário atingido" : "Questões hoje"}</span>
+                      <span className="text-xs font-bold" style={{ color: atLimit ? "#a5b4fc" : "#6366f1" }}>
                         {today}/{isPremium ? "∞" : limit}
                       </span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-white/10 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-white/8 overflow-hidden">
                       <div className="h-full rounded-full transition-all duration-500"
                         style={{ width: `${pct}%`, background: atLimit ? "linear-gradient(90deg,#6366f1,#8b5cf6)" : "#6366f1" }} />
                     </div>
                     {atLimit && (
-                      <a href="/planos" className="block mt-2 text-center text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
-                        ⚡ Fazer upgrade para questões ilimitadas →
+                      <a href="/planos" className="block mt-1.5 text-center text-[11px] font-semibold text-indigo-400 hover:text-indigo-300 transition-colors">
+                        ⚡ Upgrade para questões ilimitadas →
                       </a>
                     )}
                   </div>
                 );
               })()}
 
-              {/* ── Streak banner ── */}
+              {/* ── Streak (só quando relevante) ── */}
               {homeStats && homeStats.streak >= 3 && (
-                <div className="mx-5 mt-3 rounded-2xl px-4 py-3 flex items-center gap-3"
+                <div className="mx-4 mt-2 rounded-xl px-3 py-2 flex items-center gap-2.5"
                   style={{
-                    background: homeStats.streak >= 30 ? "linear-gradient(135deg,rgba(234,179,8,0.12),rgba(234,179,8,0.04))"
-                      : homeStats.streak >= 7 ? "linear-gradient(135deg,rgba(249,115,22,0.12),rgba(249,115,22,0.04))"
-                      : "rgba(255,255,255,0.03)",
+                    background: homeStats.streak >= 30 ? "rgba(234,179,8,0.08)" : homeStats.streak >= 7 ? "rgba(249,115,22,0.08)" : "rgba(255,255,255,0.03)",
                     border: `1px solid ${homeStats.streak >= 30 ? "rgba(234,179,8,0.2)" : homeStats.streak >= 7 ? "rgba(249,115,22,0.2)" : "rgba(255,255,255,0.06)"}`,
                   }}>
-                  <span className="text-2xl flex-shrink-0">{homeStats.streak >= 30 ? "👑" : homeStats.streak >= 14 ? "⚡" : "🔥"}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold" style={{ color: homeStats.streak >= 30 ? "#fde047" : homeStats.streak >= 7 ? "#fb923c" : "#f97316" }}>
-                      {homeStats.streak} dias seguidos!
-                    </p>
-                    <p className="text-[11px] text-gray-500">
-                      {homeStats.streak >= 30 ? "Você é imparável 👑"
-                        : homeStats.streak >= 14 ? "Consistência de elite!"
-                        : homeStats.streak >= 7 ? "Uma semana completa!"
-                        : "Continue assim, não quebre a sequência!"}
-                    </p>
-                  </div>
-                  <button onClick={() => tryNav("relatorio")}
-                    className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors flex-shrink-0">
-                    Ver relatório
+                  <span className="text-xl flex-shrink-0">{homeStats.streak >= 30 ? "👑" : homeStats.streak >= 14 ? "⚡" : "🔥"}</span>
+                  <p className="text-xs font-bold flex-1" style={{ color: homeStats.streak >= 30 ? "#fde047" : homeStats.streak >= 7 ? "#fb923c" : "#f97316" }}>
+                    {homeStats.streak} dias seguidos — {homeStats.streak >= 30 ? "imparável 👑" : homeStats.streak >= 14 ? "consistência de elite!" : homeStats.streak >= 7 ? "uma semana completa!" : "não quebre!"}
+                  </p>
+                  <button onClick={() => tryNav("relatorio")} className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors flex-shrink-0">
+                    Relatório
                   </button>
                 </div>
               )}
 
-              {/* Quick action cards */}
-              <div className="grid grid-cols-2 gap-3 mx-5 mt-3">
-                <button onClick={() => setActiveNav("mentor")}
-                  className="flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3 text-left hover:bg-indigo-500/10 transition-colors group">
-                  <div className="w-9 h-9 rounded-xl bg-indigo-500/20 flex items-center justify-center text-lg flex-shrink-0">🎓</div>
-                  <div>
-                    <p className="text-sm font-semibold text-indigo-300">Mentor IA</p>
-                    <p className="text-[10px] text-gray-500">Tire dúvidas agora</p>
-                  </div>
-                </button>
-                <button onClick={() => tryNav("simulado")}
-                  className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3 text-left hover:bg-amber-500/10 transition-colors relative">
-                  <div className="w-9 h-9 rounded-xl bg-amber-500/20 flex items-center justify-center text-lg flex-shrink-0">🎯</div>
-                  <div>
-                    <p className="text-sm font-semibold text-amber-300">Simulado</p>
-                    <p className="text-[10px] text-gray-500">Teste seus limites</p>
-                  </div>
-                  {!isPremium && <Lock size={11} className="absolute top-2.5 right-2.5 text-amber-500/60" />}
-                </button>
+              {/* ── Ações rápidas compactas ── */}
+              <div className="mx-4 mt-2 grid grid-cols-4 gap-1.5">
+                {[
+                  { icon: "🎓", label: "Mentor", action: () => setActiveNav("mentor"), color: "#6366f1", locked: false },
+                  { icon: "🎯", label: "Simulado", action: () => tryNav("simulado"), color: "#f59e0b", locked: !isPremium },
+                  { icon: "🔍", label: "Casos", action: () => tryNav("casos"), color: "#06b6d4", locked: !isPremium },
+                  { icon: "✍️", label: "Redação", action: () => tryNav("redacao"), color: "#ec4899", locked: !isPremium },
+                ].map(({ icon, label, action, color, locked }) => (
+                  <button key={label} onClick={action}
+                    className="relative flex flex-col items-center gap-1 py-2.5 rounded-xl border border-white/[0.07] bg-[#0d1117] hover:bg-white/[0.05] transition-all active:scale-95">
+                    <span className="text-xl leading-none">{icon}</span>
+                    <span className="text-[10px] font-medium text-gray-400">{label}</span>
+                    {locked && <Lock size={9} className="absolute top-1.5 right-1.5 text-gray-600" />}
+                  </button>
+                ))}
               </div>
 
               {/* ── Estudar Agora ── */}
@@ -712,8 +707,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                         return (
                           <div key={label}>
                             <div className="flex justify-between text-[10px] mb-1">
-                              <span className="text-gray-500">{label}</span>
-                              <span style={{ color: done_ ? "#10b981" : color }}>{done}/{meta} {done_ ? "✓" : ""}</span>
+                              <span className="text-gray-400">{label}</span>
+                              <span style={{ color: done_ ? "#10b981" : color }} className="font-semibold">{done}/{meta} {done_ ? "✓" : ""}</span>
                             </div>
                             <div className="h-1 rounded-full bg-white/8">
                               <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
@@ -726,51 +721,83 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 </div>
               )}
 
-              {/* Subject cards */}
-              <div className="px-5 mt-4 pb-6">
-                <p className="text-[10px] text-gray-600 uppercase tracking-widest mb-3">Suas matérias</p>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5">
+              {/* ── Matérias ── */}
+              <div className="px-4 mt-4 pb-24">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias</p>
+                  <button onClick={() => setEditingSubjects(v => !v)}
+                    className={cn("text-[11px] font-medium px-2.5 py-1 rounded-lg transition-all",
+                      editingSubjects ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" : "text-gray-500 hover:text-gray-300")}>
+                    {editingSubjects ? "✓ Concluído" : "✏️ Editar"}
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                   {subjects.map((s, idx) => {
+                    const isHidden = hiddenSubjectIds.has(s.id);
+                    if (isHidden && !editingSubjects) return null;
                     const color = getSubjectColor(idx);
                     const abbr = getSubjectAbbr(s.name);
-                    // Busca por subjectId exato primeiro (evita colisão entre "Direito X" e "Direito Y")
                     const ss = homeStats?.subjectStats.find(x => x.subjectId === s.id);
                     const pct = ss && ss.total > 0 ? ss.accuracy : 0;
-                    const ringColor = pct >= 70 ? "#34d399" : pct >= 40 ? color : ss?.total ? "#ef4444" : "rgba(255,255,255,0.1)";
+                    const ringColor = pct >= 70 ? "#34d399" : pct >= 40 ? color : ss?.total ? "#ef4444" : "rgba(255,255,255,0.12)";
                     const badge = getDifficultyBadge(ss?.total ? ss.accuracy : null);
                     return (
-                      <button key={s.id} onClick={() => { setSelectedSubject(s); setActiveTab("questoes"); }}
-                        className="flex flex-col p-3.5 rounded-2xl border border-white/[0.06] bg-[#0d1117] hover:bg-[#131820] hover:border-white/10 transition-all text-left group active:scale-[0.97]"
-                        style={{ transition: "all .15s ease" }}>
-                        <div className="flex items-start justify-between mb-2.5">
-                          <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[11px] font-black"
-                            style={{ background: color + "18", border: `1px solid ${color}33`, color }}>
-                            {abbr}
-                          </div>
-                          {/* Anel de acerto com label "acerto" abaixo */}
-                          <div className="flex flex-col items-center gap-0.5">
-                            <div className="relative">
-                              <CircularProgress pct={pct} color={ringColor} size={34} stroke={3} />
-                              <div className="absolute inset-0 flex items-center justify-center"
-                                style={{ fontSize: 7, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
-                                {pct > 0 ? `${pct}%` : "—"}
-                              </div>
+                      <div key={s.id} className="relative">
+                        {/* Botão de ocultar/mostrar em modo edição */}
+                        {editingSubjects && (
+                          <button onClick={() => isHidden ? showSubject(s.id) : hideSubject(s.id)}
+                            className={cn(
+                              "absolute -top-1.5 -right-1.5 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shadow-lg transition-all",
+                              isHidden ? "bg-green-500 text-white" : "bg-red-500 text-white"
+                            )}>
+                            {isHidden ? "+" : "×"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { if (!editingSubjects && !isHidden) { setSelectedSubject(s); setActiveTab("questoes"); } }}
+                          className={cn(
+                            "w-full flex flex-col p-3 rounded-2xl border transition-all text-left group active:scale-[0.97]",
+                            isHidden
+                              ? "opacity-40 border-white/[0.04] bg-white/[0.02]"
+                              : "border-white/[0.07] bg-[#0d1117] hover:bg-[#131820] hover:border-white/12"
+                          )}
+                          style={{ transition: "all .15s ease" }}>
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black flex-shrink-0"
+                              style={{ background: color + "1a", border: `1px solid ${color}30`, color }}>
+                              {abbr}
                             </div>
-                            <span className="text-[8px] text-gray-600 leading-none">de acerto</span>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="relative">
+                                <CircularProgress pct={pct} color={ringColor} size={30} stroke={2.5} />
+                                <div className="absolute inset-0 flex items-center justify-center"
+                                  style={{ fontSize: 6.5, fontWeight: 800, color: pct > 0 ? ringColor : "rgba(255,255,255,0.2)" }}>
+                                  {pct > 0 ? `${pct}%` : "—"}
+                                </div>
+                              </div>
+                              <span className="text-[7px] text-gray-500 leading-none">acerto</span>
+                            </div>
                           </div>
-                        </div>
-                        <p className="text-[13px] font-semibold text-gray-200 group-hover:text-white transition-colors leading-tight mb-2 line-clamp-2">{s.name}</p>
-                        <div className="flex items-center justify-between mt-auto">
-                          <span className={cn("text-[10px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-1", badge.color)}>
-                            <span>{badge.emoji}</span>
-                            <span>{badge.label}</span>
-                          </span>
-                          <span className="text-[10px] text-gray-600">{ss?.total ? `${ss.total} feitas` : "Iniciar →"}</span>
-                        </div>
-                      </button>
+                          <p className="text-[12px] font-semibold text-white leading-tight mb-1.5 line-clamp-2">{s.name}</p>
+                          <div className="flex items-center justify-between mt-auto">
+                            <span className={cn("text-[9px] px-1.5 py-0.5 rounded border font-semibold flex items-center gap-0.5", badge.color)}>
+                              {badge.emoji} {badge.label}
+                            </span>
+                            <span className="text-[9px] text-gray-500">{ss?.total ? `${ss.total} feitas` : "Iniciar →"}</span>
+                          </div>
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
+                {hiddenSubjectIds.size > 0 && !editingSubjects && (
+                  <p className="text-center text-[11px] text-gray-600 mt-3">
+                    {hiddenSubjectIds.size} matéria{hiddenSubjectIds.size > 1 ? "s" : ""} oculta{hiddenSubjectIds.size > 1 ? "s" : ""} —{" "}
+                    <button onClick={() => setEditingSubjects(true)} className="text-indigo-400 hover:text-indigo-300 transition-colors">
+                      editar
+                    </button>
+                  </p>
+                )}
               </div>
             </div>
           )}
