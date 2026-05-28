@@ -741,9 +741,9 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias <span className="text-gray-600 normal-case font-normal">({subjects.length})</span></p>
                   <button onClick={openSubjectManager}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs font-semibold hover:bg-indigo-600/30 transition-all active:scale-95">
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-500 transition-all active:scale-95 shadow-md">
                     <Plus size={13} />
-                    Adicionar / Remover
+                    + Matérias
                   </button>
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -790,54 +790,53 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
               {/* ── Modal gerenciador de matérias ── */}
               {showSubjectManager && (
-                <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(4px)" }}
+                <div className="fixed inset-0 z-[200] flex flex-col" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(6px)" }}
                   onClick={e => { if (e.target === e.currentTarget) setShowSubjectManager(false); }}>
                   <div className="mt-auto mx-auto w-full max-w-lg flex flex-col rounded-t-3xl overflow-hidden"
-                    style={{ background: "#0d1117", maxHeight: "85vh", border: "1px solid rgba(255,255,255,0.08)" }}>
+                    style={{ background: "#1a1f2e", maxHeight: "85vh", border: "1px solid rgba(255,255,255,0.15)" }}>
 
                     {/* Header */}
-                    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/[0.06] flex-shrink-0">
+                    <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/[0.10] flex-shrink-0">
                       <div>
                         <p className="text-base font-bold text-white">Gerenciar Matérias</p>
-                        <p className="text-xs text-gray-500 mt-0.5">{activeSubjectIds.size} selecionada{activeSubjectIds.size !== 1 ? "s" : ""}</p>
+                        <p className="text-sm text-indigo-300 mt-0.5 font-medium">{activeSubjectIds.size} selecionada{activeSubjectIds.size !== 1 ? "s" : ""}</p>
                       </div>
                       <button onClick={() => setShowSubjectManager(false)}
-                        className="w-8 h-8 rounded-xl bg-white/[0.06] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/10 transition-all">
-                        <X size={16} />
+                        className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-gray-300 hover:text-white hover:bg-white/20 transition-all">
+                        <X size={18} />
                       </button>
                     </div>
 
                     {/* Search */}
                     <div className="px-4 py-3 flex-shrink-0">
-                      <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5">
-                        <Search size={14} className="text-gray-500 flex-shrink-0" />
+                      <div className="flex items-center gap-2 bg-white/10 border border-white/20 rounded-xl px-3 py-2.5">
+                        <Search size={15} className="text-gray-300 flex-shrink-0" />
                         <input
                           type="text"
                           placeholder="Buscar matéria..."
                           value={subjectSearch}
                           onChange={e => setSubjectSearch(e.target.value)}
-                          className="flex-1 bg-transparent text-sm text-white placeholder-gray-600 focus:outline-none"
+                          className="flex-1 bg-transparent text-sm text-white placeholder-gray-400 focus:outline-none"
                           autoFocus
                         />
                         {subjectSearch && (
-                          <button onClick={() => setSubjectSearch("")} className="text-gray-600 hover:text-gray-400">
-                            <X size={12} />
+                          <button onClick={() => setSubjectSearch("")} className="text-gray-400 hover:text-white">
+                            <X size={13} />
                           </button>
                         )}
                       </div>
                     </div>
 
                     {/* Lista */}
-                    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1">
+                    <div className="flex-1 overflow-y-auto px-4 pb-4 space-y-1.5">
                       {allSubjects.length === 0 ? (
                         <div className="flex items-center justify-center py-12">
-                          <div className="w-5 h-5 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                          <div className="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin" />
                         </div>
                       ) : (() => {
                         const filtered = allSubjects.filter(s =>
                           s.name.toLowerCase().includes(subjectSearch.toLowerCase())
                         );
-                        // Agrupa: ativas primeiro, depois inativas
                         const ativas = filtered.filter(s => activeSubjectIds.has(s.id));
                         const inativas = filtered.filter(s => !activeSubjectIds.has(s.id));
                         const renderItem = (s: { id: string; name: string; categoria?: string }, isActive: boolean) => (
@@ -848,20 +847,20 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                               return n;
                             })}
                             className={cn(
-                              "w-full flex items-center gap-3 px-4 py-3 rounded-xl border transition-all text-left",
+                              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border transition-all text-left",
                               isActive
-                                ? "bg-indigo-600/15 border-indigo-500/30 hover:bg-indigo-600/20"
-                                : "bg-white/[0.02] border-white/[0.05] hover:bg-white/[0.05]"
+                                ? "bg-indigo-600/30 border-indigo-400/50 hover:bg-indigo-600/40"
+                                : "bg-white/[0.06] border-white/[0.12] hover:bg-white/[0.10]"
                             )}>
                             <div className={cn(
-                              "w-5 h-5 rounded-md flex items-center justify-center flex-shrink-0 border transition-all",
-                              isActive ? "bg-indigo-600 border-indigo-500" : "border-white/20 bg-transparent"
+                              "w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 border-2 transition-all",
+                              isActive ? "bg-indigo-500 border-indigo-400" : "border-gray-500 bg-white/5"
                             )}>
-                              {isActive && <Check size={11} className="text-white" />}
+                              {isActive && <Check size={13} className="text-white" strokeWidth={3} />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <p className={cn("text-sm font-medium truncate", isActive ? "text-white" : "text-gray-400")}>{s.name}</p>
-                              {s.categoria && <p className="text-[10px] text-gray-600 capitalize">{s.categoria.replace(/-/g, " ")}</p>}
+                              <p className="text-sm font-semibold text-white truncate">{s.name}</p>
+                              {s.categoria && <p className="text-[11px] text-gray-400 capitalize mt-0.5">{s.categoria.replace(/-/g, " ")}</p>}
                             </div>
                           </button>
                         );
@@ -869,13 +868,13 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                           <>
                             {ativas.length > 0 && (
                               <>
-                                <p className="text-[10px] text-indigo-400 font-semibold uppercase tracking-widest px-1 pt-1 pb-1">✓ Ativas ({ativas.length})</p>
+                                <p className="text-xs text-indigo-300 font-bold uppercase tracking-widest px-1 pt-1 pb-1.5">✓ Ativas ({ativas.length})</p>
                                 {ativas.map(s => renderItem(s, true))}
                               </>
                             )}
                             {inativas.length > 0 && (
                               <>
-                                <p className="text-[10px] text-gray-600 font-semibold uppercase tracking-widest px-1 pt-3 pb-1">Disponíveis ({inativas.length})</p>
+                                <p className="text-xs text-gray-400 font-bold uppercase tracking-widest px-1 pt-3 pb-1.5">Disponíveis para adicionar ({inativas.length})</p>
                                 {inativas.map(s => renderItem(s, false))}
                               </>
                             )}
@@ -888,14 +887,16 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     </div>
 
                     {/* Footer */}
-                    <div className="px-4 py-4 border-t border-white/[0.06] flex gap-2 flex-shrink-0">
+                    <div className="px-4 py-4 border-t border-white/[0.12] flex gap-2 flex-shrink-0">
                       <button onClick={() => setShowSubjectManager(false)}
-                        className="flex-1 py-3 rounded-xl border border-white/10 text-gray-400 text-sm font-medium hover:bg-white/5 transition-all">
+                        className="flex-1 py-3.5 rounded-xl border border-white/20 text-gray-300 text-sm font-semibold hover:bg-white/10 transition-all">
                         Cancelar
                       </button>
                       <button onClick={saveSubjects} disabled={savingSubjects || activeSubjectIds.size === 0}
-                        className="flex-2 flex-grow-[2] py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
-                        {savingSubjects ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Salvando...</> : `Salvar (${activeSubjectIds.size} matérias)`}
+                        className="flex-[2] py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg">
+                        {savingSubjects
+                          ? <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Salvando...</>
+                          : `Salvar (${activeSubjectIds.size} matérias)`}
                       </button>
                     </div>
                   </div>
