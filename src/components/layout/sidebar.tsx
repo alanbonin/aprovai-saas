@@ -22,6 +22,7 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/desafio-semanal",label: "Desafio Semanal", icon: "⚔️" },
       { href: "/questoes",      label: "Questões",         icon: "📝" },
       { href: "/adaptativo",    label: "Adaptativo",       icon: "🧠" },
+      { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰" },
     ],
   },
   {
@@ -52,8 +53,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/artigos",   label: "Artigos IA",  icon: "📜" },
       { href: "/caso",      label: "Casos",       icon: "🔍" },
       { href: "/redacao",   label: "Redação",     icon: "✍️" },
-      { href: "/materiais",  label: "Materiais",     icon: "📄" },
-      { href: "/biblioteca", label: "Biblioteca PDF", icon: "📰" },
     ],
   },
   {
@@ -120,7 +119,6 @@ const SECTIONS_ADMIN: NavSection[] = [
       { href: "/admin/flashcards",        label: "Flashcards",  icon: "🗂️" },
       { href: "/admin/materias",          label: "Matérias",      icon: "📚" },
       { href: "/admin/topicos",           label: "Tópicos",       icon: "🏷️" },
-      { href: "/admin/materiais",         label: "Materiais",     icon: "📄" },
       { href: "/admin/biblioteca",        label: "Biblioteca PDF", icon: "📰" },
       { href: "/admin/simulados",         label: "Simulados",     icon: "🎯" },
       { href: "/admin/editais",           label: "Editais",       icon: "📡" },
