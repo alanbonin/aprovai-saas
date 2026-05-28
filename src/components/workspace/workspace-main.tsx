@@ -1224,7 +1224,7 @@ function HighlightedText({ text, termos, onTermClick }: { text: string; termos: 
         const match = termos.find(t => t.termo.toLowerCase() === part.toLowerCase());
         return match ? (
           <span key={i} onClick={() => onTermClick(match)}
-            className="cursor-pointer border-b-2 border-dotted border-amber-400 text-amber-300 hover:text-amber-200 transition-colors">
+            className="cursor-pointer border-b-2 border-dotted border-indigo-400 text-indigo-300 hover:text-indigo-200 transition-colors font-medium">
             {part}
           </span>
         ) : <span key={i}>{part}</span>;
@@ -1236,9 +1236,9 @@ function HighlightedText({ text, termos, onTermClick }: { text: string; termos: 
 function TermoTooltip({ termo, onClose }: { termo: GlossTermo; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center pb-24 px-4 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-sm rounded-xl bg-[#1a1f2e] border border-amber-500/30 shadow-2xl p-4">
+      <div className="pointer-events-auto w-full max-w-sm rounded-xl bg-[#1a1f2e] border border-indigo-500/30 shadow-2xl p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
-          <p className="text-sm font-semibold text-amber-300">📚 {termo.termo}</p>
+          <p className="text-sm font-semibold text-indigo-300">📚 {termo.termo}</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-lg leading-none">×</button>
         </div>
         <p className="text-xs text-gray-300 leading-relaxed">{termo.definicao}</p>
