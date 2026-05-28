@@ -53,18 +53,6 @@ const MODALIDADE_PRESETS: Record<string, Preset[]> = {
     { label: "Simulado OAB — Oficial", icon: "⚖️", totalQ: 80, timeMins: 300, passThreshold: 50, minCorrect: 40, desc: "80 questões · 5h · mínimo 40 acertos (50%)" },
     { label: "Treino OAB — Rápido", icon: "⚡", totalQ: 20, timeMins: 60, passThreshold: 50, minCorrect: 10, desc: "20 questões · 1h · mínimo 50%" },
   ],
-  VESTIBULAR: [
-    { label: "Simulado FUVEST 1ª Fase", icon: "🎓", totalQ: 90, timeMins: 270, passThreshold: null, minCorrect: null, desc: "90 questões · 4h30 (estilo FUVEST)" },
-    { label: "Treino Rápido", icon: "⚡", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
-  ],
-  REVALIDA: [
-    { label: "Simulado REVALIDA Etapa 1", icon: "🩺", totalQ: 120, timeMins: 270, passThreshold: 60, minCorrect: 72, desc: "120 questões · 4h30 · 5 áreas" },
-    { label: "Treino por Área", icon: "⚡", totalQ: 24, timeMins: 60, passThreshold: 60, minCorrect: null, desc: "24 questões · 1h · foco em 1 área" },
-  ],
-  CFC: [
-    { label: "Simulado CFC Completo", icon: "📊", totalQ: 75, timeMins: 270, passThreshold: 50, minCorrect: 38, desc: "75 questões · 4h30 · mínimo 50%" },
-    { label: "Treino Rápido CFC", icon: "⚡", totalQ: 25, timeMins: 90, passThreshold: 50, minCorrect: null, desc: "25 questões · 1h30" },
-  ],
   CONCURSO_PUBLICO: [
     { label: "Simulado Padrão", icon: "🏛️", totalQ: 20, timeMins: 60, passThreshold: null, minCorrect: null, desc: "20 questões · 1h" },
     { label: "Simulado Longo", icon: "📋", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
@@ -85,7 +73,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
   const [filterSubject, setFilterSubject] = useState("");
   const [availableBancas, setAvailableBancas] = useState<string[]>([]);
   const [availableSubjects, setAvailableSubjects] = useState<{ id: string; name: string }[]>([]);
-  // Aprovação threshold (OAB, CFC, REVALIDA)
+  // Aprovação threshold (OAB)
   const [passThreshold, setPassThreshold] = useState<number | null>(null);
   const [minCorrect, setMinCorrect] = useState<number | null>(null);
 
@@ -235,7 +223,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
   if (phase === "result" && result) {
     const pct = result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0;
 
-    // Lógica de aprovação — OAB, CFC, REVALIDA têm threshold mínimo
+    // Lógica de aprovação — OAB tem threshold mínimo
     const hasThreshold = passThreshold !== null || minCorrect !== null;
     const approvedByPct = passThreshold !== null ? pct >= passThreshold : true;
     const approvedByCount = minCorrect !== null ? result.correct >= minCorrect : true;

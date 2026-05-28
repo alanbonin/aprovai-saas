@@ -54,6 +54,7 @@ function fmtDate(iso: string) {
 
 export default function CadernoErrosPage() {
   const [data, setData]           = useState<CadernoData | null>(null);
+  const [apiError, setApiError]   = useState(false);
   const [loading, setLoading]     = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [expanded, setExpanded]   = useState<string | null>(null);
@@ -66,14 +67,25 @@ export default function CadernoErrosPage() {
   const load = useCallback(async (showRefreshing = false) => {
     if (showRefreshing) setRefreshing(true);
     else setLoading(true);
-    const [res, autoRes] = await Promise.all([
-      fetch("/api/workspace/caderno"),
-      fetch("/api/workspace/flashcards/auto-erro"),
-    ]);
-    if (res.ok) setData(await res.json());
-    if (autoRes.ok) {
-      const autoData = await autoRes.json() as { total: number };
-      setAutoFcCount(autoData.total ?? 0);
+    setApiError(false);
+    try {
+      const [res, autoRes] = await Promise.all([
+        fetch("/api/workspace/caderno"),
+        fetch("/api/workspace/flashcards/auto-erro"),
+      ]);
+      if (res.ok) {
+        setData(await res.json());
+      } else {
+        console.error("[caderno] API retornou:", res.status);
+        setApiError(true);
+      }
+      if (autoRes.ok) {
+        const autoData = await autoRes.json() as { total: number };
+        setAutoFcCount(autoData.total ?? 0);
+      }
+    } catch (e) {
+      console.error("[caderno] Erro de rede:", e);
+      setApiError(true);
     }
     setLoading(false);
     setRefreshing(false);
@@ -126,7 +138,23 @@ export default function CadernoErrosPage() {
     );
   }
 
-  const d = data!;
+  if (apiError) {
+    return (
+      <div className="min-h-screen text-white p-6 max-w-3xl mx-auto flex flex-col items-center justify-center">
+        <AlertTriangle className="w-10 h-10 text-red-400 mb-3" />
+        <p className="text-gray-300 font-semibold mb-1">Erro ao carregar o caderno</p>
+        <p className="text-gray-500 text-sm mb-4">Não foi possível conectar ao servidor.</p>
+        <button
+          onClick={() => load()}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-medium transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" /> Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  const d = data ?? { subjects: [], total: 0, aprendidos: 0 };
 
   const filteredSubjects = (d?.subjects ?? []).map(s => {
     const qs = s.questions.filter(q => {

@@ -38,7 +38,7 @@ export function UpgradeUI({ recurso, desc, icon = "🔒" }: { recurso: string; d
           style={{ background: "linear-gradient(135deg,#6366f1,#8b5cf6)", boxShadow: "0 0 30px rgba(99,102,241,0.4)" }}>
           ⚡ Ver planos e fazer upgrade →
         </Link>
-        <p className="text-xs text-gray-600 mt-3">A partir de R$49/mês · Cancele quando quiser</p>
+        <p className="text-xs text-gray-600 mt-3">A partir de R$69/mês · Cancele quando quiser</p>
       </div>
     </div>
   );

@@ -19,6 +19,91 @@ interface ProfileInput {
   editalContent?: string | null; // conteúdo programático colado pelo aluno
 }
 
+/**
+ * Retorna as matérias básicas GARANTIDAS para o cargo.
+ * Injetadas diretamente no prompt — a IA não precisa "descobrir", apenas incluir.
+ */
+function getMateriasBasicasGarantidas(cargo: string, orgao: string): string[] {
+  const c = cargo.toLowerCase();
+  const o = orgao.toLowerCase();
+
+  // Base universal para quase todo concurso público
+  const base = [
+    "Língua Portuguesa (interpretação de texto, gramática, redação oficial)",
+    "Direito Constitucional",
+    "Direito Administrativo",
+    "Ética no Serviço Público / Estatuto do Servidor",
+  ];
+
+  // TI / Tecnologia da Informação
+  if (c.includes("ti") || c.includes("tecnologia da informação") || c.includes("analista de sistemas") ||
+      c.includes("desenvolvimento de sistemas") || c.includes("infraestrutura") || c.includes("suporte técnico") ||
+      c.includes("segurança da informação") || c.includes("banco de dados") || c.includes("redes")) {
+    return [
+      ...base,
+      "Raciocínio Lógico e Matemática",
+      "Noções de Informática / Fundamentos de TI",
+      `Legislação Específica do Órgão${orgao ? ` (${orgao})` : ""}`,
+    ];
+  }
+
+  // Fiscal / Tributário / Receita
+  if (c.includes("fiscal") || c.includes("receita") || c.includes("auditoria") || c.includes("tributário")) {
+    return [
+      ...base,
+      "Raciocínio Lógico e Matemática",
+      "Direito Tributário",
+      "Contabilidade Geral",
+      `Legislação Específica do Órgão${orgao ? ` (${orgao})` : ""}`,
+    ];
+  }
+
+  // Policial / Segurança Pública
+  if (c.includes("polici") || c.includes("agente") || c.includes("delegado") || c.includes("perito") ||
+      c.includes("investigador") || c.includes("escrivão")) {
+    return [
+      ...base,
+      "Raciocínio Lógico",
+      "Noções de Informática",
+      "Direito Penal",
+      "Direito Processual Penal",
+      `Legislação Específica${orgao ? ` do ${orgao}` : ""}`,
+    ];
+  }
+
+  // Jurídico / Judiciário / OAB
+  if (c.includes("jurídico") || c.includes("juiz") || c.includes("promotor") || c.includes("defensor") ||
+      c.includes("analista judiciário") || c.includes("técnico judiciário") || o.includes("tj") || o.includes("trt") ||
+      o.includes("trf") || o.includes("stj") || o.includes("tse") || o.includes("stf")) {
+    return [
+      ...base,
+      "Raciocínio Lógico",
+      "Noções de Informática",
+      `Legislação Específica do Tribunal${orgao ? ` (${orgao})` : ""}`,
+    ];
+  }
+
+  // Bancário / Financeiro
+  if (c.includes("banco") || c.includes("bancário") || c.includes("caixa") || c.includes("bradesco") ||
+      c.includes("itaú") || c.includes("bb ") || c.includes("bndes") || o.includes("banco") || o.includes("cef")) {
+    return [
+      ...base,
+      "Raciocínio Lógico e Matemática",
+      "Atualidades do Mercado Financeiro",
+      "Noções de Informática",
+      "Conhecimentos Bancários",
+    ];
+  }
+
+  // Administrativo / Geral (default)
+  return [
+    ...base,
+    "Raciocínio Lógico",
+    "Noções de Informática",
+    `Legislação Específica do Órgão${orgao ? ` (${orgao})` : ""}`,
+  ];
+}
+
 function buildModalidadeKnowledgeBloco(mod: string, profile: ProfileInput): string {
   if (mod === "ENEM") {
     return `MODALIDADE: ENEM (Exame Nacional do Ensino Médio)
@@ -85,6 +170,11 @@ ${profile.editalContent.slice(0, 4000)}
 ---FIM DO EDITAL---`
       : `EDITAL NÃO DISPONÍVEL — use seu conhecimento profundo sobre editais históricos para ${profile?.cargo} ${profile?.orgao ? `no ${profile.orgao}` : ""} realizados pela banca ${profile?.banca ?? "desconhecida"}. Liste as matérias que REALMENTE caem nesse concurso específico, com os pesos típicos de cada uma. Baseie-se em provas antigas e editais anteriores.`);
 
+    // Matérias básicas garantidas por cargo — injetadas diretamente no prompt
+    const materiasGarantidas = modalidade === "CONCURSO_PUBLICO"
+      ? getMateriasBasicasGarantidas(profile?.cargo ?? "", profile?.orgao ?? "")
+      : [];
+
     // Calcula rotina diária proporcional às horas disponíveis
     // Referência: 1h = 60min | cada questão ≈ 2min | cada flashcard ≈ 45s
     // Distribuição alvo por hora:
@@ -99,10 +189,15 @@ ${profile.editalContent.slice(0, 4000)}
     const redacaoFreq = horasDia <= 1 ? "quinzenal" : "semanal"; // redação oficial 1x/semana
     const estudoCasoFreq = horasDia <= 1 ? "quinzenal" : "semanal"; // estudo de caso 1x/semana
 
+    // Bloco de matérias garantidas — injetado diretamente no system prompt
+    const materiasGarantidasBloco = materiasGarantidas.length > 0
+      ? `\n## ⚠️ MATÉRIAS BÁSICAS CONFIRMADAS — INCLUA TODAS NO PLANO (OBRIGATÓRIO)\n\nAs seguintes matérias são GARANTIDAS para este cargo e devem aparecer OBRIGATORIAMENTE no array "matérias" e no cronograma:\n${materiasGarantidas.map((m, i) => `${i + 1}. ${m}`).join("\n")}\n\nNÃO OMITA NENHUMA DESSAS MATÉRIAS. Elas são pré-calculadas com base no cargo e órgão informado.\n`
+      : "";
+
     const systemPrompt = `Você é um especialista sênior em concursos públicos com profundo conhecimento de editais, bancas e matérias cobradas em cada cargo. Sua principal qualidade é saber EXATAMENTE quais matérias cada concurso cobra — inclusive as básicas que muitos esquecem.
 
 ${editalBloco}
-
+${materiasGarantidasBloco}
 ## PROTOCOLO OBRIGATÓRIO — LEVANTAMENTO DE MATÉRIAS
 
 ⚠️ ATENÇÃO CRÍTICA: Concursos públicos SEMPRE cobram matérias básicas além do conhecimento específico do cargo. Um plano sem Língua Portuguesa ou Raciocínio Lógico está INCOMPLETO e ERRADO.
@@ -176,7 +271,7 @@ REGRAS CRÍTICAS:
       ? `Modalidade: ENEM\nNome: ${profile?.nomePreferido ?? "Não informado"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva}` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
       : modalidade === "OAB"
       ? `Modalidade: OAB — ${profile?.oabFase === "segunda" ? "2ª Fase" : "1ª Fase"}\nData da prova: ${profile?.dataProva ?? "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`
-      : `Cargo: ${profile?.cargo}\nÓrgão: ${profile?.orgao ?? "Não informado"}\nBanca: ${profile?.banca ?? "Não informada"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva} (${diasRestantes != null ? `${diasRestantes} dias` : ""})` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}`;
+      : `Cargo: ${profile?.cargo}\nÓrgão: ${profile?.orgao ?? "Não informado"}\nBanca: ${profile?.banca ?? "Não informada"}\nData da prova: ${profile?.dataProva ? `${profile.dataProva} (${diasRestantes != null ? `${diasRestantes} dias` : ""})` : "Não definida"}\nHoras de estudo por dia: ${horasDia}h\nNível do aluno: ${nivelLabel[nivel] ?? nivel}\nDificuldades relatadas: ${profile?.dificuldades ?? "Nenhuma"}\nData atual: ${hoje}${materiasGarantidas.length > 0 ? `\n\nMATÉRIAS BÁSICAS OBRIGATÓRIAS (inclua todas no plano):\n${materiasGarantidas.map((m, i) => `${i + 1}. ${m}`).join("\n")}` : ""}`;
 
     const response = await createWithCache({
       model: MODELS.sonnet, // Sonnet tem conhecimento real de editais, Haiku não
@@ -208,6 +303,23 @@ REGRAS CRÍTICAS:
     }
     if (!Array.isArray(raw_plan["cronograma"])) {
       raw_plan["cronograma"] = [];
+    }
+
+    // Pós-processamento: garante que matérias básicas estejam no plano
+    // mesmo que a IA tenha esquecido de incluir alguma
+    if (materiasGarantidas.length > 0) {
+      const materiasAtuais = (raw_plan["matérias"] as string[]).map((m: string) => m.toLowerCase());
+      for (const matGarantida of materiasGarantidas) {
+        // Verifica se alguma matéria atual contém palavras-chave da matéria garantida
+        const palavrasChave = matGarantida.split(/[\s,()\/]+/).filter(p => p.length > 4).map(p => p.toLowerCase());
+        const jaInclusa = palavrasChave.some(palavra =>
+          materiasAtuais.some(m => m.includes(palavra))
+        );
+        if (!jaInclusa) {
+          // Insere no início do array para dar destaque
+          raw_plan["matérias"].unshift(matGarantida);
+        }
+      }
     }
 
     return NextResponse.json({ plan: raw_plan });

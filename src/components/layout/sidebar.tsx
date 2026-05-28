@@ -153,10 +153,10 @@ const SECTIONS_ADMIN: NavSection[] = [
 /* ── Mobile Bottom Nav ──────────────────────────────────────────────────── */
 // 5 atalhos fixos + botão "Mais" que abre o menu completo
 const BOTTOM_NAV = [
-  { href: "/hoje",      label: "Hoje",      icon: "☀️" },
-  { href: "/workspace", label: "Estudar",   icon: "📚" },
-  { href: "/questoes",  label: "Questões",  icon: "📝" },
-  { href: "/simulado",  label: "Simulado",  icon: "🎯" },
+  { href: "/hoje",      label: "Hoje",     icon: "☀️" },
+  { href: "/semana",    label: "Semana",   icon: "📅" },
+  { href: "/questoes",  label: "Questões", icon: "📝" },
+  { href: "/simulado",  label: "Simulado", icon: "🎯" },
 ];
 
 function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobileOpen }: {
@@ -502,20 +502,34 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
           </div>
         </a>
 
-        {/* Briefing do Dia — destaque fixo (só aluno) */}
+        {/* Briefing do Dia / da Semana — destaques fixos (só aluno) */}
         {!isAdmin && (
-          <Link
-            href="/hoje"
-            className={cn(
-              "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all",
-              pathname === "/hoje"
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                : "bg-amber-500/[0.07] text-amber-400/80 border-amber-500/15 hover:bg-amber-500/15 hover:text-amber-300"
-            )}
-          >
-            <span className="text-sm">☀️</span>
-            <span>Briefing do Dia</span>
-          </Link>
+          <div className="space-y-1">
+            <Link
+              href="/hoje"
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all",
+                pathname === "/hoje"
+                  ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
+                  : "bg-amber-500/[0.07] text-amber-400/80 border-amber-500/15 hover:bg-amber-500/15 hover:text-amber-300"
+              )}
+            >
+              <span className="text-sm">☀️</span>
+              <span>Briefing do Dia</span>
+            </Link>
+            <Link
+              href="/semana"
+              className={cn(
+                "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all",
+                pathname === "/semana"
+                  ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/30"
+                  : "bg-indigo-500/[0.06] text-indigo-400/80 border-indigo-500/12 hover:bg-indigo-500/12 hover:text-indigo-300"
+              )}
+            >
+              <span className="text-sm">📅</span>
+              <span>Briefing da Semana</span>
+            </Link>
+          </div>
         )}
       </div>
 

@@ -3,9 +3,9 @@
  *
  * Estrutura:
  *   Trial        — 7 dias grátis (R$ 0)
- *   Focado       — R$ 49/mês  (1 concurso, 30 msg/semana)
- *   Aprovação    — R$ 89/mês  (2 concursos, 80 msg/semana) ← mais popular
- *   Elite        — R$ 149/mês (ilimitado, 999 msg/semana)
+ *   Focado       — R$ 69/mês  (1 concurso, 80 msg/semana)
+ *   Aprovação    — R$ 99/mês  (2 concursos, 300 msg/semana) ← mais popular
+ *   Elite        — R$ 149,90/mês (ilimitado, 999 msg/semana)
  *   Prova Marcada — R$ 317 único, 12 meses, 999 msg/semana
  *
  * Uso: node scripts/seed-plans.mjs
@@ -40,15 +40,15 @@ const PLANOS = [
   {
     slug: "focado",
     name: "Focado",
-    price: 49,
+    price: 69,
     intervalDays: 30,
-    aiCreditsPerWeek: 30,
+    aiCreditsPerWeek: 80,
     maxAgents: 1,
     active: true,
     features: [
       "1 concurso-alvo principal",
       "1 mentor IA de área especializado",
-      "30 mensagens com mentor/semana",
+      "80 mensagens com mentor/semana",
       "Questões ilimitadas por matéria",
       "Flashcards com repetição espaçada (SM-2)",
       "Redação oficial com correção por IA",
@@ -60,15 +60,15 @@ const PLANOS = [
   {
     slug: "aprovacao",
     name: "Aprovação",
-    price: 89,
+    price: 99,
     intervalDays: 30,
-    aiCreditsPerWeek: 80,
+    aiCreditsPerWeek: 300,
     maxAgents: 2,
     active: true,
     features: [
       "Até 2 concursos simultâneos",
       "Mentor de área + Mentor de banca (2 IAs)",
-      "80 mensagens com mentor/semana",
+      "300 mensagens com mentor/semana",
       "Chat combinado com 2 mentores ao mesmo tempo",
       "Questões ilimitadas por matéria",
       "Flashcards e repetição espaçada avançada",
@@ -99,6 +99,66 @@ const PLANOS = [
       "Cronograma adaptativo com IA avançada",
       "Memória de longo prazo do mentor",
       "Suporte prioritário",
+    ],
+  },
+  {
+    slug: "focado-anual",
+    name: "Focado Anual",
+    price: 708,
+    intervalDays: 365,
+    aiCreditsPerWeek: 80,
+    maxAgents: 1,
+    active: false, // ativado via painel de pagamento
+    features: [
+      "1 concurso-alvo principal",
+      "1 mentor IA especializado",
+      "80 mensagens com mentor/semana",
+      "Questões ilimitadas por matéria",
+      "Flashcards com repetição espaçada (SM-2)",
+      "Redação oficial com correção por IA",
+      "Cronograma adaptativo semanal",
+      "Economia de 15% vs mensal",
+    ],
+  },
+  {
+    slug: "aprovacao-anual",
+    name: "Aprovação Anual",
+    price: 1008,
+    intervalDays: 365,
+    aiCreditsPerWeek: 300,
+    maxAgents: 2,
+    active: false,
+    features: [
+      "Até 2 concursos simultâneos",
+      "Mentor de área + Mentor de banca (2 IAs)",
+      "300 mensagens com mentor/semana",
+      "Questões ilimitadas por matéria",
+      "Flashcards e repetição espaçada avançada",
+      "Redação e casos práticos",
+      "Simulados no estilo da banca",
+      "Cronograma adaptativo semanal",
+      "Relatório completo + gráficos de evolução",
+      "Economia de 15% vs mensal",
+    ],
+  },
+  {
+    slug: "elite-anual",
+    name: "Elite Anual",
+    price: 1524,
+    intervalDays: 365,
+    aiCreditsPerWeek: 9999,
+    maxAgents: 5,
+    active: false,
+    features: [
+      "Concursos ilimitados",
+      "Até 5 mentores IA simultâneos",
+      "Mensagens ilimitadas com mentor",
+      "Decodificador de edital (PDF → plano)",
+      "Biblioteca de PDFs + chat com documentos",
+      "Modo Companhia — grupos de estudo online",
+      "Memória de longo prazo do mentor",
+      "Suporte prioritário",
+      "Economia de 15% vs mensal",
     ],
   },
   {

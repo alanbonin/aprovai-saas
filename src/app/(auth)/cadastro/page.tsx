@@ -18,49 +18,85 @@ export default function CadastroPage() {
     setLoading(true);
     setError("");
 
-    // redirectTo: após confirmar o e-mail, Supabase redireciona para /api/auth/callback
+    // redirectTo legado (usado se template Supabase ainda usar {{ .ConfirmationURL }})
     const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
 
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectTo,
-        data: { name }, // salva name no user_metadata do Supabase
-      },
-    });
-    if (signUpError || !data.user) {
-      // Traduz mensagens comuns do Supabase
-      const msg = signUpError?.message ?? "";
-      if (msg.includes("already registered") || msg.includes("already been registered")) {
-        setError("Este e-mail já está cadastrado. Tente fazer login.");
-      } else if (msg.includes("invalid")) {
-        setError("E-mail inválido.");
-      } else if (msg.includes("Password")) {
-        setError("Senha muito curta. Use no mínimo 6 caracteres.");
-      } else {
-        setError("Erro ao criar conta. Tente novamente.");
+    let signUpData: Awaited<ReturnType<typeof supabase.auth.signUp>>["data"] | null = null;
+
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: redirectTo, data: { name } },
+      });
+
+      if (signUpError || !data.user) {
+        const msg = signUpError?.message ?? "";
+        if (msg.includes("already registered") || msg.includes("already been registered")) {
+          setError("Este e-mail já está cadastrado. Tente fazer login.");
+        } else if (msg.includes("rate limit") || msg.includes("email rate")) {
+          setError("Muitos e-mails enviados. Aguarde alguns minutos e tente novamente.");
+        } else if (msg.includes("invalid")) {
+          setError("E-mail inválido.");
+        } else if (msg.includes("Password")) {
+          setError("Senha muito curta. Use no mínimo 6 caracteres.");
+        } else {
+          setError(msg || "Erro ao criar conta. Tente novamente.");
+        }
+        setLoading(false);
+        return;
       }
+
+      // Supabase retorna identities=[] quando e-mail já existe mas não foi confirmado
+      // Nesse caso, não devemos tentar criar um novo usuário no banco
+      if (data.user.identities?.length === 0) {
+        setError("Este e-mail já tem um cadastro pendente de confirmação. Verifique sua caixa de entrada ou aguarde 1 hora para tentar novamente.");
+        setLoading(false);
+        return;
+      }
+
+      signUpData = data;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Erro de conexão com autenticação: ${msg}`);
       setLoading(false);
       return;
     }
 
     // Cria usuário no banco via API
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, supabaseId: data.user.id }),
-    });
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, supabaseId: signUpData.user!.id }),
+      });
 
-    if (!res.ok) {
-      setError("Erro ao salvar perfil. Tente novamente.");
+      if (!res.ok) {
+        let errorMsg = "Erro ao salvar perfil. Tente novamente.";
+        try {
+          const resData = await res.json();
+          const apiMsg = resData?.error ?? "";
+          if (res.status === 429 || apiMsg.includes("Muitas")) {
+            errorMsg = "Muitas tentativas. Aguarde alguns minutos.";
+          } else if (apiMsg) {
+            errorMsg = apiMsg;
+          }
+        } catch {
+          errorMsg = `Erro ${res.status} ao salvar perfil.`;
+        }
+        setError(errorMsg);
+        setLoading(false);
+        return;
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setError(`Erro de conexão ao salvar perfil: ${msg}`);
       setLoading(false);
       return;
     }
 
-    // Se há sessão ativa (email auto-confirmado no Supabase), vai para o workspace
-    // que vai detectar onboardingDone=false e redirecionar para /onboarding
-    if (data.session) {
+    // Se há sessão ativa (email auto-confirmado), vai para o workspace
+    if (signUpData.session) {
       window.location.href = "/workspace";
       return;
     }

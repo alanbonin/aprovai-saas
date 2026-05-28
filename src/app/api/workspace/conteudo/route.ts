@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
       .eq("subjectId", subjectId)
       .eq("aprovado", true)
-      .limit(80),
+      .limit(200),
     db.from("Progress")
       .select("questionId, nextReview, interval, correct")
       .eq("userId", dbUser.id),
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     const fallback = await db.from("Question")
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
       .eq("subjectId", subjectId)
-      .limit(80);
+      .limit(200);
     questoes = fallback.data;
   }
 

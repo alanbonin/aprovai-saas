@@ -107,6 +107,8 @@ export function MentorChat({
   const [saving, setSaving]           = useState(false);
   const [savingMemory, setSavingMemory] = useState(false);
   const [memorySaved, setMemorySaved] = useState(false);
+  // Mobile: 'list' mostra a lista de mentores, 'chat' mostra o chat
+  const [mobileView, setMobileView]   = useState<'list' | 'chat'>('list');
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
@@ -132,6 +134,7 @@ export function MentorChat({
       setError("");
       setMemorySaved(false);
     }
+    setMobileView('chat'); // no mobile, muda para a tela de chat
   }
 
   function openCombined() {
@@ -141,6 +144,7 @@ export function MentorChat({
       setError("");
       setMemorySaved(false);
     }
+    setMobileView('chat'); // no mobile, muda para a tela de chat
   }
 
   async function saveMemory() {
@@ -354,8 +358,8 @@ export function MentorChat({
   return (
     <div className="flex h-full text-white overflow-hidden">
 
-      {/* ── Sidebar ── */}
-      <div className="w-72 border-r border-white/5 flex flex-col bg-[#0d1117] flex-shrink-0">
+      {/* ── Painel esquerdo: lista de mentores ── */}
+      <div className={`w-full md:w-72 border-r border-white/5 flex flex-col bg-[#0d1117] flex-shrink-0 ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex`}>
         {/* Header sidebar */}
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-1">
@@ -563,7 +567,16 @@ export function MentorChat({
       )}
 
       {/* ── Área do chat ── */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className={`flex-1 flex flex-col min-w-0 overflow-hidden ${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex`}>
+        {/* Botão voltar — só aparece no mobile quando está no chat */}
+        <button
+          onClick={() => setMobileView('list')}
+          className="md:hidden flex items-center gap-2 px-4 py-2.5 border-b border-white/5 text-sm text-gray-400 hover:text-white transition-colors bg-[#0d1117] flex-shrink-0"
+        >
+          <span>←</span>
+          <span>Mentores</span>
+        </button>
+
         {isIdle ? (
           <ChatPlaceholder />
         ) : (

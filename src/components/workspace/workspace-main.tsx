@@ -1225,6 +1225,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   const [reportando, setReportando] = useState<number | null>(null); // questionId sendo reportado
   const [reportMotivo, setReportMotivo] = useState("gabarito_errado");
   const [reportDesc, setReportDesc] = useState("");
+  const [autoAdvancing, setAutoAdvancing] = useState(false); // countdown ao errar
+  const [shuffleSeed, setShuffleSeed] = useState(() => Math.random()); // embaralho por sessão
   const [reportSent, setReportSent] = useState(false);
 
   async function enviarReporte(questionId: number) {
@@ -1256,7 +1258,24 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   }
 
   function resetFilters() {
-    setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false);
+    setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false); setAutoAdvancing(false);
+  }
+
+  function restartEmbaralhado() {
+    setShuffleSeed(Math.random());
+    setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false); setAnswered(new Set()); setAutoAdvancing(false);
+  }
+
+  // Fisher-Yates shuffle determinístico pelo seed
+  function shuffleArray<T>(arr: T[], seed: number): T[] {
+    const a = [...arr];
+    let s = seed;
+    for (let i = a.length - 1; i > 0; i--) {
+      s = (s * 9301 + 49297) % 233280;
+      const j = Math.floor((s / 233280) * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
 
   const bancas = Array.from(new Set(items.map(q => q.banca).filter(Boolean) as string[]));
@@ -1267,6 +1286,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   if (filterStatus === "pendentes") filtered = filtered.filter(q => !q._seen || !q._nextReview || new Date(q._nextReview).getTime() <= Date.now());
   if (filterStatus === "revisadas") filtered = filtered.filter(q => q._seen && q._nextReview && new Date(q._nextReview).getTime() > Date.now());
   if (filterStatus === "favoritas") filtered = filtered.filter(q => favoritos.has(q.id));
+  // Embaralha as questões para não seguir sempre a mesma ordem
+  filtered = shuffleArray(filtered, shuffleSeed);
 
   const q = filtered[current];
 
@@ -1288,7 +1309,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
       const k = e.key.toUpperCase();
       if (["A","B","C","D","E"].includes(k) && !selected && q) handleSelect(k);
-      if ((e.key === "Enter" || e.key === "n" || e.key === "N") && selected) handleQuality("ok");
+      // N só avança (como "Boa") quando acertou — se errou, o auto-advance já trata
+      if ((e.key === "Enter" || e.key === "n" || e.key === "N") && selected && selected === q?.answer) handleQuality("ok");
       if (e.key === "Escape") setActiveTermo(null);
     }
     window.addEventListener("keydown", onKey);
@@ -1315,7 +1337,9 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     </div>
   );
 
-  const due = filtered.filter(qq => !qq._seen || !qq._nextReview || new Date(qq._nextReview).getTime() <= Date.now());
+  const novas = filtered.filter(qq => !qq._seen);
+  const vencidas = filtered.filter(qq => qq._seen && (!qq._nextReview || new Date(qq._nextReview).getTime() <= Date.now()));
+  const due = [...novas, ...vencidas]; // para compatibilidade
   const future = filtered.filter(qq => qq._seen && qq._nextReview && new Date(qq._nextReview).getTime() > Date.now());
 
   const options = q ? (["A","B","C","D","E"] as const)
@@ -1331,7 +1355,34 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     if (isCorrect) {
       const msg = CORRECT_MSGS[Math.floor(Math.random() * CORRECT_MSGS.length)];
       onCelebrate?.(msg);
+    } else {
+      // Resposta errada → salva automaticamente como "again" e avança após 1.5s
+      setAutoAdvancing(true);
+      handleQualityDirect("again");
     }
+  }
+
+  async function handleQualityDirect(quality: "easy" | "ok" | "hard" | "again") {
+    // Salva progresso sem avançar imediatamente (usado no auto-advance de erros)
+    if (!q) return;
+    const res = await fetch("/api/questoes/progresso", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: q.id, quality }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.limitReached) { setDailyLimitHit(true); return; }
+      onProgressUpdate(q.id, data.nextReview);
+      setAnswered(prev => new Set([...prev, q.id]));
+    }
+    // Avança após 1.5s para o aluno ver a resposta correta
+    setTimeout(() => {
+      setCurrent(c => c + 1);
+      setSelected(null);
+      setShowExpl(false);
+      setActiveTermo(null);
+      setAutoAdvancing(false);
+    }, 1500);
   }
 
   async function handleQuality(quality: "easy" | "ok" | "hard" | "again") {
@@ -1382,18 +1433,26 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   }
 
   if (isFinished) {
+    const pct = score.total > 0 ? Math.round(score.correct / score.total * 100) : 0;
     return (
-      <div className="text-center py-16">
-        <CheckCircle2 className="w-14 h-14 text-green-400 mx-auto mb-4" />
-        <h2 className="text-xl font-bold mb-2">Sessão completa!</h2>
-        <p className="text-gray-400 mb-1">
-          {score.correct}/{score.total} corretas · {score.total > 0 ? Math.round(score.correct/score.total*100) : 0}%
+      <div className="text-center py-12 px-4">
+        <div className="text-5xl mb-4">{pct >= 80 ? "🏆" : pct >= 60 ? "💪" : "📚"}</div>
+        <h2 className="text-xl font-bold mb-1">Banco concluído!</h2>
+        <p className="text-gray-400 text-sm mb-1">
+          {score.correct}/{score.total} corretas · <span className={cn(
+            "font-bold", pct >= 80 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400"
+          )}>{pct}%</span>
         </p>
-        <p className="text-xs text-gray-600 mb-6">{future.length} questões para revisão futura</p>
-        <button onClick={() => { setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false); setAnswered(new Set()); }}
-          className="px-6 py-3 bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 mx-auto">
-          <RotateCcw className="w-4 h-4" /> Reiniciar sessão
-        </button>
+        <p className="text-xs text-gray-600 mb-8">{future.length > 0 ? `${future.length} questões agendadas para revisão futura` : "Continue praticando para agendar revisões"}</p>
+        <div className="space-y-2 max-w-xs mx-auto">
+          <button onClick={restartEmbaralhado}
+            className="w-full px-6 py-3 bg-indigo-600 rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2 font-semibold text-sm">
+            <RotateCcw className="w-4 h-4" /> Responder novamente (embaralhado)
+          </button>
+          {future.length > 0 && (
+            <p className="text-[11px] text-gray-600">As questões serão misturadas em nova ordem</p>
+          )}
+        </div>
       </div>
     );
   }
@@ -1417,7 +1476,12 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
       {/* Header */}
       <div className="flex justify-between items-center text-xs text-gray-500 mb-3">
-        <span>Questão {current + 1}/{filtered.length} · <span className="text-yellow-400">{due.length} para revisar</span></span>
+        <span>
+          Questão {current + 1}
+          {novas.length > 0 && <span className="text-gray-600"> · <span className="text-indigo-400">{novas.length} novas</span></span>}
+          {vencidas.length > 0 && <span className="text-gray-600"> · <span className="text-yellow-400">{vencidas.length} p/ revisar</span></span>}
+          {future.length > 0 && <span className="text-gray-600"> · {future.length} agendadas</span>}
+        </span>
         <div className="flex items-center gap-2">
           {q.banca && <span className="text-indigo-400">{q.banca}{q.year ? ` ${q.year}` : ""}</span>}
           <span className={cn("px-2 py-0.5 rounded-full text-xs", {
@@ -1517,13 +1581,24 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
             </div>
           )}
           <div>
-            <p className="text-xs text-gray-600 mb-2">Como foi? (define próxima revisão)</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              <button onClick={() => handleQuality("again")} className="py-2 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/30 transition-colors">Errei</button>
-              <button onClick={() => handleQuality("hard")} className="py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors">Difícil</button>
-              <button onClick={() => handleQuality("ok")} className="py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors">OK</button>
-              <button onClick={() => handleQuality("easy")} className="py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors">Fácil</button>
-            </div>
+            {selected && selected !== q.answer ? (
+              // Resposta errada — salva automaticamente, avança em 1.5s
+              <div className="flex items-center gap-2 py-2.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                <div className={cn("w-2 h-2 rounded-full bg-red-500 flex-shrink-0", autoAdvancing && "animate-ping")} />
+                <p className="text-xs text-red-400 font-medium">
+                  Adicionada à revisão — próxima questão em instantes...
+                </p>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-600 mb-2">Como foi? (define próxima revisão)</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button onClick={() => handleQuality("hard")} className="py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors">Difícil</button>
+                  <button onClick={() => handleQuality("ok")} className="py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors">Boa</button>
+                  <button onClick={() => handleQuality("easy")} className="py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors">Fácil</button>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Botão de reporte */}
