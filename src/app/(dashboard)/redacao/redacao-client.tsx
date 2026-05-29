@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import { cn } from "@/lib/utils";
 import {
   FileText, Send, ChevronDown, CheckCircle2, AlertCircle,
@@ -73,7 +74,7 @@ function InputModeToggle({ mode, onChange }: { mode: InputMode; onChange: (m: In
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function RedacaoClient() {
-  // Tipos personalizados
+  const { showUpgrade } = useUpgradeModal();
   const [tipos, setTipos] = useState<TipoDoc[]>(TIPOS_FALLBACK);
   const [tiposLoading, setTiposLoading] = useState(true);
 
@@ -156,6 +157,7 @@ export function RedacaoClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "gerar_tema", tipo }),
       });
+      if (res.status === 403) { showUpgrade("Redação Oficial"); return; }
       const d = await res.json() as { temas?: string[] };
       if (d.temas?.length) {
         setTemasIA(d.temas);
@@ -188,6 +190,7 @@ export function RedacaoClient() {
           fotoType: inputMode === "foto" ? fotoType : undefined,
         }),
       });
+      if (res.status === 403) { showUpgrade("Redação Oficial"); setLoading(false); return; }
 
       const data = await res.json() as Resultado & {
         error?: string;

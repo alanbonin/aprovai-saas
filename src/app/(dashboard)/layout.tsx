@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PomodoroFloat } from "@/components/layout/pomodoro-float";
+import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -46,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isPremium = !isExpiredSub && !!(sub && (sub.plan?.price ?? 0) > 0);
 
   return (
+    <UpgradeModalProvider>
     <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
       <Sidebar
         userName={dbUser.name ?? undefined}
@@ -60,5 +62,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </main>
       <PomodoroFloat />
     </div>
+    </UpgradeModalProvider>
   );
 }

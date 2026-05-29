@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import {
   BookOpen, Play, Send, RefreshCw, AlertCircle, ChevronDown,
   PenLine, Camera, Loader2, X, ImageIcon, CheckCircle2,
@@ -346,6 +347,7 @@ function RespostaSection({
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 export function CasoClient() {
+  const { showUpgrade } = useUpgradeModal();
   const [modo, setModo] = useState<Modo>("ia");
 
   // Modo IA
@@ -427,6 +429,7 @@ export function CasoClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "gerar", tema }),
       });
+      if (res.status === 403) { showUpgrade("Estudo de Caso"); return; }
       const data = await res.json() as Cenario & { error?: string };
       if (data.error) { setError(data.error); return; }
       setCenario(data);
@@ -463,6 +466,7 @@ export function CasoClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "avaliar", ...body }),
       });
+      if (res.status === 403) { showUpgrade("Estudo de Caso"); setLoadingAvaliar(false); return; }
 
       const data = await res.json() as Avaliacao & {
         error?: string;

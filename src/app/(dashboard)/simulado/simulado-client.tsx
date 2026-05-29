@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import { Trophy, Clock, CheckCircle2, XCircle, RotateCcw, Play, ChevronRight, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -62,6 +63,7 @@ const MODALIDADE_PRESETS: Record<string, Preset[]> = {
 type Phase = "menu" | "config" | "running" | "result" | "gabarito";
 
 export function SimuladoClient({ history: initialHistory, userId, modalidade = "CONCURSO_PUBLICO" }: Props) {
+  const { showUpgrade } = useUpgradeModal();
   const [phase, setPhase] = useState<Phase>("menu");
   const [history, setHistory] = useState(initialHistory);
 
@@ -170,8 +172,9 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    const data = await res.json();
     setLoading(false);
+    if (res.status === 403) { showUpgrade("Simulados"); return; }
+    const data = await res.json();
     if (!res.ok) {
       setError(data.error ?? "Erro ao gerar simulado");
       return;
