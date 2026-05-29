@@ -24,6 +24,7 @@ interface Props {
   subjects: Subject[];
   topics: Topic[];
   questoesPorTopico: Record<string, number>;
+  questoesPorMateria: Record<string, number>;
 }
 
 // ─── Form de criação/edição de tópico ─────────────────────────────────────────
@@ -178,6 +179,7 @@ function SubjectGroup({
   subject,
   topics,
   questoesPorTopico,
+  questoesPorMateria,
   onTopicCreated,
   onTopicUpdated,
   onTopicDeleted,
@@ -185,6 +187,7 @@ function SubjectGroup({
   subject: Subject;
   topics: Topic[];
   questoesPorTopico: Record<string, number>;
+  questoesPorMateria: Record<string, number>;
   onTopicCreated: (t: Topic) => void;
   onTopicUpdated: (t: Topic) => void;
   onTopicDeleted: (id: string) => void;
@@ -194,7 +197,11 @@ function SubjectGroup({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  const totalQ = topics.reduce((acc, t) => acc + (questoesPorTopico[t.id] ?? 0), 0);
+  // Total real de questões da matéria (incluindo sem tópico vinculado)
+  const totalQ = questoesPorMateria[subject.id] ?? 0;
+  // Quantas estão vinculadas a tópicos
+  const qComTopico = topics.reduce((acc, t) => acc + (questoesPorTopico[t.id] ?? 0), 0);
+  const qSemTopico = totalQ - qComTopico;
 
   const handleCreate = async (data: { name: string; slug: string; description: string; ordem: number }) => {
     const res = await fetch("/api/admin/topics", {
@@ -260,8 +267,13 @@ function SubjectGroup({
           "text-xs px-2 py-0.5 rounded-full",
           totalQ > 0 ? "bg-emerald-500/15 text-emerald-400" : "bg-white/5 text-gray-600"
         )}>
-          {totalQ} questões
+          {totalQ.toLocaleString("pt-BR")} questões
         </span>
+        {qSemTopico > 0 && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-400 ml-1">
+            {qSemTopico.toLocaleString("pt-BR")} sem tópico
+          </span>
+        )}
       </button>
 
       {/* Conteúdo expandido */}
@@ -320,7 +332,7 @@ function SubjectGroup({
 }
 
 // ─── Componente principal ─────────────────────────────────────────────────────
-export function TopicosAdmin({ subjects, topics: initialTopics, questoesPorTopico }: Props) {
+export function TopicosAdmin({ subjects, topics: initialTopics, questoesPorTopico, questoesPorMateria }: Props) {
   const [topics, setTopics] = useState<Topic[]>(initialTopics);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<string>("all");
@@ -407,6 +419,7 @@ export function TopicosAdmin({ subjects, topics: initialTopics, questoesPorTopic
             subject={subject}
             topics={getTopicsForSubject(subject.id)}
             questoesPorTopico={questoesPorTopico}
+            questoesPorMateria={questoesPorMateria}
             onTopicCreated={handleCreated}
             onTopicUpdated={handleUpdated}
             onTopicDeleted={handleDeleted}
