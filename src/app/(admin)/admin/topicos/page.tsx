@@ -1,21 +1,15 @@
 import { db } from "@/lib/db";
-import { prisma } from "@/lib/prisma";
 import { TopicosAdmin } from "./topicos-client";
 
 export const dynamic = "force-dynamic";
 
 export default async function TopicosAdminPage() {
-  const [{ data: subjects }, { data: topics, count }, { data: questoesCounts }, questoesPorMateria] = await Promise.all([
+  const [{ data: subjects }, { data: topics, count }, { data: questoesCounts }, { data: subjectCounts }] = await Promise.all([
     db.from("Subject").select("id, name, slug, categoria").order("categoria").order("name"),
     db.from("Topic").select("*", { count: "exact" }).order("subjectId").order("ordem").range(0, 9999),
     db.rpc("get_question_counts_by_topic"),
-    // Conta TODAS as questões por matéria (incluindo sem tópico)
-    prisma.$queryRaw<{ subjectId: string; total: bigint }[]>`
-      SELECT "subjectId", COUNT(*)::BIGINT AS total
-      FROM "Question"
-      WHERE "subjectId" IS NOT NULL
-      GROUP BY "subjectId"
-    `,
+    // Conta questões por matéria via RPC (criada na migration)
+    db.rpc("get_question_counts_by_subject").throwOnError().catch(() => ({ data: null, error: null })),
   ]);
 
   const qPorTopico: Record<string, number> = {};
@@ -23,9 +17,18 @@ export default async function TopicosAdminPage() {
     if (row.topic_id) qPorTopico[row.topic_id] = Number(row.question_count);
   }
 
+  // Se a RPC por matéria não existir ainda, deriva dos tópicos (fallback)
   const qPorMateria: Record<string, number> = {};
-  for (const row of questoesPorMateria) {
-    qPorMateria[row.subjectId] = Number(row.total);
+  if (subjectCounts && Array.isArray(subjectCounts)) {
+    for (const row of subjectCounts as { subject_id: string; question_count: number }[]) {
+      if (row.subject_id) qPorMateria[row.subject_id] = Number(row.question_count);
+    }
+  } else {
+    // Fallback: soma questões por tópico por matéria
+    for (const topic of (topics ?? [])) {
+      const count = qPorTopico[topic.id] ?? 0;
+      qPorMateria[topic.subjectId] = (qPorMateria[topic.subjectId] ?? 0) + count;
+    }
   }
 
   const totalQuestoes = Object.values(qPorMateria).reduce((a, b) => a + b, 0);
