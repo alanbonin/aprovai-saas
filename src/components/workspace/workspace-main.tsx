@@ -1672,7 +1672,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
               "p-3 rounded-xl border",
               selected === q.answer
                 ? "bg-emerald-950/60 border-emerald-500/40"
-                : "bg-[#1a1010] border-red-500/30"
+                : "bg-red-950/40 border-red-500/40"
             )}>
               <p className={cn("text-xs font-semibold mb-1.5",
                 selected === q.answer ? "text-emerald-400" : "text-red-400"
