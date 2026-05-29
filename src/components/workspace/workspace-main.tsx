@@ -1301,12 +1301,12 @@ function QuestoesFiltros({ filterLevel, filterStatus, onLevel, onStatus, count, 
 }) {
   return (
     <div className="flex flex-wrap gap-2 mb-4">
-      {/* Status pills */}
-      {(["todas","pendentes","revisadas","favoritas"] as const).map(s => (
-        <button key={s} onClick={() => onStatus(s)}
+      {/* Status pills — sem "Revisadas" (pouco útil na prática) */}
+      {(["todas","pendentes","favoritas"] as const).map(s => (
+        <button key={s} onClick={() => onStatus(s as "todas" | "pendentes" | "revisadas" | "favoritas")}
           className={cn("text-xs px-2.5 py-1 rounded-full border transition-colors",
             filterStatus === s ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white")}>
-          {s === "todas" ? `Todas (${total})` : s === "pendentes" ? "🔴 Pendentes" : s === "revisadas" ? "✅ Revisadas" : `⭐ Favoritas (${favCount})`}
+          {s === "todas" ? `Todas (${total})` : s === "pendentes" ? "🔴 Pendentes" : `⭐ Favoritas (${favCount})`}
         </button>
       ))}
       {/* Filtro nível */}
@@ -1672,14 +1672,14 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
               "p-3 rounded-xl border",
               selected === q.answer
                 ? "bg-emerald-950/60 border-emerald-500/40"
-                : "bg-red-950/60 border-red-500/40"
+                : "bg-[#1a1010] border-red-500/30"
             )}>
               <p className={cn("text-xs font-semibold mb-1.5",
                 selected === q.answer ? "text-emerald-400" : "text-red-400"
               )}>
                 {selected === q.answer ? "✅ Correto!" : "❌ Incorreto"} — Justificativa
               </p>
-              <p className="text-xs text-gray-200 leading-relaxed">{q.explanation}</p>
+              <p className="text-sm text-gray-100 leading-relaxed">{q.explanation}</p>
             </div>
           )}
           {q.artigo && (
