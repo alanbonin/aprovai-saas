@@ -8,10 +8,7 @@ interface Question {
   level: string; statement: string; answer: string; subjectId: string | null;
 }
 interface Subject { id: string; name: string; }
-interface Agent { id: string; name: string; banca: string | null; area: string | null; description: string; color: string; }
-
-const BANCAS = ["CESPE/CEBRASPE", "FGV", "VUNESP", "FCC", "IBFC", "CESGRANRIO", "AOCP", "NC-UFPR", "FUNRIO", "IDECAN", "IADES", "ESAF"];
-const BANCAS_AGENTS_SLUGS = ["banca-cespe", "banca-fgv", "banca-vunesp", "banca-fcc", "banca-ibfc", "banca-cesgranrio", "banca-aocp", "banca-idecan", "banca-iades", "banca-esaf"];
+interface Agent { id: string; name: string; area: string | null; description: string; color: string; }
 
 const emptyQ = {
   banca: "", year: "", level: "medio",
@@ -36,18 +33,16 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [filterSubject, setFilterSubject] = useState("");
-  const [filterBanca, setFilterBanca] = useState("");
   const [search, setSearch] = useState("");
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [editingQ, setEditingQ] = useState<(typeof emptyQ & { id?: number }) | null>(null);
   const [editSaving, setEditSaving] = useState(false);
   const [editError, setEditError] = useState("");
 
-  const fetchQuestions = useCallback(async (params: { subjectId?: string; banca?: string; search?: string; page?: number }) => {
+  const fetchQuestions = useCallback(async (params: { subjectId?: string; search?: string; page?: number }) => {
     setLoadingQ(true);
     const sp = new URLSearchParams();
     if (params.subjectId) sp.set("subjectId", params.subjectId);
-    if (params.banca) sp.set("banca", params.banca);
     if (params.search) sp.set("search", params.search);
     if (params.page) sp.set("page", String(params.page));
     sp.set("limit", "50");
@@ -62,27 +57,22 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
     setLoadingQ(false);
   }, []);
 
-  function applyFilters(overrides: { subjectId?: string; banca?: string; search?: string; page?: number } = {}) {
+  function applyFilters(overrides: { subjectId?: string; search?: string; page?: number } = {}) {
     const params = {
       subjectId: overrides.subjectId ?? filterSubject,
-      banca: overrides.banca ?? filterBanca,
       search: overrides.search ?? search,
       page: overrides.page ?? 1,
     };
     void fetchQuestions(params);
   }
 
-  // Agentes separados por tipo
-  const bancaAgents = agents.filter(a => a.banca || a.name.toLowerCase().includes("cespe") || a.name.toLowerCase().includes("fgv") || a.name.toLowerCase().includes("banca") || a.name.toLowerCase().includes("vunesp") || a.name.toLowerCase().includes("fcc") || a.name.toLowerCase().includes("ibfc") || a.name.toLowerCase().includes("aocp") || a.name.toLowerCase().includes("idecan") || a.name.toLowerCase().includes("iades") || a.name.toLowerCase().includes("esaf") || a.name.toLowerCase().includes("cesgranrio") || a.name.toLowerCase().includes("funrio"));
-  const cargoAgents = agents.filter(a => !bancaAgents.includes(a));
-
   // Geração unitária
-  const [gerarForm, setGerarForm] = useState({ subjectId: "", banca: "", extraContext: "", qty: 10, cargoAgentId: "", bancaAgentId: "" });
+  const [gerarForm, setGerarForm] = useState({ subjectId: "", extraContext: "", qty: 10, cargoAgentId: "" });
   const [gerando, setGerando] = useState(false);
   const [gerarMsg, setGerarMsg] = useState("");
 
   // Geração em lote
-  const [loteForm, setLoteForm] = useState({ cargoAgentId: "", bancaAgentId: "", banca: "", extraContext: "" });
+  const [loteForm, setLoteForm] = useState({ cargoAgentId: "", extraContext: "" });
   const [loteItems, setLoteItems] = useState<LoteItem[]>([]);
   const [gerandoLote, setGerandoLote] = useState(false);
   const [loteProgress, setLoteProgress] = useState("");
@@ -118,18 +108,7 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
     e.target.value = "";
   }
 
-  const bancasExistentes = BANCAS;
   const filtered = questions; // filtering now done server-side
-
-  function handleBancaAgentSelect(agentId: string) {
-    const agent = agents.find(a => a.id === agentId);
-    setGerarForm(f => ({ ...f, bancaAgentId: agentId, banca: agent?.banca ?? f.banca }));
-  }
-
-  function handleLoteBancaAgent(agentId: string) {
-    const agent = agents.find(a => a.id === agentId);
-    setLoteForm(f => ({ ...f, bancaAgentId: agentId, banca: agent?.banca ?? f.banca }));
-  }
 
   function addLoteItem(subjectId: string) {
     const subj = subjects.find(s => s.id === subjectId);
@@ -165,16 +144,15 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subjectId: gerarForm.subjectId, subjectName: subject?.name ?? "",
-        banca: gerarForm.banca || null, extraContext: gerarForm.extraContext || null,
+        extraContext: gerarForm.extraContext || null,
         qty: gerarForm.qty,
         cargoAgentId: gerarForm.cargoAgentId || null,
-        bancaAgentId: gerarForm.bancaAgentId || null,
       }),
     });
     const data = await res.json();
     if (!res.ok) { setGerarMsg(data.error ?? "Erro ao gerar"); setGerando(false); return; }
     setQuestions(q => [...(data.questions ?? []), ...q]);
-    setGerarMsg(`Concluído: ${data.count} questões adicionadas com artigo + dica da banca!`);
+    setGerarMsg(`Concluído: ${data.count} questões adicionadas!`);
     setGerando(false);
   }
 
@@ -189,10 +167,8 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         lote: loteItems,
-        banca: loteForm.banca || null,
         extraContext: loteForm.extraContext || null,
         cargoAgentId: loteForm.cargoAgentId || null,
-        bancaAgentId: loteForm.bancaAgentId || null,
       }),
     });
 
@@ -278,7 +254,6 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
 
   const subjectName = (id: string | null) => id ? subjects.find(s => s.id === id)?.name ?? "—" : "—";
   const selectedCargoAgent = agents.find(a => a.id === gerarForm.cargoAgentId);
-  const selectedBancaAgent = agents.find(a => a.id === gerarForm.bancaAgentId);
 
   return (
     <>
@@ -299,11 +274,6 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
           <option value="">Todas as matérias</option>
           {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
-        <select value={filterBanca} onChange={e => { setFilterBanca(e.target.value); applyFilters({ banca: e.target.value }); }}
-          className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-          <option value="">Todas as bancas</option>
-          {bancasExistentes.map(b => <option key={b} value={b}>{b}</option>)}
         </select>
         <span className="text-xs text-gray-600">{loadingQ ? "carregando…" : `${total} questão(ões)`}</span>
         <div className="ml-auto flex gap-2">
@@ -352,7 +322,6 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
                 <th className="text-left px-4 py-3 text-gray-500 font-medium w-10">#</th>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Enunciado</th>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Matéria</th>
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Banca</th>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Nível</th>
                 <th className="text-left px-4 py-3 text-gray-500 font-medium">Gab.</th>
                 <th className="px-4 py-3"></th>
@@ -371,7 +340,6 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-xs">{subjectName(q.subjectId)}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs">{q.banca ?? "—"}{q.year ? ` ${q.year}` : ""}</td>
                     <td className="px-4 py-3">
                       <span className={cn("text-xs px-2 py-0.5 rounded-full", {
                         "bg-green-500/10 text-green-400": q.level === "facil",
@@ -449,52 +417,26 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
             </div>
 
             <div className="p-5 space-y-5">
-              {/* 2 agentes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Agente do cargo / área</label>
-                  <select value={loteForm.cargoAgentId} onChange={e => setLoteForm(f => ({ ...f, cargoAgentId: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Sem agente de cargo</option>
-                    {cargoAgents.map(a => <option key={a.id} value={a.id}>{a.name}{a.area ? ` · ${a.area}` : ""}</option>)}
-                  </select>
-                  {loteForm.cargoAgentId && (
-                    <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1">
-                      <Bot className="w-3 h-3" />{agents.find(a => a.id === loteForm.cargoAgentId)?.description}
-                    </p>
-                  )}
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Agente da banca</label>
-                  <select value={loteForm.bancaAgentId} onChange={e => handleLoteBancaAgent(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Sem agente de banca</option>
-                    {bancaAgents.map(a => <option key={a.id} value={a.id}>{a.name}{a.banca ? ` · ${a.banca}` : ""}</option>)}
-                  </select>
-                  {loteForm.bancaAgentId && (
-                    <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1">
-                      <Bot className="w-3 h-3" />{agents.find(a => a.id === loteForm.bancaAgentId)?.description}
-                    </p>
-                  )}
-                </div>
+              {/* Agente */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Agente</label>
+                <select value={loteForm.cargoAgentId} onChange={e => setLoteForm(f => ({ ...f, cargoAgentId: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+                  <option value="">Sem agente</option>
+                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}{a.area ? ` · ${a.area}` : ""}</option>)}
+                </select>
+                {loteForm.cargoAgentId && (
+                  <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1">
+                    <Bot className="w-3 h-3" />{agents.find(a => a.id === loteForm.cargoAgentId)?.description}
+                  </p>
+                )}
               </div>
 
-              {/* Banca manual se agente não tiver */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Banca {loteForm.banca ? `(${loteForm.banca})` : "(manual)"}</label>
-                  <select value={loteForm.banca} onChange={e => setLoteForm(f => ({ ...f, banca: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Do agente / CESPE</option>
-                    {BANCAS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Contexto adicional (cargo)</label>
-                  <input value={loteForm.extraContext} onChange={e => setLoteForm(f => ({ ...f, extraContext: e.target.value }))}
-                    placeholder="Ex: Delegado de Polícia, nível superior"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-                </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Contexto adicional (cargo)</label>
+                <input value={loteForm.extraContext} onChange={e => setLoteForm(f => ({ ...f, extraContext: e.target.value }))}
+                  placeholder="Ex: Delegado de Polícia, nível superior"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
               </div>
 
               {/* Matérias com qty */}
@@ -576,26 +518,15 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
               <button onClick={() => setShowGerarModal(false)} className="text-gray-500 hover:text-white"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 space-y-4">
-              {/* 2 agentes */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Agente do cargo</label>
-                  <select value={gerarForm.cargoAgentId} onChange={e => setGerarForm(f => ({ ...f, cargoAgentId: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Sem agente</option>
-                    {cargoAgents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-                  </select>
-                  {selectedCargoAgent && <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1"><Bot className="w-3 h-3" />{selectedCargoAgent.description}</p>}
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Agente da banca</label>
-                  <select value={gerarForm.bancaAgentId} onChange={e => handleBancaAgentSelect(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Sem agente</option>
-                    {bancaAgents.map(a => <option key={a.id} value={a.id}>{a.name}{a.banca ? ` · ${a.banca}` : ""}</option>)}
-                  </select>
-                  {selectedBancaAgent && <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1"><Bot className="w-3 h-3" />{selectedBancaAgent.description}</p>}
-                </div>
+              {/* Agente */}
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Agente</label>
+                <select value={gerarForm.cargoAgentId} onChange={e => setGerarForm(f => ({ ...f, cargoAgentId: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+                  <option value="">Sem agente</option>
+                  {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+                {selectedCargoAgent && <p className="text-xs text-indigo-400 mt-1 flex items-center gap-1"><Bot className="w-3 h-3" />{selectedCargoAgent.description}</p>}
               </div>
 
               <div>
@@ -607,21 +538,11 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
                 </select>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Banca {gerarForm.banca ? `(${gerarForm.banca})` : ""}</label>
-                  <select value={gerarForm.banca} onChange={e => setGerarForm(f => ({ ...f, banca: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Do agente / CESPE</option>
-                    {BANCAS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Contexto extra</label>
-                  <input value={gerarForm.extraContext} onChange={e => setGerarForm(f => ({ ...f, extraContext: e.target.value }))}
-                    placeholder="Ex: Delegado, nível alto"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
-                </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Contexto extra</label>
+                <input value={gerarForm.extraContext} onChange={e => setGerarForm(f => ({ ...f, extraContext: e.target.value }))}
+                  placeholder="Ex: Delegado, nível alto"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
               </div>
 
               <div>
@@ -680,20 +601,10 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Banca</label>
-                  <select value={form.banca} onChange={e => setForm(f => ({ ...f, banca: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">Selecionar...</option>
-                    {BANCAS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Ano</label>
-                  <input value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="2024" />
-                </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Ano</label>
+                <input value={form.year} onChange={e => setForm(f => ({ ...f, year: e.target.value }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="2024" />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Enunciado *</label>
@@ -771,20 +682,10 @@ export function QuestoesAdmin({ questions: initial, subjects, agents, totalIniti
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Banca</label>
-                  <select value={editingQ.banca} onChange={e => setEditingQ(v => v ? { ...v, banca: e.target.value } : v)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
-                    <option value="">—</option>
-                    {BANCAS.map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Ano</label>
-                  <input value={editingQ.year} onChange={e => setEditingQ(v => v ? { ...v, year: e.target.value } : v)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="2024" />
-                </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Ano</label>
+                <input value={editingQ.year} onChange={e => setEditingQ(v => v ? { ...v, year: e.target.value } : v)}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" placeholder="2024" />
               </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">Enunciado *</label>

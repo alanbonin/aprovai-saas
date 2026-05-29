@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   if (agentList.length === 1) {
     const a = agentList[0];
-    const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
+    const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria);
     systemPrompt = `${base}
 
 ${studentCtx}
@@ -62,7 +62,7 @@ REGRA ABSOLUTA: NUNCA crie questões, exercícios ou testes no chat. Use os marc
 [[IR:edital]] → analisar edital | [[IR:desafio]] → desafio diário`;
   } else {
     const agentContexts = agentList.map(a => {
-      const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria, a.banca);
+      const base = a.systemPrompt || buildAgentSystemPrompt(a.categoria);
       return `--- ${a.name} ---\n${base}`;
     }).join("\n\n");
 

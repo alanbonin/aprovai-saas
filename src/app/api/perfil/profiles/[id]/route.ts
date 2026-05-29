@@ -28,7 +28,7 @@ export async function PATCH(
   const body = await req.json() as Record<string, unknown>;
 
   // Campos permitidos para atualização
-  const allowed = ["label", "cargo", "orgao", "banca", "dataProva", "horasEstudo",
+  const allowed = ["label", "cargo", "orgao", "dataProva", "horasEstudo",
     "nivelAtual", "disponibilidade", "modalidade", "dificuldades", "nomePreferido"];
   const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
   for (const key of allowed) {

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { AgentesAdmin } from "./agentes-client";
-import { CATEGORIAS, BANCAS } from "@/lib/agents";
+import { CATEGORIAS } from "@/lib/agents";
 
 function getWeekStart() {
   const d = new Date();
@@ -33,7 +33,6 @@ export default async function AgentesAdminPage() {
       <AgentesAdmin
         agents={agents ?? []}
         categorias={CATEGORIAS}
-        bancas={BANCAS}
         usageTotalMap={usageTotalMap}
         usageWeekMap={usageWeekMap}
       />

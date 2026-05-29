@@ -55,7 +55,6 @@ export async function POST(req: Request) {
     label?: string;
     cargo?: string;
     orgao?: string;
-    banca?: string;
     dataProva?: string;
     horasEstudo?: number;
     nivelAtual?: string;
@@ -77,7 +76,6 @@ export async function POST(req: Request) {
     isDefault: false,
     cargo: body.cargo ?? null,
     orgao: body.orgao ?? null,
-    banca: body.banca ?? null,
     dataProva: body.dataProva ?? null,
     horasEstudo: body.horasEstudo ?? null,
     nivelAtual: body.nivelAtual ?? null,

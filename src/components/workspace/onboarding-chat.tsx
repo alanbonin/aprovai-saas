@@ -54,7 +54,7 @@ function CaminhoSelector({ onSelect }: { onSelect: (c: Caminho) => void }) {
       id: "sei-concurso",
       emoji: "🎯",
       titulo: "Já sei qual concurso vou prestar",
-      desc: "Tenho cargo, órgão e banca definidos. Quero montar meu plano agora.",
+      desc: "Tenho cargo e órgão definidos. Quero montar meu plano agora.",
       cor: "border-indigo-500/40 bg-indigo-500/5 hover:bg-indigo-500/10",
     },
     {
@@ -342,11 +342,11 @@ function DuvidaView({ onEscolher, onVoltar }: { onEscolher: (cargo: string, orga
 }
 
 // ── Chat principal (caminho "Já sei" e variantes) ────────────────────────────
-type ChatStep = "cargo" | "banca" | "data" | "dificuldades";
+type ChatStep = "cargo" | "data" | "nivel" | "dificuldades";
 const STEPS_LABELS: Record<ChatStep, string> = {
-  cargo: "Cargo & Órgão", banca: "Banca", data: "Data da Prova", dificuldades: "Dificuldades",
+  cargo: "Cargo & Órgão", data: "Data da Prova", nivel: "Nível", dificuldades: "Dificuldades",
 };
-const STEPS_ORDER: ChatStep[] = ["cargo", "banca", "data", "dificuldades"];
+const STEPS_ORDER: ChatStep[] = ["cargo", "data", "nivel", "dificuldades"];
 
 interface ChatOnboardingProps {
   agents: Agent[];
@@ -635,8 +635,9 @@ export function OnboardingChat({ agents, userId, aiCreditsTotal, onComplete }: P
     }
   }
 
-  function handleEscolherConcurso(cargo: string, orgao: string, banca: string) {
-    const msg = `Quero prestar para ${cargo} no ${orgao}. A banca é ${banca}.`;
+  function handleEscolherConcurso(cargo: string, orgao: string, _banca?: string) {
+    void _banca;
+    const msg = `Quero prestar para ${cargo} no ${orgao}.`;
     setInitialMsg(msg);
     setCaminho("sei-concurso");
   }

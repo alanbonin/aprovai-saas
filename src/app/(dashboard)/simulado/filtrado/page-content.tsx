@@ -19,10 +19,6 @@ interface Question {
 }
 
 const OPTS = ["A", "B", "C", "D", "E"] as const;
-const BANCAS = [
-  "CESPE/CEBRASPE","FGV","VUNESP","AOCP","IADES","FCC",
-  "IBFC","IDECAN","NC-UFPR","QUADRIX","FUNCAB","Outras",
-];
 const LEVELS = [
   { id: "facil",   label: "Fácil",   color: "border-emerald-500/40 text-emerald-400 bg-emerald-500/10" },
   { id: "medio",   label: "Médio",   color: "border-yellow-500/40 text-yellow-400 bg-yellow-500/10" },
@@ -35,7 +31,6 @@ type Phase = "config" | "running" | "result";
 export function SimuladoFiltradoInner() {
   const [subjects, setSubjects]     = useState<Subject[]>([]);
   const [selSubjects, setSelSubjects] = useState<string[]>([]);
-  const [banca, setBanca]           = useState("");
   const [level, setLevel]           = useState("");
   const [total, setTotal]           = useState(15);
   const [phase, setPhase]           = useState<Phase>("config");
@@ -70,7 +65,6 @@ export function SimuladoFiltradoInner() {
       body: JSON.stringify({
         total,
         subjectIds: selSubjects.length > 0 ? selSubjects : undefined,
-        banca: banca || undefined,
         level: level || undefined,
       }),
     });
@@ -123,7 +117,7 @@ export function SimuladoFiltradoInner() {
             Simulado com Filtros
           </h1>
           <p className="text-gray-500 text-sm mt-0.5">
-            Monte um simulado personalizado por matéria, banca e dificuldade
+            Monte um simulado personalizado por matéria e dificuldade
           </p>
         </div>
 
@@ -176,38 +170,6 @@ export function SimuladoFiltradoInner() {
             <p className="text-[10px] text-gray-600 mt-2">
               {selSubjects.length === 0 ? "Nenhuma selecionada — usará todas as suas matérias" : `${selSubjects.length} matéria${selSubjects.length !== 1 ? "s" : ""} selecionada${selSubjects.length !== 1 ? "s" : ""}`}
             </p>
-          </div>
-
-          {/* Banca */}
-          <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5">
-            <p className="text-sm font-semibold mb-3">Banca</p>
-            <div className="flex flex-wrap gap-1.5">
-              <button
-                onClick={() => setBanca("")}
-                className={cn(
-                  "px-2.5 py-1 rounded-lg text-xs border transition-all",
-                  !banca
-                    ? "bg-indigo-600/20 border-indigo-500/40 text-indigo-300"
-                    : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/20 hover:text-gray-300"
-                )}
-              >
-                Todas
-              </button>
-              {BANCAS.map(b => (
-                <button
-                  key={b}
-                  onClick={() => setBanca(b === banca ? "" : b)}
-                  className={cn(
-                    "px-2.5 py-1 rounded-lg text-xs border transition-all",
-                    banca === b
-                      ? "bg-indigo-600/20 border-indigo-500/40 text-indigo-300"
-                      : "bg-white/[0.02] border-white/[0.06] text-gray-500 hover:border-white/20 hover:text-gray-300"
-                  )}
-                >
-                  {b}
-                </button>
-              ))}
-            </div>
           </div>
 
           {/* Nível */}
@@ -307,11 +269,6 @@ export function SimuladoFiltradoInner() {
 
           {/* Summary chips */}
           <div className="flex justify-center gap-3 mb-8 flex-wrap">
-            {banca && (
-              <span className="text-xs px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-                {banca}
-              </span>
-            )}
             {level && (
               <span className="text-xs px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400">
                 {LEVELS.find(l => l.id === level)?.label ?? level}
@@ -365,7 +322,6 @@ export function SimuladoFiltradoInner() {
 
       {/* Meta chips */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {q.banca && <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/[0.08] text-gray-500">{q.banca}</span>}
         {q.year && <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/[0.08] text-gray-500">{q.year}</span>}
         <span className={cn(
           "text-xs px-2 py-0.5 rounded-full border",

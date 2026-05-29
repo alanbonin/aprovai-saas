@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   // ── Contexto completo do aluno (perfil + desempenho + memória) ─────────────
   const studentCtx = await buildStudentContext(dbUser.id, agentId);
 
-  const basePrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria, agent.banca);
+  const basePrompt = agent.systemPrompt || buildAgentSystemPrompt(agent.categoria);
 
   const systemPrompt = `${basePrompt}
 

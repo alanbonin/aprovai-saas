@@ -3,11 +3,6 @@ import { useState } from "react";
 import { ClipboardList, AlertCircle, ChevronRight, RotateCcw, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const BANCAS = [
-  "CESPE/CEBRASPE", "FCC", "FGV", "VUNESP", "AOCP",
-  "IBFC", "IADES", "CESGRANRIO", "ESAF", "Quadrix",
-];
-
 const NIVEIS = [
   { value: "misto", label: "🎲 Misto" },
   { value: "facil", label: "🟢 Fácil" },
@@ -26,7 +21,6 @@ interface QuestaoGerada {
   answer: string;
   explanation: string;
   level: "facil" | "medio" | "dificil";
-  banca: string;
   dicaBanca: string;
 }
 
@@ -37,7 +31,6 @@ interface Props {
 
 export function SimuladoBanca({ subjects, profile }: Props) {
   const [step, setStep] = useState<"config" | "loading" | "simulado" | "resultado">("config");
-  const [banca, setBanca] = useState("");
   const [materiasSelec, setMateriasSelec] = useState<string[]>([]);
   const [qtd, setQtd] = useState(10);
   const [nivel, setNivel] = useState("misto");
@@ -57,7 +50,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
   const matNames = subjects.map(s => s.name);
 
   async function gerar() {
-    if (!banca || materiasSelec.length === 0) return;
+    if (materiasSelec.length === 0) return;
     setStep("loading");
     setError(null);
     try {
@@ -65,7 +58,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          banca, materias: materiasSelec, qtd, nivel,
+          materias: materiasSelec, qtd, nivel,
           cargo: profile.cargo ?? undefined,
         }),
       });
@@ -129,9 +122,9 @@ export function SimuladoBanca({ subjects, profile }: Props) {
       <div className="max-w-2xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
           <div className="text-4xl mb-3">🎯</div>
-          <h2 className="font-bold text-xl mb-2">Simulado Banca-Original</h2>
+          <h2 className="font-bold text-xl mb-2">Simulado Inteligente</h2>
           <p className="text-gray-500 text-sm max-w-sm mx-auto">
-            A IA gera questões no estilo exato da banca — mesmo formato, tom e dificuldade.
+            A IA gera questões personalizadas para o seu cargo e matérias selecionadas.
           </p>
         </div>
 
@@ -142,24 +135,6 @@ export function SimuladoBanca({ subjects, profile }: Props) {
         )}
 
         <div className="space-y-5">
-          {/* Banca */}
-          <div>
-            <label className="text-xs text-gray-500 block mb-2 font-medium">Banca organizadora</label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {BANCAS.map(b => (
-                <button key={b} onClick={() => setBanca(b)}
-                  className={cn(
-                    "py-2 px-3 rounded-xl border text-sm font-medium transition-all text-left",
-                    banca === b
-                      ? "bg-indigo-500/20 border-indigo-500/40 text-indigo-300"
-                      : "bg-white/3 border-white/8 text-gray-400 hover:text-white hover:border-white/15"
-                  )}>
-                  {b}
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Matérias */}
           <div>
             <label className="text-xs text-gray-500 block mb-2 font-medium">
@@ -222,11 +197,11 @@ export function SimuladoBanca({ subjects, profile }: Props) {
 
         <button
           onClick={gerar}
-          disabled={!banca || materiasSelec.length === 0}
+          disabled={materiasSelec.length === 0}
           className="w-full mt-6 py-3.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm
             flex items-center justify-center gap-2 disabled:opacity-40 shadow-lg shadow-indigo-500/20 transition-all">
           <ClipboardList className="w-4 h-4" />
-          Gerar simulado {banca ? `— ${banca}` : ""} ({qtd} questões)
+          Gerar simulado ({qtd} questões)
         </button>
         <p className="text-center text-xs text-gray-700 mt-2">Leva 20-40 segundos • Powered by Claude AI</p>
       </div>
@@ -238,9 +213,9 @@ export function SimuladoBanca({ subjects, profile }: Props) {
     return (
       <div className="flex flex-col items-center justify-center h-full py-20">
         <div className="text-4xl mb-5">🧠</div>
-        <p className="font-semibold text-base mb-2">Gerando simulado no estilo {banca}…</p>
+        <p className="font-semibold text-base mb-2">Gerando simulado personalizado…</p>
         <p className="text-xs text-gray-500 mb-6 text-center max-w-xs">
-          A IA está elaborando {qtd} questões seguindo o padrão exato da banca, com enunciados e distratores típicos.
+          A IA está elaborando {qtd} questões para o seu cargo e matérias selecionadas.
         </p>
         <div className="flex gap-1.5">
           {[0,1,2].map(i => (
@@ -264,8 +239,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
           <div className="text-xs text-gray-500">
-            <span className="text-indigo-400 font-semibold">{banca}</span>
-            {" · "}{q.materia}
+            {q.materia}
           </div>
           <div className="flex items-center gap-3 text-xs">
             <span className="text-gray-500">{current+1}/{questoes.length}</span>
@@ -332,7 +306,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
               <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl bg-amber-500/8 border border-amber-500/15">
                 <span className="text-amber-400 text-sm flex-shrink-0">⚡</span>
                 <div>
-                  <p className="text-[10px] font-semibold text-amber-400 mb-0.5">Padrão {banca}</p>
+                  <p className="text-[10px] font-semibold text-amber-400 mb-0.5">Dica</p>
                   <p className="text-xs text-amber-300/80 leading-relaxed">{q.dicaBanca}</p>
                 </div>
               </div>
@@ -356,7 +330,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
     <div className="max-w-md mx-auto px-4 py-12 text-center">
       <div className="text-5xl mb-4">{aprovado ? "🏆" : "📚"}</div>
       <h2 className="text-xl font-bold mb-1">{aprovado ? "Excelente resultado!" : "Continue praticando!"}</h2>
-      <p className="text-gray-500 text-sm mb-5">Simulado {banca} concluído</p>
+      <p className="text-gray-500 text-sm mb-5">Simulado concluído</p>
 
       <div className="text-6xl font-black mb-2" style={{ color: aprovado ? "#34d399" : "#f59e0b" }}>
         {pct}%

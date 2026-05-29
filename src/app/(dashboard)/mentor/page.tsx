@@ -3,7 +3,7 @@ import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { redirect } from "next/navigation";
 import { MentorChat } from "@/components/mentor/mentor-chat";
-import { CATEGORIAS, BANCAS } from "@/lib/agents";
+import { CATEGORIAS } from "@/lib/agents";
 
 export default async function MentorPage() {
   const supabase = await createClient();
@@ -41,7 +41,6 @@ export default async function MentorPage() {
     <MentorChat
       agents={agents ?? []}
       categorias={CATEGORIAS}
-      bancas={BANCAS}
       aiCreditsLeft={remaining}
       aiCreditsTotal={weeklyLimit}
       userId={dbUser.id}

@@ -258,35 +258,11 @@ export const CATEGORIAS = [
   },
 ];
 
-export const BANCAS = [
-  // Grandes bancas nacionais
-  { id: "cespe",      label: "CESPE / CEBRASPE",  descricao: "Certo/Errado com anulação — estilo assertivo e detalhista. Banca do CACD, PF, IBAMA, concursos federais" },
-  { id: "cesgranrio", label: "CESGRANRIO",         descricao: "Múltipla escolha clássica — Petrobras, BB, BNB, BASA. Questões longas e interpretativas" },
-  { id: "fgv",        label: "FGV",                descricao: "Múltipla escolha — OAB, EBSERH, concursos estaduais premium. Questões elaboradas e interdisciplinares" },
-  { id: "fcc",        label: "FCC",                descricao: "Múltipla escolha — TRTs, TJs, TRFs. Forte em Português e Direito do Trabalho" },
-  { id: "vunesp",     label: "VUNESP",             descricao: "Múltipla escolha — TJs de SP, Prefeituras, Câmaras. Questões objetivas e diretas" },
-  { id: "esaf",       label: "ESAF",               descricao: "Receita Federal histórica, ENAP, Ministérios. Questões conceituais com alta profundidade" },
-  // Bancas médias com forte atuação
-  { id: "quadrix",    label: "QUADRIX",            descricao: "Conselhos federais (COFEN, CRM, CRO) — múltipla escolha, redação clara e direta" },
-  { id: "aocp",       label: "Instituto AOCP",     descricao: "EBSERH assistencial, Polícias estaduais, saúde — múltipla escolha com textos situacionais" },
-  { id: "ibfc",       label: "IBFC",               descricao: "Polícias, Prefeituras, bancos estaduais — múltipla escolha, questões moderadas" },
-  { id: "consulplan", label: "CONSULPLAN",         descricao: "Conselhos profissionais e prefeituras — questões objetivas e bem estruturadas" },
-  { id: "funiversa",  label: "FUNIVERSA",          descricao: "Concursos do DF e Centro-Oeste — múltipla escolha, abrangente e acessível" },
-  { id: "objetiva",   label: "OBJETIVA",           descricao: "Concursos do Sul do Brasil — municípios, estados, bancos cooperativos" },
-  { id: "fundatec",   label: "FUNDATEC",           descricao: "Bancos cooperativos (Sicredi, Banrisul), concursos gaúchos — questões práticas e objetivas" },
-  // Bancas regionais relevantes
-  { id: "idecan",     label: "IDECAN",             descricao: "Concursos militares estaduais, GMs, Prefeituras — múltipla escolha com ênfase prática" },
-  { id: "iades",      label: "IADES",              descricao: "CFM, Senado, concursos de saúde — múltipla escolha, questões contextualizadas" },
-  { id: "nucepe",     label: "NUCEPE / UESPI",     descricao: "Concursos do Piauí e Nordeste — múltipla escolha, enfoque regional" },
-  { id: "comperve",   label: "COMPERVE / UFRN",    descricao: "Concursos do Rio Grande do Norte e Nordeste — múltipla escolha, base universitária" },
-];
-
-export function buildAgentSystemPrompt(categoriaId?: string | null, banca?: string | null): string {
-  const key = categoriaId ?? banca ?? null;
+export function buildAgentSystemPrompt(categoriaId?: string | null): string {
+  const key = categoriaId ?? null;
   const persona = getPersona(key);
 
   const categoria = CATEGORIAS.find(c => c.id === categoriaId);
-  const bancaLabel = BANCAS.find(b => b.id === banca)?.label ?? banca;
 
   // Começa com a identidade da persona
   let prompt = persona.personality;
@@ -299,15 +275,11 @@ export function buildAgentSystemPrompt(categoriaId?: string | null, banca?: stri
     prompt += `\n\nVocê conhece profundamente o conteúdo programático, os editais mais recentes, as disciplinas cobradas e o perfil de cada cargo dessa área.`;
   }
 
-  if (bancaLabel) {
-    prompt += `\n\nVocê também é especialista na banca **${bancaLabel}**: conhece o estilo das questões, as pegadinhas mais comuns, os temas favoritos da banca e como ela avalia os candidatos.`;
-  }
-
   prompt += `
 
 Seu papel é:
 - Explicar o conteúdo de forma clara e objetiva, com a sua personalidade característica
-- Analisar questões e identificar o raciocínio da banca
+- Analisar questões e identificar padrões de cobrança
 - Indicar os temas mais cobrados para cada cargo
 - Dar dicas de estudo e gestão de tempo
 - Orientar sobre editais, requisitos e etapas do concurso

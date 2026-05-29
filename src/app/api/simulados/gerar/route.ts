@@ -4,87 +4,6 @@ import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { simuladoLimiter } from "@/lib/rate-limit";
 
-// ── Perfil de cada banca ──────────────────────────────────────────────────────
-const BANCA_PERFIS: Record<string, string> = {
-  "CESPE": `Banca CESPE/CEBRASPE:
-- Questões CERTO/ERRADO (não múltipla escolha tradicional), 2 opções: C ou E
-- Enunciados longos com afirmações que precisam ser julgadas como certas ou erradas
-- Frequentemente usa conectivos lógicos (e, ou, se...então) que mudam o sentido da afirmação
-- Trechos de leis e doutrinas com pequenas alterações propositais
-- Foco em detalhes e exceções, não apenas na regra geral
-- Tom formal, acadêmico, com muitas referências legais
-- FORMATO: cada questão tem statement + opção A: CERTO, B: ERRADO`,
-
-  "FCC": `Banca FCC (Fundação Carlos Chagas):
-- Questões de múltipla escolha com 5 alternativas (A, B, C, D, E)
-- Enunciados mais diretos e objetivos que CESPE
-- Foco em interpretação literal de legislação
-- Alternativas bem elaboradas com distratores plausíveis
-- Usa expressões como "é correto afirmar que", "incorreto", "exceto"
-- Cobra textos literais de leis, menos interpretação
-- Alternativas geralmente simétricas em tamanho`,
-
-  "FGV": `Banca FGV:
-- Múltipla escolha com 5 alternativas
-- Questões mais elaboradas com casos práticos
-- Mistura teoria com aplicação prática
-- Enunciados moderados, nem tão longos quanto CESPE
-- Alternativas com raciocínio mais complexo
-- Costuma testar conceitos e não apenas decoreba
-- Boa dose de situações-problema ("Assinale a alternativa que apresenta...")`,
-
-  "VUNESP": `Banca VUNESP:
-- Múltipla escolha com 5 alternativas
-- Questões moderadas em complexidade
-- Foco em legislação estadual paulista além da federal
-- Cobra itens de legislação de forma direta
-- Frequentemente usa o estilo "Assinale a alternativa CORRETA"
-- Inclui questões situacionais com cenários práticos
-- Algumas questões de interpretação de texto legal`,
-
-  "AOCP": `Banca AOCP:
-- Múltipla escolha com 5 alternativas
-- Foco em legislação específica e detalhada
-- Questões diretas sobre letra da lei
-- Menos questões situacionais, mais de memorização
-- Cobra detalhes como prazos, números e percentuais
-- Enunciados objetivos e curtos`,
-
-  "IBFC": `Banca IBFC:
-- Múltipla escolha com 5 alternativas
-- Questões de nível médio, menos elaboradas
-- Cobra principalmente a regra geral, raramente exceções
-- Enunciados diretos
-- Foco em conceitos fundamentais
-- Boa parte das questões tem uma resposta claramente correta`,
-
-  "IADES": `Banca IADES:
-- Múltipla escolha com 5 alternativas
-- Cobra principalmente legislação atualizada
-- Foco em situações práticas do dia a dia do cargo
-- Questões com grau médio de dificuldade
-- Cobra interpretação de texto em português com frequência`,
-
-  "CESGRANRIO": `Banca CESGRANRIO:
-- Múltipla escolha com 5 alternativas
-- Utilizada principalmente para Petrobras, BNDES, bancos federais
-- Questões de nível alto de elaboração
-- Cobra muito raciocínio lógico e análise crítica
-- Enunciados elaborados com situações complexas
-- Distratores muito bem elaborados`,
-
-  "ESAF": `Banca ESAF:
-- Múltipla escolha com 5 alternativas
-- Foco em finanças públicas, orçamento e administração
-- Questões de nível alto
-- Cobra detalhes técnicos de legislação tributária e financeira
-- Enunciados técnicos e específicos`,
-};
-
-const DEFAULT_BANCA_PERFIL = `Banca genérica de concursos públicos brasileiros:
-- Múltipla escolha com 5 alternativas (A, B, C, D, E)
-- Questões de nível médio
-- Cobra legislação e conceitos fundamentais`;
 
 export interface QuestaoGerada {
   materia: string;
@@ -97,7 +16,6 @@ export interface QuestaoGerada {
   answer: string;
   explanation: string;
   level: "facil" | "medio" | "dificil";
-  banca: string;
   dicaBanca: string;
 }
 
@@ -115,62 +33,47 @@ export async function POST(req: Request) {
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
     const body = await req.json() as {
-      banca: string;
       materias: string[];
       qtd: number;
       cargo?: string;
       nivel?: "facil" | "medio" | "dificil" | "misto";
     };
 
-    const { banca, materias, qtd = 10, cargo, nivel = "misto" } = body;
+    const { materias, qtd = 10, cargo, nivel = "misto" } = body;
 
-    if (!banca || !materias?.length) {
-      return NextResponse.json({ error: "Banca e matérias são obrigatórios." }, { status: 400 });
+    if (!materias?.length) {
+      return NextResponse.json({ error: "Matérias são obrigatórias." }, { status: 400 });
     }
 
-    const bancaPerfil = BANCA_PERFIS[banca.toUpperCase().replace("/", "").split(" ")[0]] ?? DEFAULT_BANCA_PERFIL;
-    const isCespe = banca.toUpperCase().includes("CESPE") || banca.toUpperCase().includes("CEBRASPE");
-
-    const systemPrompt = `Você é um especialista em elaboração de questões de concursos públicos.
-
-BANCA:
-${bancaPerfil}
+    const systemPrompt = `Você é um especialista em elaboração de questões de concursos públicos brasileiros.
 
 CARGO ALVO: ${cargo ?? "Concurso Público Geral"}
 NÍVEL: ${nivel === "misto" ? "variado (mix de fácil, médio e difícil)" : nivel}
 MATÉRIAS: ${materias.join(", ")}
 QUANTIDADE: ${qtd} questões
 
-${isCespe ? `ATENÇÃO CESPE: Gere questões no formato CERTO/ERRADO:
-- optionA = "CERTO"
-- optionB = "ERRADO"
-- optionC, optionD, optionE = null
-- answer = "A" (se CERTO) ou "B" (se ERRADO)
-- Varie entre questões certas e erradas (aprox. 50% de cada)` : ""}
-
 INSTRUÇÕES:
-1. Siga EXATAMENTE o estilo da banca informada
+1. Crie questões de múltipla escolha com 5 alternativas (A, B, C, D, E) no padrão de concursos públicos brasileiros
 2. Distribua as questões pelas matérias proporcionalmente
 3. Varie o nível de dificuldade conforme solicitado
 4. Cada questão deve ter uma explicação didática e precisa
-5. A dicaBanca deve explicar por que esta questão é característica desta banca
+5. A dicaBanca deve trazer uma dica ou insight importante sobre o tema da questão
 6. As alternativas incorretas (distratores) devem ser plausíveis mas claramente erradas para quem sabe o conteúdo
 
 FORMATO JSON OBRIGATÓRIO (array de questões):
 [
   {
     "materia": "Nome da matéria",
-    "statement": "Enunciado completo da questão no estilo da banca",
+    "statement": "Enunciado completo da questão",
     "optionA": "Alternativa A",
     "optionB": "Alternativa B",
-    "optionC": "Alternativa C ou null se CESPE",
-    "optionD": "Alternativa D ou null se CESPE",
-    "optionE": "Alternativa E ou null se CESPE",
+    "optionC": "Alternativa C",
+    "optionD": "Alternativa D",
+    "optionE": "Alternativa E",
     "answer": "A",
     "explanation": "Explicação detalhada e didática da resposta correta",
     "level": "facil|medio|dificil",
-    "banca": "${banca}",
-    "dicaBanca": "Por que esta questão é característica desta banca"
+    "dicaBanca": "Dica ou insight importante sobre o tema desta questão"
   }
 ]
 
@@ -180,7 +83,7 @@ Retorne APENAS o JSON (array), sem texto antes ou depois.`;
       model: MODELS.sonnet,
       maxTokens: 8000,
       systemPrompt,
-      messages: [{ role: "user", content: `Gere ${qtd} questões de concurso no estilo ${banca}.` }],
+      messages: [{ role: "user", content: `Gere ${qtd} questões de concurso público para ${cargo ?? "concurso geral"}.` }],
       cacheSystem: true,
     });
 
@@ -205,7 +108,6 @@ Retorne APENAS o JSON (array), sem texto antes ou depois.`;
     return NextResponse.json({
       id: saved?.id ?? null,
       questoes,
-      banca,
       materias,
       geradoEm: new Date().toISOString(),
     });

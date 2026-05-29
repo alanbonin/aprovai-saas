@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 interface Agent {
   id: string; name: string; slug: string; description: string;
-  categoria: string | null; banca: string | null;
+  categoria: string | null;
   color: string; active: boolean; isPremium: boolean;
   systemPrompt: string;
 }
@@ -13,7 +13,6 @@ interface Agent {
 interface Props {
   agents: Agent[];
   categorias: { id: string; label: string }[];
-  bancas: { id: string; label: string }[];
   usageTotalMap?: Record<string, number>;
   usageWeekMap?: Record<string, number>;
 }
@@ -21,11 +20,11 @@ interface Props {
 const COLORS = ["#6366f1", "#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#14b8a6", "#f97316", "#06b6d4"];
 
 const empty: Omit<Agent, "id"> = {
-  name: "", slug: "", description: "", categoria: null, banca: null,
+  name: "", slug: "", description: "", categoria: null,
   color: "#6366f1", active: true, isPremium: false, systemPrompt: "",
 };
 
-export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMap = {}, usageWeekMap = {} }: Props) {
+export function AgentesAdmin({ agents: initial, categorias, usageTotalMap = {}, usageWeekMap = {} }: Props) {
   const [agents, setAgents] = useState(initial);
   const [editing, setEditing] = useState<Partial<Agent> | null>(null);
   const [saving, setSaving] = useState(false);
@@ -94,7 +93,6 @@ export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMa
             <tr className="border-b border-white/5 bg-white/3">
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Agente</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium hidden sm:table-cell">Categoria</th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium hidden sm:table-cell">Banca</th>
               <th className="text-right px-4 py-3 text-gray-500 font-medium hidden md:table-cell">Semana</th>
               <th className="text-right px-4 py-3 text-gray-500 font-medium hidden md:table-cell">Total msgs</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Status</th>
@@ -104,7 +102,6 @@ export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMa
           <tbody className="divide-y divide-white/5">
             {agents.map(agent => {
               const cat = categorias.find(c => c.id === agent.categoria);
-              const ban = bancas.find(b => b.id === agent.banca);
               const weekMsgs = usageWeekMap[agent.id] ?? 0;
               const totalMsgs = usageTotalMap[agent.id] ?? 0;
               return (
@@ -122,7 +119,6 @@ export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMa
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs hidden sm:table-cell">{cat?.label ?? "—"}</td>
-                  <td className="px-4 py-3 text-gray-400 text-xs hidden sm:table-cell">{ban?.label ?? "—"}</td>
                   <td className="px-4 py-3 text-right hidden md:table-cell">
                     {weekMsgs > 0
                       ? <span className="text-xs font-semibold text-indigo-400">{weekMsgs}</span>
@@ -186,29 +182,16 @@ export function AgentesAdmin({ agents: initial, categorias, bancas, usageTotalMa
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Categoria</label>
-                  <select
-                    value={editing.categoria ?? ""}
-                    onChange={e => setEditing(v => ({ ...v, categoria: e.target.value || null }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">Nenhuma</option>
-                    {categorias.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1 block">Banca</label>
-                  <select
-                    value={editing.banca ?? ""}
-                    onChange={e => setEditing(v => ({ ...v, banca: e.target.value || null }))}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">Nenhuma</option>
-                    {bancas.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-                  </select>
-                </div>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">Categoria</label>
+                <select
+                  value={editing.categoria ?? ""}
+                  onChange={e => setEditing(v => ({ ...v, categoria: e.target.value || null }))}
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Nenhuma</option>
+                  {categorias.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+                </select>
               </div>
 
               <div>

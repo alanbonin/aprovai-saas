@@ -15,7 +15,7 @@ import { ModoCompanhia } from "@/components/workspace/modo-companhia";
 import { QuestoesAdaptativas } from "@/components/workspace/questoes-adaptativas";
 import { PomodoroTimer } from "@/components/workspace/pomodoro-timer";
 import { PushToggle } from "@/components/push-toggle";
-import { CATEGORIAS, BANCAS } from "@/lib/agents";
+import { CATEGORIAS } from "@/lib/agents";
 
 interface Agent { id: string; name: string; description: string; color: string; area?: string | null; categoria?: string | null; banca?: string | null; isPremium?: boolean; avatar?: string | null; }
 interface Subject { id: string; name: string; slug: string; }
@@ -975,7 +975,6 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               <MentorChat
                 agents={allAgents as Parameters<typeof MentorChat>[0]["agents"]}
                 categorias={CATEGORIAS}
-                bancas={BANCAS}
                 aiCreditsLeft={aiCreditsTotal}
                 aiCreditsTotal={aiCreditsTotal}
                 userId={userId}
@@ -1697,7 +1696,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
             <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
               <span className="text-amber-400 text-sm flex-shrink-0 mt-0.5">⚡</span>
               <div>
-                <p className="text-xs font-semibold text-amber-400 mb-0.5">Dica da banca</p>
+                <p className="text-xs font-semibold text-amber-400 mb-0.5">Dica</p>
                 <p className="text-xs text-amber-300/80 leading-relaxed">{q.dicaBanca}</p>
               </div>
             </div>
@@ -2594,7 +2593,6 @@ function _SimuladosTabLegacy({ simulados, loading }: { simulados: SimuladoItem[]
               <div>
                 <p className="font-medium text-sm">{sim.name}</p>
                 <div className="flex items-center gap-3 mt-1 text-xs text-gray-500 flex-wrap">
-                  {sim.banca && <span className="text-indigo-400">{sim.banca}</span>}
                   {sim.agentName && <span>{sim.agentName}</span>}
                   <span>{sim.totalQuestions} questões</span>
                   <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{sim.timeLimitMins} min</span>

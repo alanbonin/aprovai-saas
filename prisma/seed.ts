@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { buildAgentSystemPrompt, CATEGORIAS, BANCAS } from "../src/lib/agents";
+import { buildAgentSystemPrompt, CATEGORIAS } from "../src/lib/agents";
 
 const prisma = new PrismaClient();
 
@@ -46,7 +46,6 @@ async function main() {
       features: [
         "Tudo do Essencial",
         "Mentoria IA ilimitada",
-        "Mentores por banca",
         "Flashcards e notas",
         "Suporte prioritário",
       ],
@@ -65,7 +64,6 @@ async function main() {
         slug: `area-${area.id}`,
         description: `Especialista em ${area.label} para concursos`,
         area: area.id,
-        banca: null,
         systemPrompt: buildAgentSystemPrompt(area.id),
         color: COLORS[i % COLORS.length],
         isPremium: false,
@@ -76,25 +74,6 @@ async function main() {
 
   console.log("✅ Agentes por área criados");
 
-  // Agentes por banca
-  for (const [i, banca] of BANCAS.entries()) {
-    await prisma.agent.upsert({
-      where: { slug: `banca-${banca.id}` },
-      create: {
-        name: `Especialista ${banca.label}`,
-        slug: `banca-${banca.id}`,
-        description: `Domina o estilo e as pegadinhas da ${banca.label}`,
-        area: null,
-        banca: banca.id,
-        systemPrompt: buildAgentSystemPrompt(undefined, banca.id),
-        color: COLORS[(i + 3) % COLORS.length],
-        isPremium: true,
-      },
-      update: {},
-    });
-  }
-
-  console.log("✅ Agentes por banca criados");
   console.log("🎉 Seed concluído!");
 }
 

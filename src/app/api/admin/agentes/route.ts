@@ -20,7 +20,6 @@ export async function POST(req: Request) {
     slug: body.slug,
     description: body.description ?? "",
     categoria: body.categoria ?? null,
-    banca: body.banca ?? null,
     color: body.color ?? "#6366f1",
     active: body.active ?? true,
     isPremium: body.isPremium ?? false,

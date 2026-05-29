@@ -80,7 +80,6 @@ interface Message {
 interface Props {
   agents: Agent[];
   categorias: { id: string; label: string }[];
-  bancas: { id: string; label: string }[];
   aiCreditsLeft: number;
   aiCreditsTotal: number;
   userId: string;
@@ -91,7 +90,7 @@ interface Props {
 type ChatMode = "idle" | `single:${string}` | "combined";
 
 export function MentorChat({
-  agents, categorias, bancas, aiCreditsLeft, aiCreditsTotal, maxAgents,
+  agents, categorias, aiCreditsLeft, aiCreditsTotal, maxAgents,
   activeAgentIds: initialActiveIds,
 }: Props) {
   const [activeIds, setActiveIds]     = useState<string[]>(initialActiveIds);
@@ -102,7 +101,6 @@ export function MentorChat({
   const [credits, setCredits]         = useState(aiCreditsLeft);
   const [error, setError]             = useState("");
   const [filterArea, setFilterArea]   = useState("");
-  const [filterBanca, setFilterBanca] = useState("");
   const [showSelector, setShowSelector] = useState(false);
   const [saving, setSaving]           = useState(false);
   const [savingMemory, setSavingMemory] = useState(false);
@@ -117,8 +115,7 @@ export function MentorChat({
   const isUnlimited    = maxAgents >= 999;
   const activeAgents   = agents.filter(a => activeIds.includes(a.id));
   const filtered       = agents.filter(a =>
-    (!filterArea  || a.area === filterArea  || a.categoria === filterArea) &&
-    (!filterBanca || a.banca === filterBanca)
+    (!filterArea  || a.area === filterArea  || a.categoria === filterArea)
   );
 
   const singleAgent = chatMode.startsWith("single:")
@@ -500,17 +497,12 @@ export function MentorChat({
                 <option value="">Todas as categorias</option>
                 {categorias.map(a => <option key={a.id} value={a.id}>{a.label}</option>)}
               </select>
-              <select value={filterBanca} onChange={e => setFilterBanca(e.target.value)}
-                className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-gray-300 focus:outline-none">
-                <option value="">Todas as bancas</option>
-                {bancas.map(b => <option key={b.id} value={b.id}>{b.label}</option>)}
-              </select>
             </div>
 
             {activeIds.length === 1 && (
               <div className="mx-4 mt-3 px-3 py-2 rounded-lg bg-indigo-600/10 border border-indigo-500/20 text-xs text-indigo-300 flex items-center gap-2">
                 <Users className="w-3.5 h-3.5 flex-shrink-0" />
-                Adicione mais 1 para habilitar o modo combinado — ideal: 1 área + 1 banca
+                Adicione mais 1 para habilitar o modo combinado — ideal: 2 especialistas diferentes
               </div>
             )}
 

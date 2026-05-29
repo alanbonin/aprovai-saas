@@ -253,7 +253,7 @@ export async function buildStudentContext(userId: string, agentId?: string): Pro
   if (profile?.nomePreferido) {
     lines.push(`NOME DO ALUNO: "${profile.nomePreferido}" — chame-o SEMPRE por este nome. Nunca use "você" genérico quando puder usar o nome.`);
   }
-  lines.push("Você JÁ CONHECE o aluno. NUNCA pergunte cargo, órgão, banca, nível ou horário — essas informações estão acima.");
+  lines.push("Você JÁ CONHECE o aluno. NUNCA pergunte cargo, órgão, nível ou horário — essas informações estão acima.");
   if (profile?.cargo) {
     const bancaInfo = profile?.orgao ? ` no ${profile.orgao}` : "";
     lines.push(`EDITAL: Use seu conhecimento de editais históricos para ${profile.cargo}${bancaInfo}. Se o aluno mencionar que saiu edital novo, peça para colar o conteúdo programático para análise precisa e atualização do plano.`);

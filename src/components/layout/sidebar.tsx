@@ -61,7 +61,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/relatorio",       label: "Relatório",      icon: "📊" },
       { href: "/resumo-semanal",  label: "Resumo Semanal", icon: "📋" },
       { href: "/diagnostico",     label: "Diagnóstico",    icon: "🩺" },
-      { href: "/bancas",          label: "Por Banca",      icon: "🏛️" },
       { href: "/nivel",           label: "Por Nível",      icon: "📶" },
       { href: "/comparar",        label: "Vs. Média",      icon: "📊" },
     ],

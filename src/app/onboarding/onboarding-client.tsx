@@ -10,14 +10,13 @@ import {
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type Modalidade = "CONCURSO_PUBLICO" | "ENEM" | "OAB";
-type Step = "nome" | "modalidade" | "cargo" | "estado" | "banca" | "data" | "tempo" | "gerando" | "pronto";
+type Step = "nome" | "modalidade" | "cargo" | "estado" | "data" | "tempo" | "gerando" | "pronto";
 
 interface WizardState {
   nome: string;
   modalidade: Modalidade | null;
   cargo: Cargo | null;
   estado: string | null;       // sigla do estado (BA, SP…) — só para cargos hasEstado
-  banca: string | null;
   dataProva: string | null;
   horasEstudo: number | null;  // em minutos/dia
 }
@@ -29,37 +28,6 @@ interface Props {
   maxConcursos: number;
 }
 
-// ── Bancas ─────────────────────────────────────────────────────────────────────
-const BANCAS = [
-  { slug: "CESPE/CEBRASPE", label: "CESPE / CEBRASPE", emoji: "🎯", desc: "Certo ou Errado, questões abertas — federal/estadual" },
-  { slug: "FCC",            label: "FCC",               emoji: "📋", desc: "Objetiva, foco em português — TRTs, estaduais" },
-  { slug: "FGV",            label: "FGV",               emoji: "🏛️", desc: "Raciocínio lógico — OAB, STF, tribunais" },
-  { slug: "CESGRANRIO",     label: "CESGRANRIO",        emoji: "🏦", desc: "Bancária — BB, CEF, BNDES, Petrobras" },
-  { slug: "VUNESP",         label: "VUNESP",            emoji: "📝", desc: "São Paulo — TJ-SP, municípios, estadual" },
-  { slug: "IADES",          label: "IADES",             emoji: "🔍", desc: "Regional, interdisciplinar — CRMs, conselhos" },
-  { slug: "QUADRIX",        label: "QUADRIX",           emoji: "📐", desc: "Conselhos profissionais — CRO, CFM, CFF" },
-  { slug: "IDECAN",         label: "IDECAN",            emoji: "📌", desc: "Regional — nível médio e superior" },
-  { slug: "IBFC",           label: "IBFC",              emoji: "🔵", desc: "Ativo em todo Brasil — saúde, segurança, prefeituras" },
-  { slug: "AOCP",           label: "AOCP",              emoji: "🟣", desc: "Norte/Nordeste — universidades, prefeituras" },
-  { slug: "IBADE",          label: "IBADE",             emoji: "🟠", desc: "Centro-Oeste e Norte — estados e municípios" },
-  { slug: "CONSULPLAN",     label: "CONSULPLAN",        emoji: "🔶", desc: "Nacional — CFO, conselhos, saúde" },
-  { slug: "FUNRIO",         label: "FUNRIO",            emoji: "🟡", desc: "Rio de Janeiro — federal e estadual" },
-  { slug: "FEPESE",         label: "FEPESE",            emoji: "🌿", desc: "Santa Catarina — UFSC, municípios SC" },
-  { slug: "FUNDATEC",       label: "FUNDATEC",          emoji: "🦆", desc: "Rio Grande do Sul — PROCERGS, RS" },
-  { slug: "CS-UFG",         label: "CS-UFG",            emoji: "🟢", desc: "Goiás — concursos de Goiás e entorno" },
-  { slug: "NC-UFPR",        label: "NC-UFPR",           emoji: "🟤", desc: "Paraná — UFPR, municípios PR" },
-  { slug: "UECE-CEV",       label: "UECE-CEV",          emoji: "☀️", desc: "Ceará — concursos estaduais CE" },
-  { slug: "NUCEPE",         label: "NUCEPE",            emoji: "🌵", desc: "Piauí — concursos estaduais PI" },
-  { slug: "FAPEC",          label: "FAPEC",             emoji: "🌎", desc: "Mato Grosso do Sul — MS" },
-  { slug: "UPENET/IAUPE",   label: "UPENET / IAUPE",   emoji: "🦁", desc: "Pernambuco — concursos PE" },
-  { slug: "INSTITUTO ACESSO", label: "INSTITUTO ACESSO",emoji: "🔑", desc: "Espírito Santo — ES" },
-  { slug: "AVANÇA SP",      label: "AVANÇA SP",         emoji: "🏙️", desc: "São Paulo — municípios paulistas" },
-  { slug: "FUMARC",         label: "FUMARC",            emoji: "⛏️", desc: "Minas Gerais — PMMG, municípios MG" },
-  { slug: "OBJETIVA",       label: "OBJETIVA",          emoji: "🎯", desc: "Sul do Brasil — municípios RS/SC" },
-  { slug: "ESAF",           label: "ESAF",              emoji: "🏅", desc: "Escola de Administração Federal — histórica" },
-  { slug: "INAZ DO PARÁ",   label: "INAZ DO PARÁ",     emoji: "🌿", desc: "Pará — concursos Norte" },
-];
-
 // ── Opções de tempo ────────────────────────────────────────────────────────────
 const OPCOES_TEMPO = [
   { minutos: 30,  label: "30 min",  desc: "Estudos leves, rotina intensa" },
@@ -70,10 +38,10 @@ const OPCOES_TEMPO = [
 ];
 
 // ── Steps ──────────────────────────────────────────────────────────────────────
-const STEPS: Step[] = ["nome", "modalidade", "cargo", "estado", "banca", "data", "tempo", "gerando", "pronto"];
+const STEPS: Step[] = ["nome", "modalidade", "cargo", "estado", "data", "tempo", "gerando", "pronto"];
 const STEP_LABELS: Record<Step, string> = {
   nome: "Boas-vindas", modalidade: "Modalidade", cargo: "Cargo",
-  estado: "Estado", banca: "Banca", data: "Data da prova",
+  estado: "Estado", data: "Data da prova",
   tempo: "Tempo de estudo", gerando: "Gerando plano", pronto: "Pronto!",
 };
 
@@ -105,7 +73,7 @@ function prevStep(current: Step, state: WizardState): Step {
 // ── Animações de geração ────────────────────────────────────────────────────────
 const GEN_STEPS_CONCURSO = [
   { icon: "🎯", text: "Analisando seu cargo e área de concurso…" },
-  { icon: "📚", text: "Selecionando as matérias mais cobradas pela banca…" },
+  { icon: "📚", text: "Selecionando as matérias mais cobradas para o seu cargo…" },
   { icon: "⚖️",  text: "Calculando peso de cada disciplina…" },
   { icon: "📅", text: "Montando cronograma com base no seu tempo disponível…" },
   { icon: "🧠", text: "Configurando seu perfil de aprendizagem…" },
@@ -138,7 +106,6 @@ export function OnboardingClient({ userId, userName }: Props) {
     modalidade: null,
     cargo: null,
     estado: null,
-    banca: null,
     dataProva: null,
     horasEstudo: null,
   });
@@ -201,7 +168,6 @@ export function OnboardingClient({ userId, userName }: Props) {
           modalidade: state.modalidade ?? "CONCURSO_PUBLICO",
           cargo: state.cargo?.nome ?? null,
           orgao: orgaoFinal,
-          banca: state.banca,
           dataProva: state.dataProva,
           horasEstudo: state.horasEstudo ? Math.round(state.horasEstudo / 60) : null,
           categoria: getCategoriaByModalidade(),
@@ -280,7 +246,7 @@ export function OnboardingClient({ userId, userName }: Props) {
         {step === "cargo" && (
           <StepCargo
             cargo={state.cargo}
-            onSelect={cargo => { setState(s => ({ ...s, cargo, estado: null, banca: cargo.banca ?? null })); setTimeout(goNext, 300); }}
+            onSelect={cargo => { setState(s => ({ ...s, cargo, estado: null })); setTimeout(goNext, 300); }}
             onBack={goBack}
           />
         )}
@@ -290,16 +256,6 @@ export function OnboardingClient({ userId, userName }: Props) {
             cargo={state.cargo}
             estado={state.estado}
             onSelect={est => { setState(s => ({ ...s, estado: est })); setTimeout(goNext, 300); }}
-            onBack={goBack}
-          />
-        )}
-
-        {step === "banca" && (
-          <StepBanca
-            banca={state.banca}
-            sugestao={state.modalidade === "OAB" ? "FGV" : (state.cargo?.banca ?? null)}
-            modalidade={state.modalidade}
-            onSelect={banca => { setState(s => ({ ...s, banca })); setTimeout(goNext, 300); }}
             onBack={goBack}
           />
         )}
@@ -595,71 +551,6 @@ function StepEstado({ cargo, estado, onSelect, onBack }: {
             </button>
           );
         })}
-      </div>
-
-      <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
-        <ChevronLeft className="w-4 h-4" /> Voltar
-      </button>
-    </div>
-  );
-}
-
-// ── STEP: BANCA ───────────────────────────────────────────────────────────────
-function StepBanca({ banca, sugestao, modalidade, onSelect, onBack }: {
-  banca: string | null;
-  sugestao: string | null;
-  modalidade: Modalidade | null;
-  onSelect: (b: string | null) => void;
-  onBack: () => void;
-}) {
-  return (
-    <div className="space-y-5">
-      <div>
-        <h2 className="text-2xl font-bold text-white mb-1">
-          {modalidade === "OAB" ? "A banca da OAB é a FGV" : "Qual é a banca do seu concurso?"}
-        </h2>
-        <p className="text-sm text-gray-500">
-          {modalidade === "OAB"
-            ? "Confirme ou altere se quiser treinar com outra banca."
-            : "Cada banca tem um estilo único. Isso calibra seu treinamento."}
-        </p>
-      </div>
-
-      {sugestao && (
-        <div className="px-4 py-2.5 rounded-lg bg-[#0ab5bd]/10 border border-[#0ab5bd]/25 text-sm text-[#0ab5bd]">
-          💡 Sugestão com base no cargo selecionado: <strong>{sugestao}</strong>
-        </div>
-      )}
-
-      <div className="max-h-72 overflow-y-auto space-y-2 pr-1 scrollbar-thin">
-        {BANCAS.map(b => (
-          <button key={b.slug} onClick={() => onSelect(b.slug)}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all",
-              banca === b.slug ? "bg-[#0ab5bd]/15 border-[#0ab5bd]/50" : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
-            )}>
-            <span className="text-xl flex-shrink-0">{b.emoji}</span>
-            <div className="flex-1 min-w-0">
-              <p className={cn("text-sm font-semibold", banca === b.slug ? "text-[#0ab5bd]" : "text-white")}>{b.label}</p>
-              <p className="text-xs text-gray-500 truncate">{b.desc}</p>
-            </div>
-            {banca === b.slug && <Check className="w-4 h-4 text-[#0ab5bd] flex-shrink-0" />}
-          </button>
-        ))}
-
-        {/* Não definida */}
-        <button onClick={() => onSelect(null)}
-          className={cn(
-            "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all",
-            banca === null ? "bg-white/8 border-white/20" : "bg-white/[0.02] border-white/8 hover:bg-white/5 hover:border-white/15"
-          )}>
-          <span className="text-xl flex-shrink-0">🤷</span>
-          <div className="flex-1">
-            <p className="text-sm font-semibold text-gray-300">Ainda não sei / Não definida</p>
-            <p className="text-xs text-gray-500">Treinaremos com questões variadas de todas as bancas</p>
-          </div>
-          {banca === null && <Check className="w-4 h-4 text-gray-400 flex-shrink-0" />}
-        </button>
       </div>
 
       <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">

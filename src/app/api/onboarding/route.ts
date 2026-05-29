@@ -19,7 +19,6 @@ export async function POST(req: Request) {
     nomePreferido?: string;
     cargo?: string | null;
     orgao?: string | null;
-    banca?: string | null;
     dataProva?: string | null;
     horasEstudo?: number | null;   // em horas/dia
     categoria?: string | null;
@@ -38,7 +37,6 @@ export async function POST(req: Request) {
     nomePreferido: body.nomePreferido?.trim() || null,
     cargo: body.cargo || null,
     orgao: body.orgao || null,
-    banca: body.banca || null,
     dataProva: body.dataProva || null,
     horasEstudo: body.horasEstudo ?? null,
     isDefault: true,
