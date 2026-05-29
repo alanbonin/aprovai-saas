@@ -1300,8 +1300,7 @@ function Pricing() {
                 <li>Concursos ilimitados</li>
                 <li>Até 5 mentores IA simultâneos</li>
                 <li>Mensagens ilimitadas</li>
-                <li>Decodificador de edital (PDF → plano)</li>
-                <li>Biblioteca de PDFs + chat com docs</li>
+                <li>Biblioteca de PDFs + chat com documentos</li>
                 <li>Memória de longo prazo do mentor</li>
                 <li>Suporte prioritário</li>
               </ul>

@@ -17,29 +17,34 @@ export interface PlanLimits {
   maxSimuladosPerWeek: number;
   maxRedacoesPerWeek: number;
   maxCasosPerWeek: number;
-  /** Decodificações de edital/semana (0 = bloqueado, -1 = ilimitado) */
-  maxEditalPerWeek: number;
   /** Documentos PDF/semana (0 = bloqueado, -1 = ilimitado) */
   maxPdfPerWeek: number;
   hasGroupStudy: boolean;
   hasLongTermMemory: boolean;
+  /** Feature flags de acesso a módulos */
+  hasPdfLibrary: boolean;
+  hasArena: boolean;
+  hasAdaptativo: boolean;
+  hasCompanhia: boolean;
 }
 
 const EXPIRED_LIMITS = {
   aiCreditsPerWeek: 0, maxAgents: 0, maxProfiles: 0,
   maxQuestionsPerWeek: 0, maxFlashcardsPerWeek: 0,
   maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 0, maxCasosPerWeek: 0,
-  maxEditalPerWeek: 0, maxPdfPerWeek: 0,
+  maxPdfPerWeek: 0,
   hasGroupStudy: false, hasLongTermMemory: false,
+  hasPdfLibrary: false, hasArena: false, hasAdaptativo: false, hasCompanhia: false,
 };
 
-// Fallback caso o plano trial não tenha os campos novos no banco ainda
+// Fallback para plano trial (caso o banco ainda não tenha os novos campos)
 const TRIAL_DEFAULTS = {
-  aiCreditsPerWeek: 10, maxAgents: 2, maxProfiles: 1,
+  aiCreditsPerWeek: 10, maxAgents: 1, maxProfiles: 1,
   maxQuestionsPerWeek: 10, maxFlashcardsPerWeek: 10,
   maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 2, maxCasosPerWeek: 2,
-  maxEditalPerWeek: 1, maxPdfPerWeek: 5,
-  hasGroupStudy: true, hasLongTermMemory: true,
+  maxPdfPerWeek: 0,
+  hasGroupStudy: true, hasLongTermMemory: false,
+  hasPdfLibrary: false, hasArena: false, hasAdaptativo: false, hasCompanhia: false,
 };
 
 function planLimits(plan: any, isTrial: boolean) {
@@ -53,10 +58,13 @@ function planLimits(plan: any, isTrial: boolean) {
     maxSimuladosPerWeek:  plan?.maxSimuladosPerWeek   ?? def.maxSimuladosPerWeek,
     maxRedacoesPerWeek:   plan?.maxRedacoesPerWeek    ?? def.maxRedacoesPerWeek,
     maxCasosPerWeek:      plan?.maxCasosPerWeek       ?? def.maxCasosPerWeek,
-    maxEditalPerWeek:     plan?.maxEditalPerWeek      ?? def.maxEditalPerWeek,
     maxPdfPerWeek:        plan?.maxPdfPerWeek         ?? def.maxPdfPerWeek,
     hasGroupStudy:        plan?.hasGroupStudy         ?? def.hasGroupStudy,
     hasLongTermMemory:    plan?.hasLongTermMemory     ?? def.hasLongTermMemory,
+    hasPdfLibrary:        plan?.hasPdfLibrary         ?? def.hasPdfLibrary,
+    hasArena:             plan?.hasArena              ?? def.hasArena,
+    hasAdaptativo:        plan?.hasAdaptativo         ?? def.hasAdaptativo,
+    hasCompanhia:         plan?.hasCompanhia          ?? def.hasCompanhia,
   };
 }
 

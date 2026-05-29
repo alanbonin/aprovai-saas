@@ -10,7 +10,7 @@ interface Plan {
   aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number;
   maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number;
   maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number;
-  hasEditalDecoder?: boolean; hasPdfLibrary?: boolean;
+  hasPdfLibrary?: boolean; hasArena?: boolean; hasAdaptativo?: boolean; hasCompanhia?: boolean;
   hasGroupStudy?: boolean; hasLongTermMemory?: boolean;
   features: string[]; active: boolean;
 }

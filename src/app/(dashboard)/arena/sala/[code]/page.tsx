@@ -1,3 +1,5 @@
+import { getAccessLevel } from "@/lib/access";
+import { UpgradeUI } from "@/components/upgrade-ui";
 import { ArenaSala } from "./arena-sala-client";
 
 interface Props {
@@ -6,6 +8,17 @@ interface Props {
 }
 
 export default async function ArenaSalaPage({ params, searchParams }: Props) {
+  const { hasArena } = await getAccessLevel();
+  if (!hasArena) {
+    return (
+      <UpgradeUI
+        recurso="Arena de Competição"
+        desc="Compita com outros candidatos em tempo real. Disponível no plano Aprovação ou superior."
+        icon="⚔️"
+      />
+    );
+  }
+
   const { code } = await params;
   const sp = await searchParams;
   return (

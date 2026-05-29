@@ -9,7 +9,7 @@ interface Plan {
   maxProfiles: number;
   maxQuestionsPerWeek: number; maxFlashcardsPerWeek: number;
   maxSimuladosPerWeek: number; maxRedacoesPerWeek: number; maxCasosPerWeek: number;
-  hasEditalDecoder: boolean; hasPdfLibrary: boolean;
+  hasPdfLibrary: boolean; hasArena: boolean; hasAdaptativo: boolean; hasCompanhia: boolean;
   hasGroupStudy: boolean; hasLongTermMemory: boolean;
   features: string[]; active: boolean;
 }
@@ -21,7 +21,8 @@ const EMPTY: Omit<Plan, "id"> = {
   aiCreditsPerWeek: 10, maxAgents: 2, maxProfiles: 1,
   maxQuestionsPerWeek: 10, maxFlashcardsPerWeek: 10,
   maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 0, maxCasosPerWeek: 0,
-  hasEditalDecoder: false, hasPdfLibrary: false, hasGroupStudy: false, hasLongTermMemory: false,
+  hasPdfLibrary: false, hasArena: false, hasAdaptativo: false, hasCompanhia: false,
+  hasGroupStudy: false, hasLongTermMemory: false,
   features: [], active: true,
 };
 
@@ -62,8 +63,10 @@ export function PlanosAdminClient({ plans: initialPlans }: Props) {
       maxSimuladosPerWeek:  p.maxSimuladosPerWeek  ?? 0,
       maxRedacoesPerWeek:   p.maxRedacoesPerWeek   ?? 0,
       maxCasosPerWeek:      p.maxCasosPerWeek      ?? 0,
-      hasEditalDecoder:     p.hasEditalDecoder      ?? false,
       hasPdfLibrary:        p.hasPdfLibrary         ?? false,
+      hasArena:             p.hasArena              ?? false,
+      hasAdaptativo:        p.hasAdaptativo         ?? false,
+      hasCompanhia:         p.hasCompanhia          ?? false,
       hasGroupStudy:        p.hasGroupStudy         ?? false,
       hasLongTermMemory:    p.hasLongTermMemory     ?? false,
       features: [...p.features], active: p.active,
@@ -200,8 +203,10 @@ export function PlanosAdminClient({ plans: initialPlans }: Props) {
               <div className="space-y-1 mb-4 text-xs">
                 {[
                   { label: "Grupos de estudo", val: plan.hasGroupStudy ?? false },
-                  { label: "Decodificador de edital", val: plan.hasEditalDecoder ?? false },
                   { label: "Biblioteca de PDFs", val: plan.hasPdfLibrary ?? false },
+                  { label: "Arena", val: plan.hasArena ?? false },
+                  { label: "Modo Adaptativo", val: plan.hasAdaptativo ?? false },
+                  { label: "Modo Companhia", val: plan.hasCompanhia ?? false },
                   { label: "Memória longo prazo", val: plan.hasLongTermMemory ?? false },
                 ].map(({ label, val }) => (
                   <div key={label} className={cn("flex items-center gap-1.5", val ? "text-green-400" : "text-gray-600")}>
@@ -288,8 +293,10 @@ export function PlanosAdminClient({ plans: initialPlans }: Props) {
               <div className="grid grid-cols-2 gap-2">
                 {[
                   { label: "Grupos de estudo", key: "hasGroupStudy" },
-                  { label: "Decodificador de edital", key: "hasEditalDecoder" },
                   { label: "Biblioteca de PDFs", key: "hasPdfLibrary" },
+                  { label: "Arena", key: "hasArena" },
+                  { label: "Modo Adaptativo", key: "hasAdaptativo" },
+                  { label: "Modo Companhia", key: "hasCompanhia" },
                   { label: "Memória longo prazo", key: "hasLongTermMemory" },
                 ].map(({ label, key }) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer bg-white/5 rounded-lg px-3 py-2.5 hover:bg-white/8 transition-colors">

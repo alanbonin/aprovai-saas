@@ -9,7 +9,6 @@ import { RedacaoClient } from "@/app/(dashboard)/redacao/redacao-client";
 import { CasoClient } from "@/app/(dashboard)/caso/caso-client";
 import { PlanosClient } from "@/app/(dashboard)/planos/planos-client";
 import { MentorChat } from "@/components/mentor/mentor-chat";
-import { EditalDecoder } from "@/components/workspace/edital-decoder";
 import { EditalWatch } from "@/components/workspace/edital-watch";
 import { ModoCompanhia } from "@/components/workspace/modo-companhia";
 import { QuestoesAdaptativas } from "@/components/workspace/questoes-adaptativas";
@@ -241,30 +240,18 @@ const NAV_ITEMS: { id: NavId; label: string; icon: string }[] = [
   { id: "planos",    label: "Planos",     icon: "💳" },
 ];
 
-// ── EditalTabs: Decodificar + Watch ──────────────────────────────────────────
+// ── EditalTabs: Monitorar Órgãos (Decodificador de Edital removido — fase 2) ──
 function EditalTabs({ userId }: { userId: string }) {
-  const [tab, setTab] = useState<"decoder" | "watch">("decoder");
   return (
     <div className="flex flex-col flex-1">
       <div className="flex gap-1 px-4 pt-4 pb-0">
-        {([
-          { id: "decoder" as const, label: "📄 Decodificar Edital" },
-          { id: "watch"   as const, label: "🔔 Monitorar Órgãos" },
-        ]).map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            className={cn(
-              "px-4 py-2 rounded-t-lg text-sm font-medium border-b-2 transition-colors",
-              tab === t.id
-                ? "border-indigo-500 text-indigo-400"
-                : "border-transparent text-gray-500 hover:text-gray-300"
-            )}>
-            {t.label}
-          </button>
-        ))}
+        <button
+          className="px-4 py-2 rounded-t-lg text-sm font-medium border-b-2 border-indigo-500 text-indigo-400">
+          🔔 Monitorar Órgãos
+        </button>
       </div>
       <div className="border-t border-white/8 flex-1 overflow-y-auto">
-        {tab === "decoder" && <EditalDecoder userId={userId} />}
-        {tab === "watch"   && <EditalWatch userId={userId} />}
+        <EditalWatch userId={userId} />
       </div>
     </div>
   );
@@ -324,7 +311,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     window.location.reload();
   }
   const [simuladoHistory, setSimuladoHistory] = useState<{ id: number; total: number; correct: number; timeSecs: number; createdAt: string }[]>([]);
-  const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number; maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number; maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number; hasEditalDecoder?: boolean; hasPdfLibrary?: boolean; hasGroupStudy?: boolean; hasLongTermMemory?: boolean; features: string[]; active: boolean }[]>([]);
+  const [planos, setPlanos] = useState<{ id: string; name: string; slug: string; price: number; intervalDays: number; aiCreditsPerWeek: number; maxAgents: number; maxProfiles: number; maxQuestionsPerWeek?: number; maxFlashcardsPerWeek?: number; maxSimuladosPerWeek?: number; maxRedacoesPerWeek?: number; maxCasosPerWeek?: number; hasPdfLibrary?: boolean; hasArena?: boolean; hasAdaptativo?: boolean; hasCompanhia?: boolean; hasGroupStudy?: boolean; hasLongTermMemory?: boolean; features: string[]; active: boolean }[]>([]);
   const [currentPlanId, setCurrentPlanId] = useState<string | null>(null);
 
   const daysLeft = daysUntil(subscriptionEndDate);

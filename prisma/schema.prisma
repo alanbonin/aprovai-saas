@@ -21,10 +21,13 @@ model Plan {
   maxSimuladosPerWeek  Int @default(0)    // simulados/semana (0 = bloqueado, -1 = ilimitado)
   maxRedacoesPerWeek   Int @default(0)    // redações/semana (0 = bloqueado, -1 = ilimitado)
   maxCasosPerWeek      Int @default(0)    // casos práticos/semana (0 = bloqueado, -1 = ilimitado)
-  maxEditalPerWeek     Int @default(0)    // decodificações de edital/semana (0 = bloqueado, -1 = ilimitado)
   maxPdfPerWeek        Int @default(0)    // documentos PDF/semana (0 = bloqueado, -1 = ilimitado)
   hasGroupStudy        Boolean @default(false) // grupos de estudo ilimitados
   hasLongTermMemory    Boolean @default(false) // memória de longo prazo do mentor
+  hasPdfLibrary        Boolean @default(false) // biblioteca de PDFs
+  hasArena             Boolean @default(false) // acesso à arena de competição
+  hasAdaptativo        Boolean @default(false) // modo adaptativo avançado
+  hasCompanhia         Boolean @default(false) // modo companhia IA
   features        String[] @default([])
   active          Boolean  @default(true)
   createdAt       DateTime @default(now())
