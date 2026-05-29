@@ -16,6 +16,12 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const { getAccessLevel } = await import("@/lib/access");
+  const access = await getAccessLevel();
+  if (access.maxFlashcardsPerWeek === 0) {
+    return NextResponse.json({ error: "Geração de flashcards não disponível no seu plano." }, { status: 403 });
+  }
+
   // Rate limit: mesma fila que o chat IA
   const rl = await defaultAiLimiter.check(dbUser.id);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });

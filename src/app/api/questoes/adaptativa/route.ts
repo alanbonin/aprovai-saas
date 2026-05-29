@@ -17,6 +17,12 @@ export async function GET(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
+  const { getAccessLevel } = await import("@/lib/access");
+  const access = await getAccessLevel();
+  if (!access.hasAdaptativo) {
+    return NextResponse.json({ error: "Questões adaptativas não disponíveis no seu plano." }, { status: 403 });
+  }
+
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 

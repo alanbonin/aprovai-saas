@@ -28,6 +28,12 @@ export async function POST(req: Request) {
     const dbUser = await getUserWithPlan(user.id);
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+    const { getAccessLevel } = await import("@/lib/access");
+    const access = await getAccessLevel();
+    if (access.maxSimuladosPerWeek === 0) {
+      return NextResponse.json({ error: "Simulados não disponíveis no seu plano. Faça upgrade para acessar." }, { status: 403 });
+    }
+
     // Burst protection: 3 simulados/min por usuário
     const rl = await simuladoLimiter.check(dbUser.id);
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });

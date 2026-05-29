@@ -10,6 +10,12 @@ export async function POST(req: NextRequest) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
+  const { getAccessLevel } = await import("@/lib/access");
+  const access = await getAccessLevel();
+  if (access.maxSimuladosPerWeek === 0) {
+    return NextResponse.json({ error: "Simulados não disponíveis no seu plano. Faça upgrade para acessar." }, { status: 403 });
+  }
+
   const { total = 20, subjectIds, banca, level } = await req.json().catch(() => ({} as Record<string, unknown>)) as { total?: number; subjectIds?: string[]; banca?: string; level?: string };
 
   // Busca matérias do aluno se não fornecidas

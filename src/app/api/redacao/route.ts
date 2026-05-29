@@ -47,6 +47,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
 
+  const { getAccessLevel } = await import("@/lib/access");
+  const access = await getAccessLevel();
+  if (access.maxRedacoesPerWeek === 0) {
+    return NextResponse.json({ error: "Recurso não disponível no seu plano. Faça upgrade para acessar Redação." }, { status: 403 });
+  }
+
   const body = await req.json() as {
     action?: string;
     tipo?: string;
