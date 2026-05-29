@@ -1482,8 +1482,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
       const msg = CORRECT_MSGS[Math.floor(Math.random() * CORRECT_MSGS.length)];
       onCelebrate?.(msg);
     } else {
-      // Resposta errada → salva automaticamente como "again" e avança após 1.5s
-      setAutoAdvancing(true);
+      // Resposta errada → salva progresso mas NÃO avança automaticamente
+      // O aluno lê a explicação e clica em "Próxima →" quando quiser
       handleQualityDirect("again");
     }
   }
@@ -1501,14 +1501,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
       onProgressUpdate(q.id, data.nextReview, isCorrect);
       setAnswered(prev => new Set([...prev, q.id]));
     }
-    // Avança após 1.5s para o aluno ver a resposta correta
-    setTimeout(() => {
-      setCurrent(c => c + 1);
-      setSelected(null);
-      setShowExpl(false);
-      setActiveTermo(null);
-      setAutoAdvancing(false);
-    }, 1500);
+    // Não avança automaticamente — aluno usa o botão "Próxima →"
   }
 
   async function handleQuality(quality: "easy" | "ok" | "hard" | "again") {
@@ -1639,8 +1632,6 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
         <span>Atalhos:</span>
         {["A","B","C","D","E"].map(k => <kbd key={k} className="px-1 py-0.5 rounded border border-white/10 font-mono">{k}</kbd>)}
         <span>responder</span>
-        <kbd className="px-1 py-0.5 rounded border border-white/10 font-mono">N</kbd>
-        <span>próxima</span>
       </div>
       <p className="text-sm text-gray-200 leading-relaxed mb-4">
         <HighlightedText text={q.statement} termos={glossTermos} onTermClick={setActiveTermo} />
@@ -1675,16 +1666,20 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
       {selected && (
         <div className="space-y-3">
+          {/* Explicação — abre automaticamente, colorida por acerto/erro */}
           {q.explanation && (
-            <div>
-              <button onClick={() => setShowExpl(r => !r)} className="text-xs text-gray-500 hover:text-gray-400 mb-1">
-                {showExpl ? "▲ Ocultar" : "▼ Ver"} justificativa
-              </button>
-              {showExpl && (
-                <p className="text-xs text-gray-400 leading-relaxed p-3 rounded-lg bg-white/5 border border-white/5">
-                  {q.explanation}
-                </p>
-              )}
+            <div className={cn(
+              "p-3 rounded-xl border",
+              selected === q.answer
+                ? "bg-emerald-950/60 border-emerald-500/40"
+                : "bg-red-950/60 border-red-500/40"
+            )}>
+              <p className={cn("text-xs font-semibold mb-1.5",
+                selected === q.answer ? "text-emerald-400" : "text-red-400"
+              )}>
+                {selected === q.answer ? "✅ Correto!" : "❌ Incorreto"} — Justificativa
+              </p>
+              <p className="text-xs text-gray-200 leading-relaxed">{q.explanation}</p>
             </div>
           )}
           {q.artigo && (
@@ -1704,12 +1699,18 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
           )}
           <div>
             {selected && selected !== q.answer ? (
-              // Resposta errada — salva automaticamente, avança em 1.5s
-              <div className="flex items-center gap-2 py-2.5 px-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                <div className={cn("w-2 h-2 rounded-full bg-red-500 flex-shrink-0", autoAdvancing && "animate-ping")} />
-                <p className="text-xs text-red-400 font-medium">
-                  Adicionada à revisão — próxima questão em instantes...
-                </p>
+              // Resposta errada — botão Próxima para o aluno avançar quando quiser
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                  <p className="text-xs text-red-400 font-medium">Adicionada ao caderno de erros para revisão</p>
+                </div>
+                <button
+                  onClick={() => { setCurrent(c => c + 1); setSelected(null); setShowExpl(false); setActiveTermo(null); setAutoAdvancing(false); }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  Próxima questão <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
             ) : (
               <>
