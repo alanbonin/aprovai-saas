@@ -26,23 +26,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .limit(1);
   if (!profileRows || profileRows.length === 0) redirect("/onboarding");
 
-  // Busca créditos de IA da semana
-  const aiCreditsTotal = 10;
+  // Busca créditos de IA da semana — total vem do plano real
+  const sub = (dbUser as any).subscription;
+  const rawTotal = sub?.plan?.aiCreditsPerWeek ?? 10;
+  const aiCreditsTotal = rawTotal === -1 || rawTotal >= 9999 ? 9999 : rawTotal;
   let aiCreditsLeft = aiCreditsTotal;
   try {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay());
     const weekStart = d.toISOString().slice(0, 10);
     const used = await getWeeklyAiUsage(dbUser.id as string, weekStart);
-    aiCreditsLeft = Math.max(0, aiCreditsTotal - used);
+    aiCreditsLeft = aiCreditsTotal >= 9999 ? 9999 : Math.max(0, aiCreditsTotal - used);
   } catch { /* silent */ }
 
   // Busca nome do plano
-  const planName = (dbUser as { subscription?: { plan?: { name?: string } } })
-    ?.subscription?.plan?.name ?? "Gratuito";
+  const planName = sub?.plan?.name ?? "Gratuito";
 
   // Verifica se é premium (plano pago e não expirado)
-  const sub = (dbUser as any).subscription;
   const isExpiredSub = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
   const isPremium = !isExpiredSub && !!(sub && (sub.plan?.price ?? 0) > 0);
 

@@ -56,6 +56,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Recurso não disponível no seu plano. Faça upgrade para acessar Estudos de Caso." }, { status: 403 });
   }
 
+  // Verificar limite semanal real (se não for ilimitado)
+  if (access.maxCasosPerWeek > 0) {
+    const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    const { db: dbClient } = await import("@/lib/db");
+    const { data: dbUserRow } = await dbClient.from("User").select("id").eq("supabaseId", user.id).single();
+    if (dbUserRow) {
+      const usedThisWeek = await getWeeklyResourceUsage(dbUserRow.id, "caso");
+      if (usedThisWeek >= access.maxCasosPerWeek) {
+        return NextResponse.json({ error: `Você atingiu o limite de ${access.maxCasosPerWeek} casos por semana do seu plano.` }, { status: 403 });
+      }
+      await incrementWeeklyResourceUsage(dbUserRow.id, "caso");
+    }
+  }
+
   const body = await req.json() as {
     action: string;
     tema?: string;

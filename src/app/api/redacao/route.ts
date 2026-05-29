@@ -53,6 +53,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Recurso não disponível no seu plano. Faça upgrade para acessar Redação." }, { status: 403 });
   }
 
+  // Verificar limite semanal real (se não for ilimitado)
+  if (access.maxRedacoesPerWeek > 0) {
+    const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    const { db: dbClient } = await import("@/lib/db");
+    const { data: dbUserRow } = await dbClient.from("User").select("id").eq("supabaseId", user.id).single();
+    if (dbUserRow) {
+      const body0 = await req.clone().json().catch(() => ({}));
+      // Só conta na ação de corrigir (não em sugerir_tipos ou gerar_tema)
+      if (!body0.action || body0.action === "corrigir") {
+        const usedThisWeek = await getWeeklyResourceUsage(dbUserRow.id, "redacao");
+        if (usedThisWeek >= access.maxRedacoesPerWeek) {
+          return NextResponse.json({ error: `Você atingiu o limite de ${access.maxRedacoesPerWeek} redações por semana do seu plano.` }, { status: 403 });
+        }
+        await incrementWeeklyResourceUsage(dbUserRow.id, "redacao");
+      }
+    }
+  }
+
   const body = await req.json() as {
     action?: string;
     tipo?: string;

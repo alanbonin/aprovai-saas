@@ -382,7 +382,9 @@ interface Stats {
 
 const TRIAL_LOCKED_HREFS = new Set([
   "/quiz", "/desafio-semanal", "/questoes", "/adaptativo",
+  "/biblioteca",
   "/simulado", "/simulado/filtrado", "/simulado/revisao", "/simulado/exame", "/historico-simulados",
+  "/arena",
   "/revisao", "/agenda-revisoes", "/favoritos",
   "/glossario", "/artigos", "/caso", "/redacao", "/materiais",
   "/resumo-semanal", "/diagnostico", "/bancas", "/nivel", "/comparar",

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   if (docError || !doc) return NextResponse.json({ error: "Documento não encontrado" }, { status: 404 });
 
   // Verifica acesso pelo plano
-  const plan = (dbUser as unknown as { subscription?: { Plan?: { slug?: string } } }).subscription?.Plan;
+  const plan = (dbUser as unknown as { subscription?: { plan?: { slug?: string } } }).subscription?.plan;
   const planSlug = plan?.slug ?? "trial";
   const planOrder = ["trial", "focado", "aprovacao", "elite", "prova-marcada"];
   const userLevel = planOrder.indexOf(planSlug);

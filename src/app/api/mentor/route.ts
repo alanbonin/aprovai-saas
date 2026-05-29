@@ -15,8 +15,13 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
-  const { message, agentId, history = [] } = await req.json();
+  const body = await req.json().catch(() => ({}));
+  const { message, agentId, history = [] } = body;
   if (!message || !agentId) return NextResponse.json({ error: "Dados incompletos" }, { status: 400 });
+  if (typeof message !== "string" || message.length > 4000)
+    return NextResponse.json({ error: "Mensagem inválida" }, { status: 400 });
+  if (!Array.isArray(history) || history.length > 50)
+    return NextResponse.json({ error: "Histórico inválido" }, { status: 400 });
 
   const { data: agent } = await db.from("Agent").select("*").eq("id", agentId).single();
   if (!agent?.active) return NextResponse.json({ error: "Mentor não encontrado" }, { status: 404 });

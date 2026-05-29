@@ -78,7 +78,7 @@ export const getAccessLevel = cache(async (): Promise<PlanLimits> => {
     if (!dbUser) return { planSlug: null, planName: null, isPremium: false, ...EXPIRED_LIMITS };
 
     const sub = (dbUser as any).subscription;
-    const isExpired = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
+    const isExpired = !sub || ["CANCELLED", "EXPIRED"].includes(sub.status ?? "") || (sub.endDate && new Date(sub.endDate) < new Date());
 
     if (isExpired || !sub) {
       return { planSlug: null, planName: null, isPremium: false, ...EXPIRED_LIMITS };
