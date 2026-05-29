@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { resolveCargoId } from "@/lib/cargos";
+import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
 
 // ── Keyword matching para detectar área do cargo ─────────────────────
 const AREA_KEYWORDS: Record<string, string[]> = {
@@ -479,41 +481,65 @@ export async function POST(req: Request) {
         }
       }
 
-      // ── Matérias para este perfil (profileId isolado) ─────────────────
-      const agentAreas = agentRows
-        .filter(a => profileAgentIds.includes(a.id))
-        .map(a => a.area ?? "")
-        .filter(Boolean);
+      // ── Matérias para este perfil ──────────────────────────────────────
+      // 1. Tenta resolver matérias exatas pelo mapeamento de cargos (edital)
+      const resolvedCargo = resolveCargoId(c.cargo ?? "", c.orgao ?? "");
+      let subjectIds: string[] = [];
 
-      const subjectCats = getSubjectCategorias(profileModalidade, agentAreas);
-
-      if (subjectCats.length > 0) {
-        const { data: matchedSubjects } = await db
-          .from("Subject")
-          .select("id")
-          .in("categoria", subjectCats)
-          .order("ordem");
-
-        if (matchedSubjects && matchedSubjects.length > 0) {
-          // Remove matérias antigas deste perfil
-          try {
-            await db.from("StudentSubject")
-              .delete()
-              .eq("userId", dbUser.id)
-              .eq("profileId", profileId);
-          } catch { /* profileId ainda não existe, ignora */ }
-
-          const ssRows = matchedSubjects.map((s: { id: string }) => ({
-            id:         crypto.randomUUID(),
-            userId:     dbUser.id,
-            profileId,
-            subjectId:  s.id,
-            fromEdital: false,
-            createdAt:  now,
-          }));
-          const { error: ssErr } = await db.from("StudentSubject").insert(ssRows);
-          if (ssErr) log.error("db.onboarding_student_subject", { table: "StudentSubject" }, ssErr);
+      if (resolvedCargo && profileModalidade === "CONCURSO_PUBLICO") {
+        const nomesEdital = getMateriasParaCargo(resolvedCargo.cargoId, resolvedCargo.estado);
+        if (nomesEdital.length > 0) {
+          // Busca os IDs das matérias pelo nome exato
+          const { data: byName } = await db
+            .from("Subject")
+            .select("id, name")
+            .in("name", nomesEdital);
+          subjectIds = (byName ?? []).map((s: { id: string }) => s.id);
+          log.info("onboarding.cargo_resolved", {
+            cargoId: resolvedCargo.cargoId,
+            estado: resolvedCargo.estado ?? null,
+            materias: nomesEdital.length,
+            found: subjectIds.length,
+          });
         }
+      }
+
+      // 2. Fallback por categorias (ENEM, OAB, ou cargo não mapeado)
+      if (subjectIds.length === 0) {
+        const agentAreas = agentRows
+          .filter(a => profileAgentIds.includes(a.id))
+          .map(a => a.area ?? "")
+          .filter(Boolean);
+        const subjectCats = getSubjectCategorias(profileModalidade, agentAreas);
+        if (subjectCats.length > 0) {
+          const { data: byCat } = await db
+            .from("Subject")
+            .select("id")
+            .in("categoria", subjectCats)
+            .order("ordem");
+          subjectIds = (byCat ?? []).map((s: { id: string }) => s.id);
+        }
+      }
+
+      if (subjectIds.length > 0) {
+        // Remove matérias antigas deste perfil
+        try {
+          await db.from("StudentSubject")
+            .delete()
+            .eq("userId", dbUser.id)
+            .eq("profileId", profileId);
+        } catch { /* profileId ainda não existe, ignora */ }
+
+        const ssRows = subjectIds.map(subjectId => ({
+          id:         crypto.randomUUID(),
+          userId:     dbUser.id,
+          profileId,
+          subjectId,
+          fromEdital: !!resolvedCargo,
+          createdAt:  now,
+        }));
+        const { error: ssErr } = await db.from("StudentSubject").insert(ssRows);
+        if (ssErr) log.error("db.onboarding_student_subject", { table: "StudentSubject" }, ssErr);
       }
 
       // ── Coleta dados dos agentes para resposta ────────────────────────
