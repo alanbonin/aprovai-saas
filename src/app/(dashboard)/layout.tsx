@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
+import { PomodoroFloat } from "@/components/layout/pomodoro-float";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -57,6 +58,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
+      <PomodoroFloat />
     </div>
   );
 }

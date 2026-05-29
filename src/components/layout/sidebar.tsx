@@ -87,7 +87,6 @@ const SECTIONS_STUDENT: NavSection[] = [
   {
     id: "ferramentas", title: "Ferramentas", color: "#94a3b8", defaultOpen: false,
     items: [
-      { href: "/pomodoro",    label: "Pomodoro",   icon: "🍅" },
       { href: "/sessao",      label: "Cronômetro", icon: "⏱️" },
       { href: "/calculadora", label: "Calculadora",icon: "🧮" },
       { href: "/diario",      label: "Diário",     icon: "📔" },
