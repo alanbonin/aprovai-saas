@@ -4,6 +4,8 @@ import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { log } from "@/lib/logger";
+import { resolveCargoId } from "@/lib/cargos";
+import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────────
 export interface DaySchedule {
@@ -108,12 +110,30 @@ async function getProfileAndSubjects(userId: string) {
   const profileRes = { data: profileRow };
 
   const profile = profileRes.data;
-  const materias = ((subjectsRes.data ?? []) as { Subject: { name: string }[] | { name: string } | null }[])
+  const materiasMatriculadas = ((subjectsRes.data ?? []) as { Subject: { name: string }[] | { name: string } | null }[])
     .map(ss => {
       const s = ss.Subject;
       return Array.isArray(s) ? s[0]?.name : (s as { name: string } | null)?.name;
     })
     .filter(Boolean) as string[];
+
+  // Enriquece com matérias do mapeamento de cargos (edital real)
+  let materiasEdital: string[] = [];
+  let cargoResolvidoId: string | undefined;
+  let estadoResolvido: string | undefined;
+
+  if (profile?.cargo || profile?.orgao) {
+    const resolved = resolveCargoId(profile.cargo ?? "", profile.orgao ?? "");
+    if (resolved) {
+      cargoResolvidoId = resolved.cargoId;
+      estadoResolvido = resolved.estado;
+      materiasEdital = getMateriasParaCargo(resolved.cargoId, resolved.estado);
+    }
+  }
+
+  // Une matérias matriculadas + edital, sem duplicatas
+  const todasMaterias = [...new Set([...materiasMatriculadas, ...materiasEdital])];
+  const materias = todasMaterias.length > 0 ? todasMaterias : materiasMatriculadas;
 
   let diasProva: number | null = null;
   if (profile?.dataProva) {
@@ -122,7 +142,7 @@ async function getProfileAndSubjects(userId: string) {
     ));
   }
 
-  return { profile, materias, diasProva };
+  return { profile, materias, materiasEdital, cargoResolvidoId, estadoResolvido, diasProva };
 }
 
 // ── GET — busca plano salvo ────────────────────────────────────────────────────
@@ -173,7 +193,7 @@ export async function POST(req: Request) {
     const activeProfile = await getActiveProfile(dbUser.id);
     const profileId = activeProfile?.id ?? null;
 
-    const { profile, materias, diasProva } = await getProfileAndSubjects(dbUser.id);
+    const { profile, materias, materiasEdital, cargoResolvidoId, estadoResolvido, diasProva } = await getProfileAndSubjects(dbUser.id);
 
     // ── AJUSTAR ───────────────────────────────────────────────────────────────
     if (body.action === "ajustar") {
@@ -258,7 +278,8 @@ PERFIL DO ALUNO:
 - Dias para prova: ${diasProva !== null ? diasProva + " dias" : "não informado"}
 - Dificuldades: ${profile?.dificuldades ?? "não informado"}
 - Banca: ${profile?.banca ?? "não informada"}
-- Matérias: ${materias.length > 0 ? materias.join(", ") : "gerais (Direito Constitucional, Administrativo, Português, Raciocínio Lógico)"}
+- Matérias exigidas pelo edital (${cargoResolvidoId ?? "base geral"}${estadoResolvido ? ` / ${estadoResolvido}` : ""}): ${materiasEdital.length > 0 ? materiasEdital.join(", ") : "não mapeado"}
+- Matérias do aluno: ${materias.length > 0 ? materias.join(", ") : "gerais (Direito Constitucional, Administrativo, Português, Raciocínio Lógico)"}
 - Horas por dia: ${horasPorDia}h
 - Dias disponíveis: ${diasDisp.join(", ")}
 

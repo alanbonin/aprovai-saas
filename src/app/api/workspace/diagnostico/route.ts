@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { defaultAiLimiter } from "@/lib/rate-limit";
+import { resolveCargoId } from "@/lib/cargos";
+import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
 
 const NOTE_PREFIX = "__DIAGNOSTICO_SEMANAL__";
 
@@ -136,9 +138,18 @@ export async function POST() {
 
   const DIAG_SYSTEM = "Você é a Estrategista Aprovai — especialista em pedagogia para concursos públicos. Sua função é analisar o desempenho semanal do aluno e gerar um diagnóstico personalizado, motivador e acionável.";
 
+  // Resolve matérias exatas do edital pelo cargo
+  const resolvedCargo = profile?.cargo
+    ? resolveCargoId(profile.cargo, profile.orgao ?? "")
+    : null;
+  const materiasEdital = resolvedCargo
+    ? getMateriasParaCargo(resolvedCargo.cargoId, resolvedCargo.estado)
+    : [];
+
   const prompt = `Analise o desempenho desta semana do aluno e gere um diagnóstico conciso:
 
 CARGO ALVO: ${profile?.cargo ?? "Concurso público"} | ÓRGÃO: ${profile?.orgao ?? "N/A"}
+${materiasEdital.length > 0 ? `MATÉRIAS DO EDITAL: ${materiasEdital.join(", ")}` : ""}
 ${daysToProva !== null ? `DIAS PARA A PROVA: ${daysToProva}` : ""}
 
 DADOS DA SEMANA:

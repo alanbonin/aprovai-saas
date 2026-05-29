@@ -434,6 +434,111 @@ export function buscarCargos(query: string): Cargo[] {
   });
 }
 
+/**
+ * Extrai a sigla do estado de um texto (cargo ou órgão).
+ * Ex: "PC-BA", "Bahia", "SP", "São Paulo" → "BA" / "SP"
+ */
+export function extrairEstado(texto: string): string | undefined {
+  const t = texto.toUpperCase();
+
+  // Siglas diretas: PC-BA, PM-SP, TRE-MG, etc.
+  const siglaDireta = t.match(/\b([A-Z]{2})-([A-Z]{2})\b/);
+  if (siglaDireta) {
+    const estado = siglaDireta[2];
+    if (SIGLAS_ESTADOS.has(estado)) return estado;
+  }
+
+  // Sigla isolada no fim: "Polícia Civil (BA)", "SEFAZ SP"
+  const siglaSolta = t.match(/\b(AC|AL|AP|AM|BA|CE|DF|ES|GO|MA|MT|MS|MG|PA|PB|PR|PE|PI|RJ|RN|RS|RO|RR|SC|SP|SE|TO)\b/);
+  if (siglaSolta) return siglaSolta[1];
+
+  // Nome por extenso
+  const tn = texto.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  for (const [sigla, nome] of NOMES_ESTADOS) {
+    if (tn.includes(nome)) return sigla;
+  }
+
+  return undefined;
+}
+
+const SIGLAS_ESTADOS = new Set([
+  "AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS",
+  "MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"
+]);
+
+const NOMES_ESTADOS: [string, string][] = [
+  ["AC","acre"],["AL","alagoas"],["AP","amapa"],["AM","amazonas"],
+  ["BA","bahia"],["CE","ceara"],["DF","distrito federal"],["ES","espirito santo"],
+  ["GO","goias"],["MA","maranhao"],["MT","mato grosso do sul"],["MS","mato grosso"],
+  ["MG","minas gerais"],["PA","para"],["PB","paraiba"],["PR","parana"],
+  ["PE","pernambuco"],["PI","piaui"],["RJ","rio de janeiro"],["RN","rio grande do norte"],
+  ["RS","rio grande do sul"],["RO","rondonia"],["RR","roraima"],
+  ["SC","santa catarina"],["SP","sao paulo"],["SE","sergipe"],["TO","tocantins"],
+];
+
+/**
+ * Tenta resolver o cargoId a partir do texto de cargo + órgão digitado pelo aluno.
+ * Retorna { cargoId, estado? } ou null se não encontrar.
+ *
+ * Exemplos:
+ *   resolveCargoId("Delegado de Polícia Civil", "PC-BA") → { cargoId: "delegado-pc", estado: "BA" }
+ *   resolveCargoId("Escriturário", "Banco do Brasil") → { cargoId: "escriturario-bb" }
+ *   resolveCargoId("Policial Rodoviário Federal", "PRF") → { cargoId: "prf" }
+ */
+export function resolveCargoId(
+  cargoTexto: string,
+  orgaoTexto: string
+): { cargoId: string; estado?: string } | null {
+  const norm = (s: string) =>
+    s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9 ]/g, " ");
+
+  const cargo = norm(cargoTexto);
+  const orgao = norm(orgaoTexto);
+  const texto = `${cargo} ${orgao}`;
+
+  let melhorCargo: Cargo | null = null;
+  let melhorScore = 0;
+
+  for (const c of CARGOS) {
+    const nomeN = norm(c.nome);
+    const orgaoN = norm(c.orgao);
+    const siglaAlt = c.sigla ? norm(c.sigla) : "";
+
+    let score = 0;
+
+    // Pontuação por palavras em comum no nome do cargo
+    const palavrasNome = nomeN.split(" ").filter(p => p.length > 3);
+    for (const p of palavrasNome) {
+      if (cargo.includes(p)) score += 2;
+    }
+
+    // Pontuação por palavras em comum no órgão
+    const palavrasOrgao = orgaoN.split(" ").filter(p => p.length > 3);
+    for (const p of palavrasOrgao) {
+      if (orgao.includes(p)) score += 1;
+    }
+
+    // Bonus por sigla exata
+    if (siglaAlt && texto.includes(siglaAlt)) score += 3;
+
+    // Penaliza se nenhuma palavra principal bateu
+    if (score === 0) continue;
+
+    if (score > melhorScore) {
+      melhorScore = score;
+      melhorCargo = c;
+    }
+  }
+
+  if (!melhorCargo || melhorScore < 2) return null;
+
+  const estado = melhorCargo.hasEstado
+    ? extrairEstado(`${cargoTexto} ${orgaoTexto}`)
+    : undefined;
+
+  return { cargoId: melhorCargo.id, estado };
+}
+
 /** Estados brasileiros para seleção */
 export const ESTADOS = [
   { sigla: "AC", nome: "Acre" },
