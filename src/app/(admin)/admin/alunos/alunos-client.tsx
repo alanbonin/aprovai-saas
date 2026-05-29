@@ -5,17 +5,73 @@ import {
   UserPlus, Crown, Trash2, ChevronDown, X, AlertCircle, CheckCircle2,
   Search, BarChart2, Loader2, Target, Layers, ClipboardList, Flame, Zap,
   Pencil, Check, Square, CheckSquare, ShieldAlert, KeyRound,
+  Globe, Users, HandshakeIcon, Gift, Star, Shield, Tag, Download,
+  Building2, Megaphone, Clock, TrendingUp,
 } from "lucide-react";
 
-interface User { id: string; name: string; email: string; role: string; createdAt: string; }
+// ── Tipos ────────────────────────────────────────────────────────────────────
+interface User {
+  id: string; name: string; email: string; role: string; createdAt: string;
+  origin: string; partnerId: string | null; groupTag: string | null;
+}
 interface Plan { id: string; name: string; slug: string; }
+interface Partner { id: string; name: string; slug: string; }
 interface Props {
   users: User[];
   plans: Plan[];
+  partners: Partner[];
   planMap: Record<string, string>;
   subMap: Record<string, string>;
+  partnerMap: Record<string, string>;
 }
 
+// ── Tabs de grupo ─────────────────────────────────────────────────────────────
+type TabKey = "todos" | "platform" | "admin" | "partner" | "free" | "premium" | "admins" | "especiais";
+
+const TABS: { key: TabKey; label: string; icon: React.ReactNode; color: string }[] = [
+  { key: "todos",    label: "Todos",         icon: <Globe className="w-3.5 h-3.5" />,        color: "text-gray-300" },
+  { key: "platform", label: "Plataforma",    icon: <TrendingUp className="w-3.5 h-3.5" />,   color: "text-indigo-400" },
+  { key: "admin",    label: "Diretos",       icon: <Users className="w-3.5 h-3.5" />,         color: "text-blue-400" },
+  { key: "partner",  label: "Parceria",      icon: <HandshakeIcon className="w-3.5 h-3.5" />, color: "text-emerald-400" },
+  { key: "free",     label: "Gratuitos",     icon: <Gift className="w-3.5 h-3.5" />,          color: "text-teal-400" },
+  { key: "premium",  label: "Premium",       icon: <Crown className="w-3.5 h-3.5" />,         color: "text-amber-400" },
+  { key: "admins",   label: "Admins",        icon: <Shield className="w-3.5 h-3.5" />,        color: "text-red-400" },
+  { key: "especiais",label: "Beta/Especiais",icon: <Tag className="w-3.5 h-3.5" />,           color: "text-purple-400" },
+];
+
+// ── Grupos sugeridos (UI informativa) ─────────────────────────────────────────
+const GRUPOS_SUGERIDOS = [
+  { icon: <Building2 className="w-3.5 h-3.5" />, label: "Corporativo", desc: "Empresa pagou pelos acessos", tag: "corporativo" },
+  { icon: <Megaphone className="w-3.5 h-3.5" />, label: "Influencer",  desc: "Embaixador com acesso especial", tag: "influencer" },
+  { icon: <Clock className="w-3.5 h-3.5" />,     label: "Trial expirado", desc: "Subscription status EXPIRED", tag: null },
+  { icon: <Star className="w-3.5 h-3.5" />,       label: "Inativo",    desc: "Nunca fez login após cadastro", tag: null },
+];
+
+// ── Badge origem ──────────────────────────────────────────────────────────────
+function OriginBadge({ origin }: { origin: string }) {
+  if (origin === "platform") return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+      <TrendingUp className="w-2.5 h-2.5" /> Plataforma
+    </span>
+  );
+  if (origin === "admin") return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
+      <Users className="w-2.5 h-2.5" /> Direto
+    </span>
+  );
+  if (origin === "partner") return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+      <HandshakeIcon className="w-2.5 h-2.5" /> Parceria
+    </span>
+  );
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-white/5 text-gray-500 border border-white/10">
+      {origin}
+    </span>
+  );
+}
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -43,12 +99,15 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const INPUT = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
-export function AlunosClient({ users: initialUsers, plans, planMap, subMap: initialSubMap }: Props) {
+// ── Componente principal ──────────────────────────────────────────────────────
+export function AlunosClient({ users: initialUsers, plans, partners, planMap, subMap: initialSubMap, partnerMap }: Props) {
   const [users, setUsers] = useState(initialUsers);
   const [subMap, setSubMap] = useState(initialSubMap);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
+  const [activeTab, setActiveTab] = useState<TabKey>("todos");
+  const [partnerFilter, setPartnerFilter] = useState<string>("");
 
   // Seleção múltipla
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -60,10 +119,10 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
   const [editModal, setEditModal] = useState<User | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
-  // Form criar aluno
-  const [form, setForm] = useState({ name: "", email: "", password: "", planId: "" });
+  // Form criar usuário
+  const [form, setForm] = useState({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "" });
 
-  // Form editar aluno
+  // Form editar usuário
   const [editForm, setEditForm] = useState({ name: "", email: "", newPassword: "" });
 
   // Stats drawer
@@ -84,23 +143,62 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
     setTimeout(() => setToast(null), 3500);
   }
 
+  // ── Stats por grupo ──────────────────────────────────────────────────────────
+  const stats = useMemo(() => {
+    const total = users.length;
+    const platform = users.filter(u => u.origin === "platform").length;
+    const adminDirect = users.filter(u => u.origin === "admin").length;
+    const partner = users.filter(u => u.origin === "partner").length;
+    const premium = users.filter(u => !!subMap[u.id]).length;
+    const free = users.filter(u => !subMap[u.id] && u.role !== "ADMIN").length;
+    const admins = users.filter(u => u.role === "ADMIN").length;
+    const especiais = users.filter(u => !!u.groupTag).length;
+    return { total, platform, adminDirect, partner, premium, free, admins, especiais };
+  }, [users, subMap]);
+
+  // ── Filtro por tab ───────────────────────────────────────────────────────────
+  const tabFiltered = useMemo(() => {
+    let base = users;
+    switch (activeTab) {
+      case "platform":  base = users.filter(u => u.origin === "platform"); break;
+      case "admin":     base = users.filter(u => u.origin === "admin"); break;
+      case "partner":   base = users.filter(u => u.origin === "partner"); break;
+      case "free":      base = users.filter(u => !subMap[u.id] && u.role !== "ADMIN"); break;
+      case "premium":   base = users.filter(u => !!subMap[u.id]); break;
+      case "admins":    base = users.filter(u => u.role === "ADMIN"); break;
+      case "especiais": base = users.filter(u => !!u.groupTag); break;
+    }
+    // Sub-filtro por parceiro (só no tab de parceria)
+    if (activeTab === "partner" && partnerFilter) {
+      base = base.filter(u => u.partnerId === partnerFilter);
+    }
+    return base;
+  }, [users, subMap, activeTab, partnerFilter]);
+
   const filtered = useMemo(() =>
-    users.filter(u =>
+    tabFiltered.filter(u =>
       u.name.toLowerCase().includes(search.toLowerCase()) ||
       u.email.toLowerCase().includes(search.toLowerCase())
-    ), [users, search]);
+    ), [tabFiltered, search]);
 
-  // ── Seleção ─────────────────────────────────────────────────────────
+  // Contagem da tab ativa para badge
+  const tabCount = useMemo(() => {
+    const map: Record<TabKey, number> = {
+      todos: stats.total, platform: stats.platform, admin: stats.adminDirect,
+      partner: stats.partner, free: stats.free, premium: stats.premium,
+      admins: stats.admins, especiais: stats.especiais,
+    };
+    return map;
+  }, [stats]);
+
+  // ── Seleção múltipla ─────────────────────────────────────────────────────────
   const selectableIds = filtered.filter(u => u.role !== "ADMIN").map(u => u.id);
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
   const someSelected = selectableIds.some(id => selected.has(id));
 
   function toggleAll() {
-    if (allSelected) {
-      setSelected(new Set());
-    } else {
-      setSelected(new Set(selectableIds));
-    }
+    if (allSelected) { setSelected(new Set()); }
+    else { setSelected(new Set(selectableIds)); }
   }
 
   function toggleOne(id: string) {
@@ -111,7 +209,24 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
     });
   }
 
-  // ── Stats ────────────────────────────────────────────────────────────
+  // ── Export CSV parceiro ──────────────────────────────────────────────────────
+  function exportPartnerCSV() {
+    const rows = filtered.map(u => ({
+      nome: u.name, email: u.email,
+      parceiro: u.partnerId ? (partnerMap[u.partnerId] ?? u.partnerId) : "",
+      plano: subMap[u.id] ? (planMap[subMap[u.id]] ?? "") : "Gratuito",
+      cadastro: new Date(u.createdAt).toLocaleDateString("pt-BR"),
+      tag: u.groupTag ?? "",
+    }));
+    const header = "Nome,Email,Parceiro,Plano,Cadastro,Tag";
+    const csv = [header, ...rows.map(r => `"${r.nome}","${r.email}","${r.parceiro}","${r.plano}","${r.cadastro}","${r.tag}"`)].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "parceiros.csv"; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Stats ────────────────────────────────────────────────────────────────────
   async function openStats(u: User) {
     setStatsUser(u); setStatsData(null); setStatsLoading(true);
     const res = await fetch(`/api/admin/alunos/${u.id}/stats`);
@@ -119,29 +234,33 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
     setStatsLoading(false);
   }
 
-  // ── Criar aluno ──────────────────────────────────────────────────────
+  // ── Criar usuário ────────────────────────────────────────────────────────────
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     try {
+      const payload: Record<string, string> = { name: form.name, email: form.email, password: form.password };
+      if (form.planId) payload.planId = form.planId;
+      if (form.partnerId) payload.partnerId = form.partnerId;
+      if (form.groupTag) payload.groupTag = form.groupTag;
       const res = await fetch("/api/admin/alunos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
-      if (!res.ok) { showToast(data.error ?? "Erro ao criar aluno", false); return; }
+      if (!res.ok) { showToast(data.error ?? "Erro ao criar usuário", false); return; }
       if (data.user) {
         setUsers(prev => [data.user, ...prev]);
         if (form.planId) setSubMap(m => ({ ...m, [data.user.id]: form.planId }));
       }
-      showToast("Aluno criado com sucesso!");
+      showToast("Usuário criado com sucesso!");
       setShowCreate(false);
-      setForm({ name: "", email: "", password: "", planId: "" });
+      setForm({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "" });
     } finally { setLoading(false); }
   }
 
-  // ── Editar aluno ─────────────────────────────────────────────────────
+  // ── Editar usuário ───────────────────────────────────────────────────────────
   function openEdit(u: User) {
     setEditModal(u);
     setEditForm({ name: u.name, email: u.email, newPassword: "" });
@@ -173,7 +292,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
     } finally { setLoading(false); }
   }
 
-  // ── Mudar plano ──────────────────────────────────────────────────────
+  // ── Mudar plano ──────────────────────────────────────────────────────────────
   async function handleChangePlan(userId: string, planId: string) {
     setLoading(true);
     try {
@@ -190,7 +309,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
     } finally { setLoading(false); }
   }
 
-  // ── Excluir 1 ────────────────────────────────────────────────────────
+  // ── Excluir 1 ────────────────────────────────────────────────────────────────
   async function handleDelete(userId: string) {
     setLoading(true);
     try {
@@ -204,11 +323,11 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
       setUsers(u => u.filter(x => x.id !== userId));
       setSelected(prev => { const next = new Set(prev); next.delete(userId); return next; });
       setDeleteModal(null);
-      showToast("Aluno removido");
+      showToast("Usuário removido");
     } finally { setLoading(false); }
   }
 
-  // ── Excluir em lote ──────────────────────────────────────────────────
+  // ── Excluir em lote ──────────────────────────────────────────────────────────
   async function handleBulkDelete() {
     const userIds = [...selected];
     setLoading(true);
@@ -223,12 +342,13 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
       setUsers(prev => prev.filter(u => !userIds.includes(u.id)));
       setSelected(new Set());
       setBulkDeleteConfirm(false);
-      showToast(`${userIds.length} aluno(s) removido(s)`);
+      showToast(`${userIds.length} usuário(s) removido(s)`);
     } finally { setLoading(false); }
   }
 
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="p-8 text-white">
+    <div className="p-6 text-white min-h-screen">
       {/* Toast */}
       {toast && (
         <div className={cn(
@@ -240,32 +360,97 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
         </div>
       )}
 
-      {/* Header */}
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Alunos</h1>
+          <h1 className="text-2xl font-bold text-white">Usuários</h1>
           <p className="text-gray-500 text-sm mt-1">{users.length} usuários cadastrados</p>
         </div>
         <div className="flex items-center gap-2">
-          <a href="/api/admin/alunos/export" download="alunos.csv"
+          <a href="/api/admin/alunos/export" download="usuarios.csv"
             className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-colors text-gray-300">
             <Zap className="w-4 h-4 text-amber-400" /> Exportar CSV
           </a>
           <button onClick={() => setShowCreate(true)}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
-            <UserPlus className="w-4 h-4" /> Criar Aluno
+            <UserPlus className="w-4 h-4" /> Criar Usuário
           </button>
         </div>
       </div>
 
-      {/* Barra de busca + ações em lote */}
-      <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-sm">
+      {/* ── Cards de stats ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-3 mb-6 lg:grid-cols-8">
+        {TABS.map(tab => {
+          const count = tabCount[tab.key];
+          const isActive = activeTab === tab.key;
+          return (
+            <button
+              key={tab.key}
+              onClick={() => { setActiveTab(tab.key); setPartnerFilter(""); }}
+              className={cn(
+                "flex flex-col items-center gap-1 p-3 rounded-xl border text-center transition-all",
+                isActive
+                  ? "bg-indigo-500/15 border-indigo-500/40 shadow-lg shadow-indigo-500/10"
+                  : "bg-black/30 border-white/8 hover:border-white/20 hover:bg-white/5"
+              )}
+            >
+              <span className={cn("transition-colors", isActive ? "text-indigo-400" : tab.color)}>
+                {tab.icon}
+              </span>
+              <span className={cn("text-lg font-bold tabular-nums", isActive ? "text-white" : "text-gray-200")}>
+                {count}
+              </span>
+              <span className={cn("text-[10px] font-medium leading-tight", isActive ? "text-indigo-300" : "text-gray-500")}>
+                {tab.label}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* ── Grupos sugeridos (informativo) ─────────────────────────────────── */}
+      <div className="mb-5 rounded-xl border border-white/5 bg-black/20 px-4 py-3">
+        <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2.5">Grupos a implementar</p>
+        <div className="flex flex-wrap gap-2">
+          {GRUPOS_SUGERIDOS.map(g => (
+            <div key={g.label}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-gray-500 cursor-default">
+              <span className="text-gray-600">{g.icon}</span>
+              <span className="font-medium text-gray-400">{g.label}</span>
+              <span className="text-gray-600 text-[10px]">— {g.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Barra de busca + filtro parceiro ───────────────────────────────── */}
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
           <input type="text" value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar por nome ou e-mail..."
             className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
         </div>
+
+        {/* Sub-filtro por parceiro */}
+        {activeTab === "partner" && partners.length > 0 && (
+          <div className="flex items-center gap-2">
+            <select
+              value={partnerFilter}
+              onChange={e => setPartnerFilter(e.target.value)}
+              className="bg-white/5 border border-emerald-500/30 rounded-lg px-3 py-2 text-sm text-emerald-300 focus:outline-none focus:border-emerald-500"
+            >
+              <option value="">Todos os parceiros</option>
+              {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <button
+              onClick={exportPartnerCSV}
+              className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-sm text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+            >
+              <Download className="w-3.5 h-3.5" /> Relatório CSV
+            </button>
+          </div>
+        )}
 
         {/* Barra de seleção múltipla */}
         {someSelected && (
@@ -278,15 +463,14 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
             >
               <Trash2 className="w-3 h-3" /> Excluir selecionados
             </button>
-            <button onClick={() => setSelected(new Set())}
-              className="text-gray-500 hover:text-white ml-1">
+            <button onClick={() => setSelected(new Set())} className="text-gray-500 hover:text-white ml-1">
               <X className="w-3.5 h-3.5" />
             </button>
           </div>
         )}
       </div>
 
-      {/* Tabela */}
+      {/* ── Tabela ─────────────────────────────────────────────────────────── */}
       <div className="rounded-xl border border-white/5 overflow-hidden">
         <table className="w-full text-sm">
           <thead>
@@ -300,8 +484,13 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
                       : <Square className="w-4 h-4" />}
                 </button>
               </th>
-              <th className="text-left px-4 py-3 text-gray-500 font-medium">Aluno</th>
+              <th className="text-left px-4 py-3 text-gray-500 font-medium">Usuário</th>
+              <th className="text-left px-4 py-3 text-gray-500 font-medium">Origem</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Plano</th>
+              {activeTab === "partner" && (
+                <th className="text-left px-4 py-3 text-gray-500 font-medium">Parceiro</th>
+              )}
+              <th className="text-left px-4 py-3 text-gray-500 font-medium">Tag</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Função</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Cadastro</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Ações</th>
@@ -313,6 +502,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
               const currentPlanName = currentPlanId ? planMap[currentPlanId] : null;
               const isChecked = selected.has(u.id);
               const isAdmin = u.role === "ADMIN";
+              const partnerName = u.partnerId ? (partnerMap[u.partnerId] ?? null) : null;
               return (
                 <tr key={u.id} className={cn("hover:bg-white/[0.02] transition-colors", isChecked && "bg-indigo-500/5")}>
                   <td className="px-4 py-3">
@@ -336,14 +526,31 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
                     </div>
                   </td>
                   <td className="px-4 py-3">
+                    <OriginBadge origin={u.origin} />
+                  </td>
+                  <td className="px-4 py-3">
                     {currentPlanName
-                      ? <span className="flex items-center gap-1 text-orange-400 text-xs font-medium"><Crown className="w-3 h-3" /> {currentPlanName}</span>
-                      : <span className="text-gray-600 text-xs">Gratuito</span>}
+                      ? <span className="flex items-center gap-1 text-amber-400 text-xs font-medium"><Crown className="w-3 h-3" /> {currentPlanName}</span>
+                      : <span className="flex items-center gap-1 text-teal-500/70 text-xs"><Gift className="w-3 h-3" /> Gratuito</span>}
+                  </td>
+                  {activeTab === "partner" && (
+                    <td className="px-4 py-3">
+                      {partnerName
+                        ? <span className="text-xs text-emerald-400 font-medium">{partnerName}</span>
+                        : <span className="text-xs text-gray-600">—</span>}
+                    </td>
+                  )}
+                  <td className="px-4 py-3">
+                    {u.groupTag
+                      ? <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                          <Tag className="w-2.5 h-2.5" /> {u.groupTag}
+                        </span>
+                      : <span className="text-gray-700 text-xs">—</span>}
                   </td>
                   <td className="px-4 py-3">
                     <span className={cn("text-xs px-2 py-0.5 rounded-full",
                       isAdmin ? "bg-red-500/20 text-red-400" : "bg-white/5 text-gray-500")}>
-                      {isAdmin ? "Admin" : "Aluno"}
+                      {isAdmin ? "Admin" : "Usuário"}
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs">
@@ -359,7 +566,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
                       {/* Editar */}
                       {!isAdmin && (
                         <button onClick={() => openEdit(u)}
-                          className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Editar aluno">
+                          className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Editar usuário">
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -373,7 +580,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
                       {/* Excluir */}
                       {!isAdmin && (
                         <button onClick={() => setDeleteModal(u)}
-                          className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Remover aluno">
+                          className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Remover usuário">
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
@@ -383,48 +590,74 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
               );
             })}
             {filtered.length === 0 && (
-              <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-600">Nenhum aluno encontrado</td></tr>
+              <tr><td colSpan={activeTab === "partner" ? 9 : 8} className="px-4 py-10 text-center text-gray-600">Nenhum usuário encontrado</td></tr>
             )}
           </tbody>
         </table>
       </div>
 
-      {/* ── Modal: Criar Aluno ─────────────────────────────────────────── */}
+      {/* ── Modal: Criar Usuário ─────────────────────────────────────────────── */}
       {showCreate && (
-        <Modal title="Criar novo aluno" onClose={() => setShowCreate(false)}>
+        <Modal title="Criar novo usuário" onClose={() => setShowCreate(false)} wide>
           <form onSubmit={handleCreate} className="space-y-4">
-            <Field label="Nome completo">
-              <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                required placeholder="João Silva" className={INPUT} />
-            </Field>
-            <Field label="E-mail">
-              <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                required placeholder="joao@email.com" className={INPUT} />
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Nome completo">
+                <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  required placeholder="João Silva" className={INPUT} />
+              </Field>
+              <Field label="E-mail">
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  required placeholder="joao@email.com" className={INPUT} />
+              </Field>
+            </div>
             <Field label="Senha inicial">
               <input type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
                 required minLength={6} placeholder="mínimo 6 caracteres" className={INPUT} />
             </Field>
-            <Field label="Plano (opcional)">
-              <select value={form.planId} onChange={e => setForm(f => ({ ...f, planId: e.target.value }))}
-                className={INPUT}>
-                <option value="">Sem plano (Gratuito)</option>
-                {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-              </select>
-            </Field>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Origem">
+                <select value={form.origin} onChange={e => setForm(f => ({ ...f, origin: e.target.value, partnerId: "" }))}
+                  className={INPUT}>
+                  <option value="admin">Direto (Admin)</option>
+                  <option value="partner">Parceria</option>
+                </select>
+              </Field>
+              {form.origin === "partner" && (
+                <Field label="Parceiro">
+                  <select value={form.partnerId} onChange={e => setForm(f => ({ ...f, partnerId: e.target.value }))}
+                    className={INPUT}>
+                    <option value="">Selecionar parceiro...</option>
+                    {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </Field>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Plano (opcional)">
+                <select value={form.planId} onChange={e => setForm(f => ({ ...f, planId: e.target.value }))}
+                  className={INPUT}>
+                  <option value="">Sem plano (Gratuito)</option>
+                  {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </Field>
+              <Field label="Tag especial (opcional)">
+                <input type="text" value={form.groupTag} onChange={e => setForm(f => ({ ...f, groupTag: e.target.value }))}
+                  placeholder="beta, influencer, corporativo..." className={INPUT} />
+              </Field>
+            </div>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowCreate(false)}
                 className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors">Cancelar</button>
               <button type="submit" disabled={loading}
                 className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-sm font-medium transition-colors">
-                {loading ? "Criando..." : "Criar aluno"}
+                {loading ? "Criando..." : "Criar usuário"}
               </button>
             </div>
           </form>
         </Modal>
       )}
 
-      {/* ── Modal: Editar Aluno ────────────────────────────────────────── */}
+      {/* ── Modal: Editar Usuário ────────────────────────────────────────────── */}
       {editModal && (
         <Modal title={`Editar — ${editModal.name}`} onClose={() => setEditModal(null)} wide>
           <form onSubmit={handleEdit} className="space-y-4">
@@ -482,7 +715,7 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
         </Modal>
       )}
 
-      {/* ── Modal: Atribuir Plano ──────────────────────────────────────── */}
+      {/* ── Modal: Atribuir Plano ───────────────────────────────────────────── */}
       {planModal && (
         <Modal title={`Plano — ${planModal.name}`} onClose={() => setPlanModal(null)}>
           <p className="text-xs text-gray-500 mb-4">{planModal.email}</p>
@@ -496,11 +729,11 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
             {plans.map(p => (
               <button key={p.id} onClick={() => handleChangePlan(planModal.id, p.id)} disabled={loading}
                 className={cn("w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors",
-                  subMap[planModal.id] === p.id ? "border-orange-500/50 bg-orange-500/10 text-orange-300" : "border-white/10 hover:border-white/20 text-gray-400")}>
+                  subMap[planModal.id] === p.id ? "border-amber-500/50 bg-amber-500/10 text-amber-300" : "border-white/10 hover:border-white/20 text-gray-400")}>
                 <div className="flex items-center gap-2">
-                  <Crown className={cn("w-3.5 h-3.5", subMap[planModal.id] === p.id ? "text-orange-400" : "text-gray-600")} />
+                  <Crown className={cn("w-3.5 h-3.5", subMap[planModal.id] === p.id ? "text-amber-400" : "text-gray-600")} />
                   <p className="font-medium">{p.name}</p>
-                  {subMap[planModal.id] === p.id && <span className="ml-auto text-xs text-orange-400">Atual</span>}
+                  {subMap[planModal.id] === p.id && <span className="ml-auto text-xs text-amber-400">Atual</span>}
                 </div>
               </button>
             ))}
@@ -509,15 +742,15 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
         </Modal>
       )}
 
-      {/* ── Modal: Confirmar exclusão simples ─────────────────────────── */}
+      {/* ── Modal: Confirmar exclusão simples ──────────────────────────────── */}
       {deleteModal && (
-        <Modal title="Remover aluno" onClose={() => setDeleteModal(null)}>
+        <Modal title="Remover usuário" onClose={() => setDeleteModal(null)}>
           <p className="text-sm text-gray-300 mb-1">Tem certeza que deseja remover:</p>
           <p className="font-semibold text-white mb-1">{deleteModal.name}</p>
           <p className="text-xs text-gray-500 mb-4">{deleteModal.email}</p>
           <p className="text-xs text-red-400 mb-5 flex items-start gap-1.5">
             <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-            Esta ação é irreversível. Remove o acesso e todos os dados do aluno.
+            Esta ação é irreversível. Remove o acesso e todos os dados do usuário.
           </p>
           <div className="flex gap-3">
             <button onClick={() => setDeleteModal(null)}
@@ -530,13 +763,13 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
         </Modal>
       )}
 
-      {/* ── Modal: Confirmar exclusão em lote ─────────────────────────── */}
+      {/* ── Modal: Confirmar exclusão em lote ──────────────────────────────── */}
       {bulkDeleteConfirm && (
         <Modal title="Excluir em lote" onClose={() => setBulkDeleteConfirm(false)}>
           <div className="flex items-center gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20 mb-5">
             <ShieldAlert className="w-8 h-8 text-red-400 flex-shrink-0" />
             <div>
-              <p className="font-semibold text-white text-sm mb-0.5">{selected.size} aluno(s) serão removidos</p>
+              <p className="font-semibold text-white text-sm mb-0.5">{selected.size} usuário(s) serão removidos</p>
               <p className="text-xs text-gray-400">Todos os dados, progresso e histórico serão apagados permanentemente.</p>
             </div>
           </div>
@@ -549,13 +782,13 @@ export function AlunosClient({ users: initialUsers, plans, planMap, subMap: init
               className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors">Cancelar</button>
             <button onClick={handleBulkDelete} disabled={loading}
               className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2">
-              {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Removendo...</> : `Remover ${selected.size} aluno(s)`}
+              {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Removendo...</> : `Remover ${selected.size} usuário(s)`}
             </button>
           </div>
         </Modal>
       )}
 
-      {/* ── Drawer: Stats do aluno ─────────────────────────────────────── */}
+      {/* ── Drawer: Stats do usuário ─────────────────────────────────────────── */}
       {statsUser && (
         <div className="fixed inset-0 z-50 flex" onClick={() => setStatsUser(null)}>
           <div className="flex-1 bg-black/50" />

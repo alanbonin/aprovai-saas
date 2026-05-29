@@ -104,8 +104,8 @@ const SECTIONS_ADMIN: NavSection[] = [
     items: [
       { href: "/admin",           label: "Dashboard",        icon: "📊" },
       { href: "/admin/analytics", label: "Analytics",        icon: "📈" },
-      { href: "/admin/alunos",    label: "Alunos",           icon: "👥" },
-      { href: "/admin/relatorio", label: "Relatório Alunos", icon: "📉" },
+      { href: "/admin/alunos",    label: "Usuários",          icon: "👥" },
+      { href: "/admin/relatorio", label: "Relatório Usuários", icon: "📉" },
     ],
   },
   {

@@ -4,9 +4,10 @@ import { AlunosClient } from "./alunos-client";
 export const dynamic = "force-dynamic";
 
 export default async function AlunosAdminPage() {
-  const [{ data: users }, { data: plans }] = await Promise.all([
-    db.from("User").select("id, name, email, role, createdAt").order("createdAt", { ascending: false }).limit(500),
+  const [{ data: users }, { data: plans }, { data: partners }] = await Promise.all([
+    db.from("User").select("id, name, email, role, createdAt, origin, partnerId, groupTag").order("createdAt", { ascending: false }).limit(500),
     db.from("Plan").select("id, name, slug").eq("active", true).order("price"),
+    db.from("Partner").select("id, name, slug").eq("active", true).order("name"),
   ]);
 
   const userIds = (users ?? []).map((u: { id: string }) => u.id);
@@ -27,12 +28,18 @@ export default async function AlunosAdminPage() {
     if (!subMap[s.userId]) subMap[s.userId] = s.planId;
   }
 
+  const partnerMap = Object.fromEntries(
+    (partners ?? []).map((p: { id: string; name: string }) => [p.id, p.name])
+  );
+
   return (
     <AlunosClient
-      users={(users ?? []) as { id: string; name: string; email: string; role: string; createdAt: string }[]}
+      users={(users ?? []) as { id: string; name: string; email: string; role: string; createdAt: string; origin: string; partnerId: string | null; groupTag: string | null }[]}
       plans={(plans ?? []) as { id: string; name: string; slug: string }[]}
+      partners={(partners ?? []) as { id: string; name: string; slug: string }[]}
       planMap={planMap}
       subMap={subMap}
+      partnerMap={partnerMap}
     />
   );
 }

@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   const rl = await adminAlunosLimiter.check(`admin:${user.id}`);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
-  const { name, email, password, planId } = await req.json();
+  const { name, email, password, planId, partnerId, groupTag } = await req.json();
   if (!name || !email || !password) return NextResponse.json({ error: "name, email e password são obrigatórios" }, { status: 400 });
 
   // Cria usuário no Supabase Auth (admin)
@@ -37,15 +37,20 @@ export async function POST(req: Request) {
   // Cria registro no DB (id gerado aqui pois o Supabase JS não usa @default(cuid()) do Prisma)
   const newId = crypto.randomUUID();
   const now = new Date().toISOString();
-  const { data: dbUser, error: dbErr } = await db.from("User").insert({
+  const insertPayload: Record<string, unknown> = {
     id: newId,
     supabaseId: authUser.user.id,
     name,
     email,
     role: "STUDENT",
+    origin: partnerId ? "partner" : "admin",
     createdAt: now,
     updatedAt: now,
-  }).select("id").single();
+  };
+  if (partnerId) insertPayload.partnerId = partnerId;
+  if (groupTag) insertPayload.groupTag = groupTag;
+
+  const { data: dbUser, error: dbErr } = await db.from("User").insert(insertPayload).select("id").single();
 
   if (dbErr) {
     log.error("db.admin_alunos_create_error", { table: "User" }, dbErr);
@@ -99,6 +104,9 @@ export async function POST(req: Request) {
       name,
       email,
       role: "STUDENT",
+      origin: partnerId ? "partner" : "admin",
+      partnerId: partnerId ?? null,
+      groupTag: groupTag ?? null,
       createdAt: now,
     },
   });

@@ -81,6 +81,7 @@ export async function POST(req: Request) {
     name,
     email,
     role: "STUDENT",
+    origin: "platform",
     createdAt: now,
     updatedAt: now,
   }).select("id").single();
