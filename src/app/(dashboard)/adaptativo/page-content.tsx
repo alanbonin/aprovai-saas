@@ -59,11 +59,12 @@ export function AdaptativoInner() {
   const [xpFlash, setXpFlash]   = useState(false);
   const [done, setDone]         = useState(false);
   const [sessionResults, setSessionResults] = useState<{ correct: number; total: number }>({ correct: 0, total: 0 });
+  const [wrongSaved, setWrongSaved] = useState(false); // progresso de erro já salvo
 
   const load = useCallback(async () => {
     setLoading(true);
     setIdx(0); setSelected(null); setRevealed(false); setDone(false);
-    setSessionResults({ correct: 0, total: 0 });
+    setSessionResults({ correct: 0, total: 0 }); setWrongSaved(false);
     const res = await fetch("/api/questoes/adaptativa?qtd=10").catch(() => null);
     if (res?.ok) {
       const d: AdaptResponse = await res.json();
@@ -105,6 +106,29 @@ export function AdaptativoInner() {
       setIdx(i => i + 1);
       setSelected(null);
       setRevealed(false);
+      setWrongSaved(false);
+    }
+  }
+
+  async function saveWrongAndReveal(questao: { id: number }) {
+    setWrongSaved(true);
+    setSessionResults(prev => ({ correct: prev.correct, total: prev.total + 1 }));
+    await fetch("/api/questoes/progresso", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ questionId: questao.id, correct: false, quality: QUALITY_MAP["again"] }),
+    }).catch(() => {});
+  }
+
+  function nextFromWrong() {
+    if (!data) return;
+    if (idx + 1 >= data.questoes.length) {
+      setDone(true);
+    } else {
+      setIdx(i => i + 1);
+      setSelected(null);
+      setRevealed(false);
+      setWrongSaved(false);
     }
   }
 
@@ -246,8 +270,8 @@ export function AdaptativoInner() {
                     setSelected(letter);
                     setRevealed(true);
                     if (letter !== questao.answer) {
-                      // Errou — salva automaticamente e avança após breve delay
-                      setTimeout(() => handleQuality("again", false), 1500);
+                      // Errou — salva progresso e mostra botão Próxima para aluno ler a explicação
+                      void saveWrongAndReveal(questao);
                     }
                   }}
                   className={cn("w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all text-sm", cls)}
@@ -266,9 +290,13 @@ export function AdaptativoInner() {
           {revealed && (
             <div className="mt-4 space-y-3">
               {questao.explanation && (
-                <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                  <p className="text-xs font-semibold text-gray-400 mb-1">Explicação</p>
-                  <p className="text-xs text-gray-300 leading-relaxed">{questao.explanation}</p>
+                <div className={cn(
+                  "rounded-xl border p-3",
+                  selected === questao.answer
+                    ? "bg-emerald-950/50 border-emerald-500/40"
+                    : "bg-red-950/50 border-red-500/40"
+                )}>
+                  <p className="text-gray-200 text-xs leading-relaxed">{questao.explanation}</p>
                 </div>
               )}
               <div className="relative">
@@ -290,6 +318,13 @@ export function AdaptativoInner() {
                     ))}
                   </div>
                 )}
+                {wrongSaved && (
+                  <button onClick={nextFromWrong}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors mt-1">
+                    {idx + 1 >= (data?.questoes.length ?? 0) ? "Ver resultado" : "Próxima"}
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -297,7 +332,7 @@ export function AdaptativoInner() {
           {/* Pular sem responder (se não revelou) */}
           {!revealed && (
             <button
-              onClick={() => setRevealed(true)}
+              onClick={() => { setRevealed(true); void saveWrongAndReveal(questao); }}
               className="mt-3 w-full py-2 rounded-xl border border-white/10 text-gray-500 text-xs hover:text-gray-300 transition-colors flex items-center justify-center gap-1"
             >
               <ChevronRight className="w-3.5 h-3.5" /> Ver gabarito sem responder

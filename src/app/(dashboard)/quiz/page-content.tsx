@@ -356,9 +356,13 @@ export function QuizInner() {
 
           {/* Explanation */}
           {q.explanation && (
-            <div className="rounded-xl bg-indigo-500/[0.06] border border-indigo-500/15 p-3">
-              <p className="text-[10px] text-indigo-400 font-semibold mb-1">Justificativa</p>
-              <p className="text-xs text-gray-400 leading-relaxed">{q.explanation}</p>
+            <div className={cn(
+              "rounded-xl border p-3",
+              results[current]?.correct
+                ? "bg-emerald-950/50 border-emerald-500/40"
+                : "bg-red-950/50 border-red-500/40"
+            )}>
+              <p className="text-gray-200 text-xs leading-relaxed">{q.explanation}</p>
             </div>
           )}
 

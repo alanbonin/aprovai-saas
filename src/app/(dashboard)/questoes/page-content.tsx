@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   CheckCircle, XCircle, ChevronRight, RotateCcw, Filter,
-  Star, Zap, BookOpen, Trophy, Flag, X, Lightbulb,
+  Star, Zap, BookOpen, Trophy, Flag, X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSessionState } from "@/lib/use-session-state";
@@ -65,7 +65,6 @@ export function QuestoesInner() {
   const [favoritos, setFavoritos]   = useState<number[]>([]);
   const [selected, setSelected]     = useState<string | null>(null);
   const [quality, setQuality]       = useState<string | null>(null);
-  const [showResult, setShowResult] = useState(false);
   const [loading, setLoading]       = useState(questions.length === 0); // não recarrega se tem questões
   const [xpFlash, setXpFlash]       = useState(0);
   const [showFilter, setShowFilter] = useState(
@@ -136,7 +135,6 @@ export function QuestoesInner() {
     setCurrent(0);
     setSelected(null);
     setQuality(null);
-    setShowResult(false);
     setScore({ correct: 0, total: 0, xpGained: 0 });
     setLoading(false);
   }, [filterBanca, filterLevel, filterSubject, filterYear, onlyFavs, onlyErros]);
@@ -154,7 +152,6 @@ export function QuestoesInner() {
   function handleSelect(key: string) {
     if (selected) return;
     setSelected(key);
-    setShowResult(true); // abre explicação automaticamente
     setActiveTermo(null); // fecha glossário aberto
     const isCorrect = key === q!.answer;
     setScore(s => ({
@@ -166,14 +163,14 @@ export function QuestoesInner() {
       setXpFlash(f => f + 1);
       setTimeout(() => setXpFlash(f => f - 1), 1500);
     } else {
-      // Auto-salva como erro no caderno de erros e avança automaticamente
+      // Auto-salva como erro no caderno de erros
       fetch("/api/questoes/progresso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId: q!.id, correct: false, quality: "errei" }),
       }).catch(() => {});
+      // Mostra botão Próxima imediatamente (aluno lê a explicação e avança quando quiser)
       setQuality("__auto__");
-      setTimeout(next, 1500);
     }
   }
 
@@ -195,7 +192,6 @@ export function QuestoesInner() {
       setCurrent(c => c + 1);
       setSelected(null);
       setQuality(null);
-      setShowResult(false);
     } else {
       setDone(true);
     }
@@ -566,21 +562,13 @@ export function QuestoesInner() {
             <div className="mt-5 space-y-3">
               {/* Explanation — abre automaticamente ao responder */}
               {q.explanation && (
-                <div>
-                  {/* Header clicável para ocultar/mostrar */}
-                  <button
-                    onClick={() => setShowResult(r => !r)}
-                    className="flex items-center gap-2 text-xs text-amber-400/80 hover:text-amber-300 mb-2 transition-colors"
-                  >
-                    <Lightbulb className="w-3.5 h-3.5" />
-                    <span className="font-medium">{showResult ? "Ocultar" : "Ver"} explicação</span>
-                    <ChevronRight className={cn("w-3 h-3 transition-transform", showResult && "rotate-90")} />
-                  </button>
-                  {showResult && (
-                    <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30">
-                      <p className="text-xs text-amber-100 leading-relaxed">{q.explanation}</p>
-                    </div>
-                  )}
+                <div className={cn(
+                  "p-4 rounded-xl border",
+                  selected === q.answer
+                    ? "bg-emerald-950/50 border-emerald-500/40"
+                    : "bg-red-950/50 border-red-500/40"
+                )}>
+                  <p className="text-gray-200 text-sm leading-relaxed">{q.explanation}</p>
                 </div>
               )}
 

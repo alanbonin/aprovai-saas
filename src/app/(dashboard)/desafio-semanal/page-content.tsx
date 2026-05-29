@@ -274,9 +274,13 @@ export function DesafioSemanalInner() {
 
           {/* Explanation */}
           {answered && q.explanation && (
-            <div className="rounded-xl bg-purple-500/[0.06] border border-purple-500/15 p-4 mb-4">
-              <p className="text-xs font-semibold text-purple-400 mb-1.5">Justificativa</p>
-              <p className="text-xs text-gray-400 leading-relaxed">{q.explanation}</p>
+            <div className={cn(
+              "rounded-xl border p-4 mb-4",
+              sel === q.answer
+                ? "bg-emerald-950/50 border-emerald-500/40"
+                : "bg-red-950/50 border-red-500/40"
+            )}>
+              <p className="text-gray-200 text-sm leading-relaxed">{q.explanation}</p>
             </div>
           )}
 

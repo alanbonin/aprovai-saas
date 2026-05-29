@@ -35,7 +35,6 @@ export function RevisaoInner() {
   const [current, setCurrent]     = useState(0);
   const [selected, setSelected]   = useState<string | null>(null);
   const [quality, setQuality]     = useState<string | null>(null);
-  const [showExp, setShowExp]     = useState(false);
   const [filterSubject, setFilterSubject] = useState("");
   const [loading, setLoading]     = useState(true);
   const [done, setDone]           = useState(false);
@@ -61,7 +60,6 @@ export function RevisaoInner() {
     setCurrent(0);
     setSelected(null);
     setQuality(null);
-    setShowExp(false);
     setScore({ correct: 0, total: 0, xp: 0 });
     setLoading(false);
   }, []);
@@ -99,7 +97,6 @@ export function RevisaoInner() {
       setCurrent(c => c + 1);
       setSelected(null);
       setQuality(null);
-      setShowExp(false);
     } else {
       setDone(true);
     }
@@ -244,12 +241,13 @@ export function RevisaoInner() {
           {selected && (
             <div className="mt-5 space-y-3">
               {q.explanation && (
-                <div onClick={() => setShowExp(v => !v)} className="cursor-pointer">
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-1.5 hover:text-gray-400">
-                    <span>{showExp ? "Ocultar" : "Ver"} explicação</span>
-                    <ChevronRight className={cn("w-3 h-3 transition-transform", showExp && "rotate-90")} />
-                  </div>
-                  {showExp && <p className="text-xs text-gray-400 leading-relaxed p-3 rounded-lg bg-white/5 border border-white/5">{q.explanation}</p>}
+                <div className={cn(
+                  "p-3 rounded-lg border",
+                  selected === q.answer
+                    ? "bg-emerald-950/50 border-emerald-500/40"
+                    : "bg-red-950/50 border-red-500/40"
+                )}>
+                  <p className="text-gray-200 text-xs leading-relaxed">{q.explanation}</p>
                 </div>
               )}
 
@@ -265,6 +263,15 @@ export function RevisaoInner() {
                     ))}
                   </div>
                 </div>
+              )}
+
+              {/* Botão Próxima — adicional ao quality, permite avançar sem classificar */}
+              {!quality && (
+                <button onClick={next}
+                  className="w-full py-2.5 bg-indigo-600/70 hover:bg-indigo-600 border border-indigo-500/40 rounded-xl text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                  <ChevronRight className="w-4 h-4" />
+                  {current < questions.length - 1 ? "Pular (Próxima →)" : "Ver resultado"}
+                </button>
               )}
 
               {quality && (

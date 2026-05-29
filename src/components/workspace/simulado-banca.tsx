@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { ClipboardList, AlertCircle, ChevronRight, RotateCcw, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { ClipboardList, AlertCircle, RotateCcw, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const NIVEIS = [
@@ -38,7 +38,6 @@ export function SimuladoBanca({ subjects, profile }: Props) {
   const [questoes, setQuestoes] = useState<QuestaoGerada[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const [showExpl, setShowExpl] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   // answers[i] = true (acertou) | false (errou) — para breakdown por matéria
   const [answers, setAnswers] = useState<boolean[]>([]);
@@ -67,7 +66,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
 
       setQuestoes(data.questoes ?? []);
       setSimuladoId(data.id ?? null);
-      setCurrent(0); setSelected(null); setShowExpl(false);
+      setCurrent(0); setSelected(null);
       setScore({ correct: 0, total: 0 });
       setAnswers([]);
       const t = Date.now(); setStartTime(t);
@@ -108,7 +107,6 @@ export function SimuladoBanca({ subjects, profile }: Props) {
     } else {
       setCurrent(c => c + 1);
       setSelected(null);
-      setShowExpl(false);
     }
   }
 
@@ -290,15 +288,14 @@ export function SimuladoBanca({ subjects, profile }: Props) {
 
         {selected && (
           <div className="space-y-3">
-            {/* Explicação */}
-            <div>
-              <button onClick={() => setShowExpl(r => !r)} className="text-xs text-indigo-400 hover:text-indigo-300 mb-1 flex items-center gap-1">
-                <ChevronRight className={cn("w-3 h-3 transition-transform", showExpl && "rotate-90")} />
-                {showExpl ? "Ocultar" : "Ver"} explicação
-              </button>
-              {showExpl && (
-                <p className="text-xs text-gray-400 leading-relaxed p-3 rounded-xl bg-white/5 border border-white/5">{q.explanation}</p>
-              )}
+            {/* Explicação — abre automaticamente com cor baseada no acerto */}
+            <div className={cn(
+              "p-3 rounded-xl border",
+              selected === q.answer
+                ? "bg-emerald-950/50 border-emerald-500/40"
+                : "bg-red-950/50 border-red-500/40"
+            )}>
+              <p className="text-gray-200 text-xs leading-relaxed">{q.explanation}</p>
             </div>
 
             {/* Dica da banca */}
@@ -374,7 +371,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
           <RotateCcw className="w-4 h-4" /> Novo simulado
         </button>
         <button onClick={() => {
-          setStep("simulado"); setCurrent(0); setSelected(null); setShowExpl(false);
+          setStep("simulado"); setCurrent(0); setSelected(null);
           setScore({ correct: 0, total: 0 }); setAnswers([]);
           const t = Date.now(); setStartTime(t); setElapsed(0);
           const ref = setInterval(() => setElapsed(Math.floor((Date.now() - t) / 1000)), 1000);

@@ -81,7 +81,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
   const [questions, setQuestions] = useState<Question[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
-  const [showExpl, setShowExpl] = useState(false);
   const [answers, setAnswers] = useState<{ questionId: number; correct: boolean; selected: string | null }[]>([]);
   const [gabaritoExpanded, setGabaritoExpanded] = useState<number | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -180,7 +179,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     setQuestions(data.questions);
     setCurrent(0);
     setSelected(null);
-    setShowExpl(false);
     setAnswers([]);
     setTimeLeft(timeMins * 60);
     setPhase("running");
@@ -202,7 +200,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     } else {
       setCurrent(next);
       setSelected(null);
-      setShowExpl(false);
     }
   }
 
@@ -495,16 +492,13 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
           {selected && (
             <div className="space-y-3">
               {q.explanation && (
-                <div>
-                  <button onClick={() => setShowExpl(!showExpl)}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 mb-2">
-                    {showExpl ? "Ocultar" : "Ver"} explicação
-                  </button>
-                  {showExpl && (
-                    <div className="p-3 rounded-lg bg-indigo-500/5 border border-indigo-500/20 text-xs text-gray-300 leading-relaxed">
-                      {q.explanation}
-                    </div>
-                  )}
+                <div className={cn(
+                  "p-3 rounded-lg border text-xs leading-relaxed",
+                  selected === q.answer
+                    ? "bg-emerald-950/50 border-emerald-500/40"
+                    : "bg-red-950/50 border-red-500/40"
+                )}>
+                  <p className="text-gray-200">{q.explanation}</p>
                 </div>
               )}
               <button onClick={nextQuestion}

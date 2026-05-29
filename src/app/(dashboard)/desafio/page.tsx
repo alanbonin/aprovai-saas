@@ -147,14 +147,14 @@ export default function DesafioPage() {
     answers.current.push({ questionId: q.id, correct: isCorrect });
 
     if (!isCorrect) {
-      // Auto-save como erro no caderno de erros e avança automaticamente
+      // Auto-save como erro no caderno de erros
       fetch("/api/questoes/progresso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ questionId: q.id, correct: false, quality: "errei" }),
       }).catch(() => {});
+      // Mostra botão Próxima imediatamente (aluno lê a explicação e avança quando quiser)
       setQuality("__auto__");
-      setTimeout(next, 1500);
     }
   }
 
@@ -478,8 +478,13 @@ export default function DesafioPage() {
         {selected && (
           <div className="mt-5 space-y-3">
             {q.explanation && (
-              <div className="text-xs text-gray-500 leading-relaxed p-3 rounded-lg bg-white/5 border border-white/5">
-                <strong className="text-gray-400">Explicação: </strong>{q.explanation}
+              <div className={cn(
+                "p-4 rounded-xl border",
+                selected === q.answer
+                  ? "bg-emerald-950/50 border-emerald-500/40"
+                  : "bg-red-950/50 border-red-500/40"
+              )}>
+                <p className="text-gray-200 text-sm leading-relaxed">{q.explanation}</p>
               </div>
             )}
             {!quality && selected === q.answer && (

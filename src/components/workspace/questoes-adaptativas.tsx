@@ -84,7 +84,6 @@ export function QuestoesAdaptativas({ subjectId, subjectName, onClose }: Props) 
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [answered, setAnswered] = useState(false);
-  const [showExpl, setShowExpl] = useState(false);
   const [results, setResults] = useState<{ correct: boolean; id: number }[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -133,7 +132,6 @@ export function QuestoesAdaptativas({ subjectId, subjectName, onClose }: Props) 
       setCurrent(c => c + 1);
       setSelected(null);
       setAnswered(false);
-      setShowExpl(false);
     }
   }
 
@@ -179,7 +177,7 @@ export function QuestoesAdaptativas({ subjectId, subjectName, onClose }: Props) 
         <div className="flex gap-3 justify-center">
           <button onClick={() => {
             setStep("loading");
-            setCurrent(0); setSelected(null); setAnswered(false); setShowExpl(false); setResults([]);
+            setCurrent(0); setSelected(null); setAnswered(false); setResults([]);
             // Re-fetch
             const url = `/api/questoes/adaptativa?qtd=10${subjectId ? `&subjectId=${subjectId}` : ""}`;
             fetch(url).then(r => r.json()).then(d => {
@@ -266,7 +264,7 @@ export function QuestoesAdaptativas({ subjectId, subjectName, onClose }: Props) 
       {answered && (
         <div className={cn(
           "rounded-xl border p-4 mb-5",
-          isCorrect ? "bg-green-500/8 border-green-500/20" : "bg-red-500/8 border-red-500/20"
+          isCorrect ? "bg-emerald-950/50 border-emerald-500/40" : "bg-red-950/50 border-red-500/40"
         )}>
           <div className="flex items-center gap-2 mb-2">
             {isCorrect
@@ -276,17 +274,9 @@ export function QuestoesAdaptativas({ subjectId, subjectName, onClose }: Props) 
             {saving && <Loader2 className="w-3 h-3 text-gray-600 animate-spin ml-auto" />}
           </div>
           {q.explanation && (
-            <>
-              <button onClick={() => setShowExpl(v => !v)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors">
-                {showExpl ? "Ocultar explicação" : "Ver explicação"}
-              </button>
-              {showExpl && (
-                <p className="text-xs text-gray-300 leading-relaxed mt-2 border-t border-white/8 pt-2">
-                  {q.explanation}
-                </p>
-              )}
-            </>
+            <p className="text-gray-200 text-xs leading-relaxed mt-2 border-t border-white/8 pt-2">
+              {q.explanation}
+            </p>
           )}
         </div>
       )}
