@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { log } from "@/lib/logger";
+import { resolveCargoId } from "@/lib/cargos";
+import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
 
 /**
  * POST /api/onboarding
@@ -107,30 +109,59 @@ export async function POST(req: Request) {
     log.info("onboarding.metas_saved", { userId: dbUser.id, questoesDia, questoesMeta });
   }
 
-  // Inscreve automaticamente nas matérias da categoria escolhida
-  if (body.categoria) {
-    const { data: subjects } = await db
-      .from("Subject")
-      .select("id")
-      .eq("categoria", body.categoria)
-      .limit(50);
+  // Inscreve nas matérias corretas do edital via mapeamento de cargos
+  {
+    const now = new Date().toISOString();
+    let subjectIds: string[] = [];
+    let fromEdital = false;
 
-    if (subjects && subjects.length > 0) {
-      // Busca inscrições existentes para não duplicar
+    // 1. Tenta resolver pelo cargo+orgao (fonte primária — mapeamento de editais)
+    if (body.cargo || body.orgao) {
+      const resolved = resolveCargoId(body.cargo ?? "", body.orgao ?? "");
+      if (resolved) {
+        const nomesEdital = getMateriasParaCargo(resolved.cargoId, resolved.estado);
+        if (nomesEdital.length > 0) {
+          const { data: byName } = await db
+            .from("Subject")
+            .select("id")
+            .in("name", nomesEdital);
+          subjectIds = (byName ?? []).map((s: { id: string }) => s.id);
+          fromEdital = true;
+          log.info("onboarding.cargo_resolved", {
+            cargoId: resolved.cargoId,
+            estado: resolved.estado ?? null,
+            found: subjectIds.length,
+          });
+        }
+      }
+    }
+
+    // 2. Fallback: categoria enviada pelo wizard (ENEM, OAB, etc.)
+    if (subjectIds.length === 0 && body.categoria) {
+      const { data: byCat } = await db
+        .from("Subject")
+        .select("id")
+        .eq("categoria", body.categoria)
+        .limit(50);
+      subjectIds = (byCat ?? []).map((s: { id: string }) => s.id);
+    }
+
+    // 3. Insere evitando duplicatas
+    if (subjectIds.length > 0) {
       const { data: existing } = await db
         .from("StudentSubject")
         .select("subjectId")
         .eq("userId", dbUser.id);
+      const existingIds = new Set((existing ?? []).map((e: { subjectId: string }) => e.subjectId));
 
-      const existingIds = new Set((existing ?? []).map(e => e.subjectId));
-
-      const toInsert = subjects
-        .filter(s => !existingIds.has(s.id))
-        .map(s => ({
+      const toInsert = subjectIds
+        .filter(id => !existingIds.has(id))
+        .map(subjectId => ({
+          id: crypto.randomUUID(),
           userId: dbUser.id,
-          subjectId: s.id,
-          fromEdital: false,
-          createdAt: new Date().toISOString(),
+          subjectId,
+          fromEdital,
+          createdAt: now,
         }));
 
       if (toInsert.length > 0) {
