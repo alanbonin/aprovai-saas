@@ -446,11 +446,13 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     setActiveTab(tab);
   }
 
-  function onProgressUpdate(questionId: number, _nextReview: string) {
+  function onProgressUpdate(questionId: number, _nextReview: string, correct?: boolean) {
     setContent(c => ({
       ...c,
       questoes: (c.questoes as Question[]).map(q =>
-        q.id === questionId ? { ...q, _nextReview } : q
+        q.id === questionId
+          ? { ...q, _nextReview, _seen: true, ...(correct !== undefined ? { _correct: correct } : {}) }
+          : q
       ),
     }));
   }
@@ -1096,7 +1098,7 @@ interface Question {
   optionA: string | null; optionB: string | null; optionC: string | null; optionD: string | null; optionE: string | null;
   explanation: string | null; level: string;
   artigo: string | null; dicaBanca: string | null;
-  _nextReview: string | null; _interval: number | null; _seen: boolean;
+  _nextReview: string | null; _interval: number | null; _seen: boolean; _correct: boolean | null;
 }
 interface Flashcard { id: string; front: string; back: string; deckName: string; setId: string; nextReview: string | null; interval: number; easeFactor: number; due: boolean; }
 interface SimuladoItem {
@@ -1249,7 +1251,7 @@ function TermoTooltip({ termo, onClose }: { termo: GlossTermo; onClose: () => vo
 // ── Toggle Questões Normal vs Adaptativas ────────────────────────────────────
 function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUpdate, onCelebrate, isPremium, todayCount }: {
   subjectId: string; subjectName: string; items: Question[];
-  onProgressUpdate: (id: number, next: string) => void;
+  onProgressUpdate: (id: number, next: string, correct?: boolean) => void;
   onCelebrate?: (msg: string) => void;
   isPremium: boolean; todayCount: number;
 }) {
@@ -1330,7 +1332,7 @@ const CORRECT_MSGS = [
 
 function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPremium = true, todayCount = 0 }: {
   items: Question[]; subjectName: string;
-  onProgressUpdate: (id: number, next: string) => void;
+  onProgressUpdate: (id: number, next: string, correct?: boolean) => void;
   onCelebrate?: (msg: string) => void;
   isPremium?: boolean; todayCount?: number;
 }) {
@@ -1405,8 +1407,10 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
   let filtered = items;
   if (filterLevel) filtered = filtered.filter(q => q.level === filterLevel);
-  if (filterStatus === "pendentes") filtered = filtered.filter(q => !q._seen || !q._nextReview || new Date(q._nextReview).getTime() <= Date.now());
-  if (filterStatus === "revisadas") filtered = filtered.filter(q => q._seen && q._nextReview && new Date(q._nextReview).getTime() > Date.now());
+  // Pendentes = nunca respondida OU respondeu errado na última tentativa
+  if (filterStatus === "pendentes") filtered = filtered.filter(q => !q._seen || q._correct === false);
+  // Revisadas = respondeu CORRETAMENTE pelo menos uma vez
+  if (filterStatus === "revisadas") filtered = filtered.filter(q => q._correct === true);
   if (filterStatus === "favoritas") filtered = filtered.filter(q => favoritos.has(q.id));
   // Embaralha as questões para não seguir sempre a mesma ordem
   filtered = shuffleArray(filtered, shuffleSeed);
@@ -1485,8 +1489,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   }
 
   async function handleQualityDirect(quality: "easy" | "ok" | "hard" | "again") {
-    // Salva progresso sem avançar imediatamente (usado no auto-advance de erros)
     if (!q) return;
+    const isCorrect = quality !== "again";
     const res = await fetch("/api/questoes/progresso", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, quality }),
@@ -1494,7 +1498,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     if (res.ok) {
       const data = await res.json();
       if (data.limitReached) { setDailyLimitHit(true); return; }
-      onProgressUpdate(q.id, data.nextReview);
+      onProgressUpdate(q.id, data.nextReview, isCorrect);
       setAnswered(prev => new Set([...prev, q.id]));
     }
     // Avança após 1.5s para o aluno ver a resposta correta
@@ -1509,18 +1513,15 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
   async function handleQuality(quality: "easy" | "ok" | "hard" | "again") {
     if (!q) return;
+    const isCorrect = quality !== "again";
     const res = await fetch("/api/questoes/progresso", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, quality }),
     });
     if (res.ok) {
       const data = await res.json();
-      // Limite diário atingido (trial)
-      if (data.limitReached) {
-        setDailyLimitHit(true);
-        return;
-      }
-      onProgressUpdate(q.id, data.nextReview);
+      if (data.limitReached) { setDailyLimitHit(true); return; }
+      onProgressUpdate(q.id, data.nextReview, isCorrect);
       setAnswered(prev => new Set([...prev, q.id]));
     }
     setCurrent(c => c + 1);

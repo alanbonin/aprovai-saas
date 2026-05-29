@@ -29,7 +29,7 @@ export async function GET(req: Request) {
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
       .eq("subjectId", subjectId)
       .eq("aprovado", true)
-      .limit(200),
+      .limit(5000), // sem limite prático — matérias podem ter 1000+ questões
     db.from("Progress")
       .select("questionId, nextReview, interval, correct")
       .eq("userId", dbUser.id),
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     const fallback = await db.from("Question")
       .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year, level, artigo, dicaBanca")
       .eq("subjectId", subjectId)
-      .limit(200);
+      .limit(5000);
     questoes = fallback.data;
   }
 
@@ -60,6 +60,7 @@ export async function GET(req: Request) {
       _nextReview: prog?.nextReview ?? null,
       _interval: prog?.interval ?? null,
       _seen: !!prog,
+      _correct: prog?.correct ?? null, // null = nunca respondida, true = acertou, false = errou
     };
   }).sort((a: { _seen: boolean; _nextReview: string | null }, b: { _seen: boolean; _nextReview: string | null }) => {
     const aOverdue = !a._seen || !a._nextReview || new Date(a._nextReview).getTime() <= now;
