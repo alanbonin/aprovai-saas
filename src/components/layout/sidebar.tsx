@@ -71,7 +71,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/metas",        label: "Metas",       icon: "🎯" },
       { href: "/cronograma",   label: "Cronograma",  icon: "📅" },
       { href: "/plano-semanal",label: "Plano IA",    icon: "🤖" },
-      { href: "/edital-watch", label: "Radar Editais",icon: "📡" },
     ],
   },
   {
@@ -388,7 +387,7 @@ const TRIAL_LOCKED_HREFS = new Set([
   "/revisao", "/agenda-revisoes", "/favoritos",
   "/glossario", "/artigos", "/caso", "/redacao", "/materiais",
   "/resumo-semanal", "/diagnostico", "/bancas", "/nivel", "/comparar",
-  "/plano-semanal", "/edital-watch",
+  "/plano-semanal",
   "/ranking", "/grupos", "/conquistas", "/timeline", "/notificacoes",
 ]);
 
