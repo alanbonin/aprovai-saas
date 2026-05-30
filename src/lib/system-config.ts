@@ -68,7 +68,7 @@ export async function getConfig<K extends ConfigKey>(key: K): Promise<typeof CON
     const { data } = await db
       .from("Note")
       .select("content")
-      .eq("title", `${CONFIG_PREFIX}${key}`)
+      .eq("subjectId", `${CONFIG_PREFIX}${key}`)
       .is("userId", null)
       .maybeSingle();
 
@@ -84,13 +84,13 @@ export async function getConfigs<K extends ConfigKey>(keys: K[]): Promise<Record
   const prefixedKeys = keys.map(k => `${CONFIG_PREFIX}${k}`);
   const { data } = await db
     .from("Note")
-    .select("title, content")
-    .in("title", prefixedKeys)
+    .select("subjectId, content")
+    .in("subjectId", prefixedKeys)
     .is("userId", null);
 
   const result = {} as Record<K, typeof CONFIG_DEFAULTS[K]>;
   for (const key of keys) {
-    const row = data?.find(r => r.title === `${CONFIG_PREFIX}${key}`);
+    const row = data?.find(r => r.subjectId === `${CONFIG_PREFIX}${key}`);
     result[key] = row?.content ? JSON.parse(row.content) : CONFIG_DEFAULTS[key];
   }
   return result;
@@ -100,13 +100,13 @@ export async function getConfigs<K extends ConfigKey>(keys: K[]): Promise<Record
 export async function getAllConfigs(): Promise<Record<string, ConfigValue>> {
   const { data } = await db
     .from("Note")
-    .select("title, content")
-    .like("title", `${CONFIG_PREFIX}%`)
+    .select("subjectId, content")
+    .like("subjectId", `${CONFIG_PREFIX}%`)
     .is("userId", null);
 
   const result: Record<string, ConfigValue> = { ...(CONFIG_DEFAULTS as Record<string, ConfigValue>) };
   for (const row of data ?? []) {
-    const key = row.title.replace(CONFIG_PREFIX, "");
+    const key = (row.subjectId as string).replace(CONFIG_PREFIX, "");
     if (key in CONFIG_DEFAULTS && row.content) {
       try { result[key] = JSON.parse(row.content); } catch { /* ignora */ }
     }
@@ -116,26 +116,27 @@ export async function getAllConfigs(): Promise<Record<string, ConfigValue>> {
 
 /** Salva uma configuração no banco */
 export async function setConfig(key: string, value: ConfigValue): Promise<void> {
-  const title = `${CONFIG_PREFIX}${key}`;
+  const subjectId = `${CONFIG_PREFIX}${key}`;
   const content = JSON.stringify(value);
 
   const { data: existing } = await db
     .from("Note")
     .select("id")
-    .eq("title", title)
+    .eq("subjectId", subjectId)
     .is("userId", null)
     .maybeSingle();
 
   if (existing) {
-    await db.from("Note").update({ content }).eq("id", (existing as { id: string }).id);
+    await db.from("Note").update({ content, updatedAt: new Date().toISOString() })
+      .eq("id", (existing as { id: string }).id);
   } else {
     await db.from("Note").insert({
       id: crypto.randomUUID(),
-      title,
+      subjectId,
       content,
       userId: null,
-      subjectId: null,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
   }
 }
@@ -145,6 +146,6 @@ export async function deleteConfig(key: string): Promise<void> {
   await db
     .from("Note")
     .delete()
-    .eq("title", `${CONFIG_PREFIX}${key}`)
+    .eq("subjectId", `${CONFIG_PREFIX}${key}`)
     .is("userId", null);
 }

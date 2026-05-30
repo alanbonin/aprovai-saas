@@ -347,15 +347,35 @@ async function main() {
     }
   }
 
-  // Conta questões existentes por tópico
+  // Conta questões existentes por tópico via RPC (mesma função do admin — precisa)
   let questionCounts = {};
   if (ONLY_EMPTY || TARGET_PER_TOPIC > 0) {
-    const { data: qCounts } = await db.from("Question")
-      .select("topicId")
-      .in("topicId", allTopics.map(t => t.id));
-    (qCounts ?? []).forEach(q => {
-      if (q.topicId) questionCounts[q.topicId] = (questionCounts[q.topicId] || 0) + 1;
-    });
+    const { data: rpcCounts, error: rpcErr } = await db.rpc("get_question_counts_by_topic");
+    if (rpcErr) {
+      // Fallback: query direta em chunks com paginação
+      const allIds = allTopics.map(t => t.id);
+      const CHUNK = 100;
+      for (let i = 0; i < allIds.length; i += CHUNK) {
+        const chunk = allIds.slice(i, i + CHUNK);
+        let page = 0;
+        while (true) {
+          const { data: qCounts } = await db.from("Question")
+            .select("topicId")
+            .in("topicId", chunk)
+            .range(page * 1000, (page + 1) * 1000 - 1);
+          if (!qCounts?.length) break;
+          qCounts.forEach(q => {
+            if (q.topicId) questionCounts[q.topicId] = (questionCounts[q.topicId] || 0) + 1;
+          });
+          if (qCounts.length < 1000) break;
+          page++;
+        }
+      }
+    } else {
+      (rpcCounts ?? []).forEach(row => {
+        if (row.topic_id) questionCounts[row.topic_id] = Number(row.question_count);
+      });
+    }
   }
 
   // Filtra tópicos que ainda precisam de questões
