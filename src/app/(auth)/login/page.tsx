@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Tela = "login" | "forgot" | "forgot-ok";

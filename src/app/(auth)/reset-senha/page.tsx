@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { Trophy, CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ResetSenhaPage() {
@@ -19,6 +19,8 @@ export default function ResetSenhaPage() {
     supabase.auth.getSession().then(({ data }) => {
       if (!data.session) router.push("/login");
     });
+  // supabase e router são estáveis entre renders — sem risco de loop
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleReset(e: React.FormEvent) {
@@ -31,17 +33,23 @@ export default function ResetSenhaPage() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     setDone(true);
-    setTimeout(() => router.push("/dashboard"), 2500);
+    setTimeout(() => router.push("/hoje"), 2500);
   }
 
   return (
     <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-white" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
+          <div className="text-left">
+            <p className="font-bold text-lg leading-tight">
+              <span className="text-white">Aprov</span>
+              <span style={{ color: "#0ab5bd" }}>AI</span>
+              <span className="text-white">360</span>
+            </p>
+            <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
           </div>
-          <span className="text-white font-bold text-2xl">Aprovai</span>
         </div>
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
           {done ? (

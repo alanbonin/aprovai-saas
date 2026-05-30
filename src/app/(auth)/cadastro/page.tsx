@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function CadastroPage() {
