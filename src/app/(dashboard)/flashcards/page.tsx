@@ -84,6 +84,7 @@ export default function FlashcardsPage() {
   const [done, setDone]         = useState(false);
   const [xpFlash, setXpFlash]   = useState(false);
   const [sessionStats, setSessionStats] = useState({ lembrei: 0, dificil: 0, naoLembrei: 0 });
+  const [nextReviewMsg, setNextReviewMsg] = useState<string | null>(null);
 
   const loadDecks = useCallback(async () => {
     try {
@@ -167,6 +168,22 @@ export default function FlashcardsPage() {
       setXpFlash(true);
       setTimeout(() => setXpFlash(false), 1500);
     }
+
+    // Calcula próxima revisão aproximada para exibir mensagem fugaz
+    const interval =
+      quality === "lembrei"
+        ? Math.max(1, Math.round((card.easeFactor ?? 2.5) * (card.interval ?? 1)))
+        : quality === "dificil"
+        ? 1
+        : 0;
+    const reviewMsg =
+      quality === "nao-lembrei"
+        ? "🔄 Revisar em breve (hoje)"
+        : interval === 1
+        ? "✅ Próxima revisão em 1 dia"
+        : `✅ Próxima revisão em ${interval} dias`;
+    setNextReviewMsg(reviewMsg);
+    setTimeout(() => setNextReviewMsg(null), 2000);
 
     setSessionStats(prev => ({
       ...prev,
@@ -488,6 +505,13 @@ export default function FlashcardsPage() {
               className="py-3 rounded-xl bg-green-600/20 border border-green-500/30 text-green-300 text-xs font-bold hover:bg-green-600/30 transition-all">
               😄 Lembrei!
             </button>
+          </div>
+          {/* Mensagem fugaz de próxima revisão */}
+          <div
+            className="text-xs text-gray-400 text-center mt-1 transition-opacity duration-500"
+            style={{ opacity: nextReviewMsg ? 1 : 0, minHeight: "1.25rem" }}
+          >
+            {nextReviewMsg ?? ""}
           </div>
         </div>
       ) : (

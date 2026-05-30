@@ -4,6 +4,7 @@ import { getUserWithPlan, db } from "@/lib/db";
 
 const READ_PREFIX = "__NOTIF_READ__";
 const ADMIN_PREFIX = "__ADMIN_NOTIF__";
+const SIMULADO_NOTIF_PREFIX = "__SIMULADO_NOTIF__";
 
 /** Busca IDs de notificações já lidas pelo aluno */
 async function getReadIds(userId: string): Promise<Set<string>> {
@@ -36,12 +37,13 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const [profile, flashcardSets, readNote, adminNotes, totalProgress] = await Promise.all([
+  const [profile, flashcardSets, readNote, adminNotes, totalProgress, simuladoNote] = await Promise.all([
     db.from("StudentProfile").select("streak, xp, lastStudyDate, dataProva, cargo").eq("userId", dbUser.id).single(),
     db.from("FlashcardSet").select("cards").eq("userId", dbUser.id),
     db.from("Note").select("id, content").eq("userId", dbUser.id).eq("subjectId", READ_PREFIX).single(),
     db.from("Note").select("id, content, updatedAt").eq("subjectId", ADMIN_PREFIX).order("updatedAt", { ascending: false }).limit(5),
     db.from("Progress").select("id", { count: "exact" }).eq("userId", dbUser.id),
+    db.from("Note").select("id, content, updatedAt").eq("userId", dbUser.id).eq("subjectId", SIMULADO_NOTIF_PREFIX).single(),
   ]);
 
   const readIds = await getReadIds(dbUser.id);
@@ -162,6 +164,29 @@ export async function GET() {
         read: readIds.has(id),
       });
     }
+  }
+
+  // --- Simulado concluído ---
+  if (simuladoNote.data) {
+    try {
+      type SimuladoPayload = { correct: number; total: number; score: number; at: string };
+      const payload = JSON.parse(simuladoNote.data.content ?? "{}") as SimuladoPayload;
+      if (payload.total > 0) {
+        // Só exibe se o simulado foi nas últimas 24h
+        const simuladoAt = new Date(payload.at);
+        const hoursDiff = (now.getTime() - simuladoAt.getTime()) / 3600000;
+        if (hoursDiff <= 24) {
+          const id = `simulado_${simuladoNote.data.id}`;
+          notifs.push({
+            id, type: "achievement", icon: "🏆",
+            title: "Simulado concluído!",
+            message: `Você acertou ${payload.correct}/${payload.total} questões (${payload.score}%). ${payload.score >= 70 ? "Ótimo resultado! 🎉" : "Continue praticando! 💪"}`,
+            createdAt: payload.at,
+            read: readIds.has(id),
+          });
+        }
+      }
+    } catch { /* skip malformed */ }
   }
 
   // --- Admin announcements ---

@@ -33,6 +33,17 @@ function navigate(key: string) {
   window.dispatchEvent(new CustomEvent("aprovai:navigate", { detail: { nav: action.nav } }));
 }
 
+// ── Parser simples de Markdown ────────────────────────────────────────────────
+function parseMarkdown(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code class="bg-white/10 px-1 rounded text-sm font-mono">$1</code>')
+    .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc">$1</li>')
+    .replace(/^(\d+)\. (.+)$/gm, '<li class="ml-4 list-decimal">$2</li>')
+    .replace(/\n/g, '<br/>');
+}
+
 // ── Renderiza texto com [[IR:X]] convertidos em action cards inline ───────────
 function renderWithActions(text: string) {
   // Divide o texto pelos marcadores [[IR:X]]
@@ -702,9 +713,38 @@ export function MentorChat({
                           </span>
                         ) : (
                           msg.content
-                            ? <span style={{ whiteSpace: "pre-wrap" }}>{renderWithActions(msg.content)}</span>
+                            ? <span
+                                dangerouslySetInnerHTML={{ __html: parseMarkdown(
+                                  // Remove [[IR:X]] markers before rendering markdown,
+                                  // then append action cards below
+                                  msg.content.replace(/\[\[IR:[a-z-]+\]\]/g, "")
+                                ) }}
+                              />
                             : <span className="text-gray-600">...</span>
                         )}
+                        {/* Action cards rendered separately after markdown body */}
+                        {msg.content && (() => {
+                          const actionMatches = [...msg.content.matchAll(/\[\[IR:([a-z-]+)\]\]/g)];
+                          if (!actionMatches.length) return null;
+                          return (
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {actionMatches.map((m, idx) => {
+                                const key = m[1];
+                                const action = ACTION_MAP[key];
+                                if (!action) return null;
+                                return (
+                                  <button key={idx} onClick={() => navigate(key)}
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all hover:scale-105 active:scale-95"
+                                    style={{ background: `${action.color}18`, border: `1px solid ${action.color}44`, color: action.color }}>
+                                    <span>{action.icon}</span>
+                                    {action.label}
+                                    <ExternalLink size={9} style={{ opacity: 0.7 }} />
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
                       </div>
                     </div>
                   </div>

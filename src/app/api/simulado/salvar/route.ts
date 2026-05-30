@@ -148,5 +148,31 @@ export async function POST(req: NextRequest) {
   const xpDelta = (correct ?? 0) * XP_SIMULADO_PER_ACERTO;
   void updateXP(dbUser.id, xpDelta).catch(() => {});
 
+  // ── 4. Notificação in-app de simulado concluído ───────────────────────────
+  // O sistema de notificações usa Note como KV store com prefixos.
+  // Persiste o último simulado concluído para o GET /api/notificacoes capturar.
+  const safeTotal   = total   ?? 0;
+  const safeCorrect = correct ?? 0;
+  const score = safeTotal > 0 ? Math.round((safeCorrect / safeTotal) * 100) : 0;
+  const SIMULADO_NOTIF_PREFIX = "__SIMULADO_NOTIF__";
+  const notifPayload = JSON.stringify({
+    correct: safeCorrect,
+    total:   safeTotal,
+    score,
+    at:      new Date().toISOString(),
+  });
+  // Upsert: remove anterior e insere o novo (mantém apenas o último simulado)
+  void (async () => {
+    try {
+      await db.from("Note").delete()
+        .eq("userId", dbUser.id).eq("subjectId", SIMULADO_NOTIF_PREFIX);
+      await db.from("Note").insert({
+        userId:    dbUser.id,
+        subjectId: SIMULADO_NOTIF_PREFIX,
+        content:   notifPayload,
+      });
+    } catch { /* silencioso — não quebra o fluxo */ }
+  })();
+
   return NextResponse.json({ ok: true });
 }
