@@ -100,6 +100,9 @@ export interface CachedCreateOptions {
 /**
  * messages.create com prompt caching no system prompt.
  * Equivalente a anthropic.messages.create() mas com cache no system.
+ *
+ * Inclui 1 retry automático em caso de erro 529 (API overloaded) ou timeout,
+ * com espera de 3 segundos antes da segunda tentativa.
  */
 export async function createWithCache(opts: CachedCreateOptions) {
   const anthropic = getAnthropic();
@@ -112,13 +115,24 @@ export async function createWithCache(opts: CachedCreateOptions) {
   } = opts;
 
   const fullPrompt = applyConstraints(systemPrompt);
-
-  return anthropic.messages.create({
+  const payload = {
     model,
     max_tokens: maxTokens,
     system: cacheSystem ? cachedSystem(fullPrompt) : fullPrompt,
     messages,
-  });
+  } as const;
+
+  try {
+    return await anthropic.messages.create(payload);
+  } catch (err) {
+    // Retry em erro 529 (API overloaded) ou 503 (Service Unavailable)
+    const status = (err as { status?: number })?.status;
+    if (status === 529 || status === 503) {
+      await new Promise(r => setTimeout(r, 3000));
+      return await anthropic.messages.create(payload);
+    }
+    throw err;
+  }
 }
 
 /**

@@ -5,10 +5,25 @@ import { getUserWithPlan, db } from "@/lib/db";
 /**
  * GET /api/questoes/do-dia
  *
- * Retorna a "Questão do Dia" — seleção determinística baseada no dia do ano,
- * filtrada pelas matérias do aluno quando disponíveis.
- * Cada aluno pode receber uma questão diferente (baseada em suas matérias + dayOfYear).
+ * Retorna a "Questão do Dia" — seleção determinística baseada no dia do ano
+ * no fuso horário de Brasília (America/Sao_Paulo), filtrada pelas matérias
+ * do aluno quando disponíveis.
  */
+
+/** Retorna YYYY-MM-DD no horário de Brasília */
+function todayBRT(): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+/** Calcula o dia do ano em BRT (1–366) */
+function dayOfYearBRT(): number {
+  const todayStr = todayBRT(); // YYYY-MM-DD
+  const [year, month, day] = todayStr.split("-").map(Number);
+  const start = new Date(year, 0, 0);
+  const today = new Date(year, (month ?? 1) - 1, day ?? 1);
+  return Math.floor((today.getTime() - start.getTime()) / 86400000);
+}
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -17,10 +32,8 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Índice baseado no dia do ano
-  const now = new Date();
-  const start = new Date(now.getFullYear(), 0, 0);
-  const dayOfYear = Math.floor((now.getTime() - start.getTime()) / 86400000);
+  // Índice baseado no dia do ano em BRT (corrige bug UTC)
+  const dayOfYear = dayOfYearBRT();
 
   // Busca matérias do aluno
   const { data: studentSubjects } = await db
@@ -72,8 +85,9 @@ export async function GET() {
     subjectName = subj?.name ?? null;
   }
 
-  // Verifica se o aluno já respondeu hoje
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  // Verifica se o aluno já respondeu hoje (usando BRT para o boundary de meia-noite)
+  const todayStr = todayBRT(); // YYYY-MM-DD em BRT
+  const todayStart = new Date(`${todayStr}T00:00:00-03:00`).toISOString();
   const { data: answered } = await db
     .from("Progress")
     .select("correct")

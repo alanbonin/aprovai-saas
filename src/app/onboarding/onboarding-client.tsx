@@ -592,6 +592,12 @@ function StepData({ dataProva, onChange, onNext, onBack }: {
             <span className="text-gray-400">até a prova — vamos aproveitar bem!</span>
           </div>
         )}
+        {diasRestantes !== null && diasRestantes <= 0 && (
+          <div className="px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/25 text-sm flex items-center gap-2">
+            <span className="text-red-400 font-semibold">⚠️ Data no passado.</span>
+            <span className="text-gray-400">Escolha uma data futura.</span>
+          </div>
+        )}
         <button onClick={() => { onChange(null); onNext(); }}
           className={cn(
             "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border text-left transition-all",
@@ -609,7 +615,7 @@ function StepData({ dataProva, onChange, onNext, onBack }: {
         <button onClick={onBack} className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-300 transition-colors">
           <ChevronLeft className="w-4 h-4" /> Voltar
         </button>
-        {dataProva && (
+        {dataProva && diasRestantes !== null && diasRestantes > 0 && (
           <button onClick={onNext}
             className="px-6 py-2.5 rounded-xl text-sm font-semibold bg-[#0ab5bd] text-black hover:bg-[#09a3aa] transition-all flex items-center gap-2">
             Continuar <ChevronRight className="w-4 h-4" />

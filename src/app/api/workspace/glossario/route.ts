@@ -1,18 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createWithCache, MODELS } from "@/lib/anthropic";
-
-
-function extractJSON(text: string): string {
-  const start = text.indexOf("{");
-  if (start === -1) throw new Error("Nenhum JSON");
-  let depth = 0;
-  for (let i = start; i < text.length; i++) {
-    if (text[i] === "{") depth++;
-    else if (text[i] === "}") { depth--; if (depth === 0) return text.slice(start, i + 1); }
-  }
-  throw new Error("JSON incompleto");
-}
+import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -43,7 +31,7 @@ Se não houver termos técnicos relevantes, retorne {"termos":[]}.`,
     });
 
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    const parsed = JSON.parse(extractJSON(raw));
+    const parsed = extractJSON<{ termos?: { termo: string; definicao: string }[] }>(raw);
     return NextResponse.json({ termos: parsed.termos ?? [] });
   } catch {
     return NextResponse.json({ termos: [] });

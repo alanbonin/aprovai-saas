@@ -18,6 +18,7 @@ interface Plan {
 interface Props {
   plans: Plan[];
   currentPlanId: string | null;
+  subscriptionEndDate?: string | null;
   trialExpired?: boolean;
   paymentError?: boolean;
 }
@@ -47,7 +48,7 @@ function isOneTime(plan: Plan) { return plan.intervalDays >= 365 || plan.slug ==
 function isAnual(plan: Plan) { return plan.intervalDays >= 360 && plan.intervalDays < 3650 && plan.slug !== "prova-marcada"; }
 function isMensal(plan: Plan) { return !isOneTime(plan) && !isAnual(plan); }
 
-export function PlanosClient({ plans, currentPlanId, trialExpired, paymentError }: Props) {
+export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialExpired, paymentError }: Props) {
   const mensais  = plans.filter(isMensal);
   const anuais   = plans.filter(isAnual);
   const temAnuais = anuais.length > 0;
@@ -206,8 +207,13 @@ export function PlanosClient({ plans, currentPlanId, trialExpired, paymentError 
               </ul>
 
               {isCurrent ? (
-                <div className="w-full py-2.5 rounded-xl border border-green-500/30 text-green-400 text-sm text-center font-medium">
-                  Plano atual ✓
+                <div className="w-full rounded-xl border border-green-500/30 text-green-400 text-sm text-center font-medium">
+                  <div className="py-2.5">Plano atual ✓</div>
+                  {subscriptionEndDate && (
+                    <div className="border-t border-green-500/20 py-1.5 text-xs text-green-600">
+                      Válido até {new Date(subscriptionEndDate).toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" })}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <CheckoutButton planId={plan.id} planName={plan.name} isPopular={cfg.popular} isFree={isFree} />
