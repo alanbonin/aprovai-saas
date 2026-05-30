@@ -117,3 +117,6 @@ export const resetPasswordLimiter = createLimiter({ max: 3, window: "1 h", prefi
 
 /** Reportar questão — 10/hora por usuário (evita spam) */
 export const reportarLimiter = createLimiter({ max: 10, window: "1 h", prefix: "reportar" });
+
+/** Exclusão de conta LGPD — 1/hora por usuário (ação destrutiva) */
+export const deleteAccountLimiter = createLimiter({ max: 1, window: "1 h", prefix: "delete-account" });

@@ -1,9 +1,17 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export default function CadastroPage() {
+  const searchParams = useSearchParams();
+  const [deleted, setDeleted] = useState(false);
+
+  useEffect(() => {
+    if (searchParams.get("deleted") === "1") setDeleted(true);
+  }, [searchParams]);
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -158,6 +166,12 @@ export default function CadastroPage() {
             <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
           </div>
         </div>
+
+        {deleted && (
+          <div className="mb-4 px-4 py-3 rounded-xl bg-green-500/10 border border-green-500/25 text-sm text-green-300 text-center">
+            Sua conta foi excluída com sucesso. Você pode criar uma nova conta abaixo.
+          </div>
+        )}
 
         <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
           <h1 className="text-white text-xl font-bold mb-6">Criar sua conta grátis</h1>

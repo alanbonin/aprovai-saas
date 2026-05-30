@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { renderToBuffer, Document, Page, Text, View, StyleSheet } from "@react-pdf/renderer";
+import { log, LogEvent } from "@/lib/logger";
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 async function requireAdmin() {
@@ -391,17 +392,17 @@ Retorne APENAS JSON valido sem markdown:
         messages: [{ role: "user", content: prompt }],
       });
     } catch (e) {
-      console.error("[materiais/gerar] Sonnet falhou, tentando Haiku:", e);
+      log.warn(LogEvent.AI_ERROR, { stage: "materiais/gerar", msg: "Sonnet falhou, tentando Haiku" });
       msg = await createWithCache({
         model: MODELS.haiku, maxTokens: 6000, systemPrompt: SYSTEM, cacheSystem: false,
         messages: [{ role: "user", content: prompt }],
       });
     }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
-    console.error("[materiais/gerar] stop_reason:", (msg as { stop_reason?: string }).stop_reason, "| chars:", raw.length);
+    log.info(LogEvent.AI_ERROR, { stage: "materiais/gerar", stop_reason: (msg as { stop_reason?: string }).stop_reason, chars: raw.length });
     content = extractJSON<AulaContent>(raw);
   } catch (e) {
-    console.error("[materiais/gerar] Erro IA:", e);
+    log.error(LogEvent.AI_ERROR, { stage: "materiais/gerar" }, e);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
@@ -410,7 +411,7 @@ Retorne APENAS JSON valido sem markdown:
   try {
     pdfBuffer = await renderToBuffer(<AulaPDF content={content} />);
   } catch (e) {
-    console.error("[materiais/gerar] Erro PDF:", e);
+    log.error(LogEvent.AI_ERROR, { stage: "materiais/gerar/pdf" }, e);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 
@@ -437,7 +438,7 @@ Retorne APENAS JSON valido sem markdown:
     .upload(fileName, pdfBuffer, { contentType: "application/pdf", upsert: false });
 
   if (uploadError) {
-    console.error("[materiais/gerar] Upload error:", uploadError);
+    log.error(LogEvent.DB_ERROR, { stage: "materiais/gerar/upload" }, uploadError);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   }
 

@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createAdminClient } from "@supabase/supabase-js";
 import { db } from "@/lib/db";
 import { log, LogEvent } from "@/lib/logger";
+import { deleteAccountLimiter } from "@/lib/rate-limit";
 
 /**
  * DELETE /api/auth/delete-account
@@ -18,6 +19,15 @@ export async function DELETE(req: Request) {
 
   const userId = user.id;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+
+  // Rate limiting — ação destrutiva: 1 vez por hora por usuário
+  const rl = await deleteAccountLimiter.check(userId);
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Muitas tentativas. Aguarde 1 hora antes de tentar novamente." },
+      { status: 429 }
+    );
+  }
 
   log.security(LogEvent.LGPD_DATA_EXPORT, {
     userId,
