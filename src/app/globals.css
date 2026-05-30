@@ -113,10 +113,23 @@ html.light .bg-white\/8         { background-color: rgba(0,0,0,0.05) !important;
 html.light .bg-white\/10        { background-color: rgba(0,0,0,0.06) !important; }
 html.light .bg-white\/20        { background-color: rgba(0,0,0,0.10) !important; }
 
+/* Slate backgrounds → claro */
+html.light .bg-slate-900,
+html.light .bg-slate-900\/60     { background-color: var(--bg-card)    !important; }
+html.light .bg-slate-800,
+html.light .bg-slate-800\/60     { background-color: var(--bg-surface) !important; }
+html.light .bg-slate-700,
+html.light .bg-slate-700\/60     { background-color: var(--bg-hover)   !important; }
+html.light .border-slate-700     { border-color: var(--border-color)   !important; }
+html.light .border-slate-600     { border-color: var(--border-color)   !important; }
+
 /* Input/textarea escuro → claro */
 html.light input[class*="bg-\[#"],
 html.light textarea[class*="bg-\[#"],
-html.light select[class*="bg-\[#"] {
+html.light select[class*="bg-\[#"],
+html.light input.bg-slate-800,
+html.light textarea.bg-slate-800,
+html.light select.bg-slate-800   {
   background-color: var(--bg-card) !important;
   color: var(--text-primary) !important;
   border-color: var(--border-color) !important;
