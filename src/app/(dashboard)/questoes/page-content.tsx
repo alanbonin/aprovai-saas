@@ -456,7 +456,19 @@ export function QuestoesInner() {
         <div className="text-center py-20">
           <BookOpen className="w-12 h-12 text-gray-700 mx-auto mb-3" />
           <p className="text-gray-400 text-lg">Nenhuma questão encontrada</p>
-          <p className="text-gray-600 text-sm mt-1">Tente mudar os filtros ou aguarde novas questões</p>
+          <p className="text-gray-600 text-sm mt-1">
+            {subjects.length === 0
+              ? "Você ainda não selecionou matérias. Configure seu perfil para ver questões do seu concurso."
+              : "Tente mudar os filtros ou aguarde novas questões."}
+          </p>
+          {subjects.length === 0 && (
+            <a
+              href="/workspace/perfil"
+              className="inline-block mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+            >
+              Configurar meu perfil →
+            </a>
+          )}
         </div>
       )}
 
