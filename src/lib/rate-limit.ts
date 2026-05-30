@@ -114,3 +114,6 @@ export const checkoutLimiter = createLimiter({ max: 10, window: "1 h", prefix: "
 
 /** Reset de senha — 3/hora por IP */
 export const resetPasswordLimiter = createLimiter({ max: 3, window: "1 h", prefix: "reset-pw" });
+
+/** Reportar questão — 10/hora por usuário (evita spam) */
+export const reportarLimiter = createLimiter({ max: 10, window: "1 h", prefix: "reportar" });

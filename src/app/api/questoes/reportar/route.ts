@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { z } from "zod";
+import { reportarLimiter } from "@/lib/rate-limit";
 
 const ReportarSchema = z.object({
   questionId: z.number().int(),
@@ -35,6 +36,10 @@ export async function POST(req: Request) {
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  // Rate limit: 10 reportes/hora por usuário
+  const rl = await reportarLimiter.check(`reportar:${dbUser.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const rawBody = await req.json();
   const parseResult = ReportarSchema.safeParse(rawBody);

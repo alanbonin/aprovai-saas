@@ -35,7 +35,29 @@ export async function POST(req: Request) {
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   const { questionId, action } = await req.json() as { questionId: number; action: "add" | "remove" };
+
+  if (!questionId || typeof questionId !== "number") {
+    return NextResponse.json({ error: "questionId inválido" }, { status: 400 });
+  }
+
+  // Validar existência da questão antes de favoritar (evita IDs fantasma)
+  if (action === "add") {
+    const { data: exists } = await db
+      .from("Question")
+      .select("id")
+      .eq("id", questionId)
+      .maybeSingle();
+    if (!exists) {
+      return NextResponse.json({ error: "Questão não encontrada" }, { status: 404 });
+    }
+  }
+
   const favs = await getFavs(dbUser.id);
+
+  // Limite de 1000 favoritos por usuário
+  if (action === "add" && favs.length >= 1000) {
+    return NextResponse.json({ error: "Limite de 1000 favoritos atingido" }, { status: 422 });
+  }
 
   let updated: number[];
   if (action === "add") updated = favs.includes(questionId) ? favs : [...favs, questionId];

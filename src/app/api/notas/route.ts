@@ -70,6 +70,16 @@ export async function POST(req: Request) {
   }
 
   const notes = await loadNotes(dbUser.id);
+
+  // Limite de 500 notas por usuário (evita payload JSON gigante no banco)
+  const MAX_NOTES = 500;
+  if (notes.length >= MAX_NOTES) {
+    return NextResponse.json(
+      { error: `Limite de ${MAX_NOTES} anotações atingido. Exclua anotações antigas para continuar.` },
+      { status: 422 }
+    );
+  }
+
   const now = new Date().toISOString();
   const note: StudyNote = {
     id: crypto.randomUUID(),
