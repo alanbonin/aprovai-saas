@@ -40,19 +40,22 @@ export function FavoritosInner() {
   const [subjects, setSubjects]     = useState<Subject[]>([]);
   const [favIds, setFavIds]         = useState<number[]>([]);
   const [loading, setLoading]       = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [filterSubject, setFilterSubject] = useState("");
   const [showFilter, setShowFilter] = useState(false);
   const [removingId, setRemovingId] = useState<number | null>(null);
 
   const loadData = useCallback(async () => {
     setLoading(true);
+    setFetchError(false);
     try {
       const [favsRes, subsRes] = await Promise.all([
         fetch("/api/questoes/favoritos"),
         fetch("/api/workspace/materias"),
       ]);
+      if (!favsRes.ok) throw new Error("Falha ao carregar favoritos");
       const favsData = await favsRes.json();
-      const subsData = await subsRes.json();
+      const subsData = subsRes.ok ? await subsRes.json() : {};
       const ids: number[] = favsData.favoritos ?? [];
       setFavIds(ids);
       setSubjects(subsData.subjects ?? []);
@@ -66,10 +69,10 @@ export function FavoritosInner() {
       // Load all favorites (up to 100)
       const params = new URLSearchParams({ favoritos: "1", limit: "100" });
       const qRes = await fetch(`/api/questoes?${params}`);
-      const qData = await qRes.json();
+      const qData = qRes.ok ? await qRes.json() : {};
       setQuestions(qData.questions ?? []);
     } catch {
-      // ignore
+      setFetchError(true);
     }
     setLoading(false);
   }, []);
@@ -114,6 +117,25 @@ export function FavoritosInner() {
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
           <p className="text-gray-400">Carregando favoritos...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-screen text-white">
+        <div className="text-center">
+          <XCircle className="w-12 h-12 text-red-500 mx-auto mb-3" />
+          <p className="text-gray-300 font-medium mb-1">Não foi possível carregar seus favoritos</p>
+          <p className="text-gray-500 text-sm mb-4">Verifique sua conexão e tente novamente.</p>
+          <button
+            onClick={loadData}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors mx-auto"
+          >
+            <RotateCcw className="w-4 h-4" />
+            Tentar novamente
+          </button>
         </div>
       </div>
     );

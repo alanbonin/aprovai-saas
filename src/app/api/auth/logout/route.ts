@@ -4,5 +4,5 @@ import { createClient } from "@/lib/supabase/server";
 export async function POST() {
   const supabase = await createClient();
   await supabase.auth.signOut({ scope: "global" });
-  return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL!));
+  return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai360.com.br"));
 }

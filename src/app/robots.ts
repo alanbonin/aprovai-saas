@@ -19,7 +19,6 @@ export default function robots(): MetadataRoute.Robots {
           "/redacao",
           "/caso",
           "/materiais",
-          "/planos",
         ],
       },
     ],

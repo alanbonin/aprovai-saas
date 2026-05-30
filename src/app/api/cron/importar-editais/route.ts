@@ -16,13 +16,13 @@ function checkAuth(req: Request): boolean {
 
 // Termos de busca rotacionados por dia da semana para cobrir mais editais
 const TERMOS_POR_DIA: string[][] = [
-  ["concurso público edital inscrições 2025"],        // Dom
-  ["processo seletivo vagas nível superior 2025"],     // Seg
-  ["concurso público resultado gabarito 2025"],        // Ter
+  ["concurso público edital inscrições 2026"],        // Dom
+  ["processo seletivo vagas nível superior 2026"],     // Seg
+  ["concurso público resultado gabarito 2026"],        // Ter
   ["edital abertura inscrições concurso municipal"],   // Qua
-  ["concurso estadual vagas salário edital 2025"],     // Qui
-  ["concurso federal auditor analista 2025"],          // Sex
-  ["processo seletivo simplificado edital 2025"],      // Sáb
+  ["concurso estadual vagas salário edital 2026"],     // Qui
+  ["concurso federal auditor analista 2026"],          // Sex
+  ["processo seletivo simplificado edital 2026"],      // Sáb
 ];
 
 interface QDGazette {

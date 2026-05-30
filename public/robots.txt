@@ -1,10 +1,20 @@
 User-agent: *
 Allow: /
+Allow: /login
+Allow: /cadastro
+Allow: /planos
 Allow: /termos
 Allow: /privacidade
+Disallow: /workspace
+Disallow: /dashboard
+Disallow: /admin
 Disallow: /api/
-Disallow: /admin/
-Disallow: /workspace/
-Disallow: /dashboard/
+Disallow: /relatorio
+Disallow: /mentor
+Disallow: /questoes
+Disallow: /simulado
+Disallow: /redacao
+Disallow: /caso
+Disallow: /materiais
 
-Sitemap: https://aprovai.app/sitemap.xml
+Sitemap: https://aprovai360.com.br/sitemap.xml
