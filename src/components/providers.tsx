@@ -11,7 +11,7 @@ function ServiceWorkerRegistrar() {
     navigator.serviceWorker
       .register("/sw.js", { scope: "/" })
       .then((reg) => {
-        console.log("[SW] Registrado:", reg.scope);
+        // SW registrado com sucesso
         // Verifica atualizações a cada 1h
         setInterval(() => reg.update(), 3_600_000);
       })

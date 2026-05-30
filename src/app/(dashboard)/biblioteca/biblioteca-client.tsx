@@ -98,10 +98,21 @@ export function BibliotecaClient() {
     if (!selectedDoc) return;
     setUrlExpired(false);
     setLoadingPdf(true);
-    const r = await fetch(`/api/biblioteca/url?id=${selectedDoc.id}`);
-    const { url } = await r.json();
-    setPdfUrl(url);
-    setLoadingPdf(false);
+    try {
+      const r = await fetch(`/api/biblioteca/url?id=${selectedDoc.id}`);
+      if (!r.ok) {
+        const err = await r.json().catch(() => ({}));
+        alert(err.error ?? "Erro ao renovar link do documento");
+        setLoadingPdf(false);
+        return;
+      }
+      const { url } = await r.json();
+      setPdfUrl(url);
+    } catch {
+      alert("Erro ao renovar link do documento");
+    } finally {
+      setLoadingPdf(false);
+    }
   }
 
   // subjects já vêm ordenados alfabeticamente de /api/workspace/materias
