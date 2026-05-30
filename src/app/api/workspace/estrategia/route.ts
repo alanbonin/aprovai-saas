@@ -6,6 +6,7 @@ import { getActiveProfile } from "@/lib/get-active-profile";
 import { log } from "@/lib/logger";
 import { resolveCargoId } from "@/lib/cargos";
 import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
+import { defaultAiLimiter } from "@/lib/rate-limit";
 
 // ── Tipos públicos ─────────────────────────────────────────────────────────────
 export interface DaySchedule {
@@ -179,6 +180,10 @@ export async function POST(req: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    // Rate limit de burst — 10 req/min por usuário
+    const rl = await defaultAiLimiter.check(user.id);
+    if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
     const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });

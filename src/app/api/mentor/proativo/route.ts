@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { defaultAiLimiter } from "@/lib/rate-limit";
 
 // ── GET /api/mentor/proativo ─────────────────────────────────────────────────
 // Retorna uma mensagem proativa do mentor se o aluno precisar de contato.
@@ -12,6 +13,10 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ message: null });
+
+    // Rate limit — 10 req/min (o cliente já faz throttle de 8h via localStorage, mas proteção server-side)
+    const rl = await defaultAiLimiter.check(user.id);
+    if (!rl.ok) return NextResponse.json({ message: null }); // silencioso: não precisa mostrar erro ao usuário
 
     const { data: dbUser } = await db.from("User").select("id, name, createdAt").eq("supabaseId", user.id).single();
     if (!dbUser) return NextResponse.json({ message: null });

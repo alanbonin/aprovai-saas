@@ -4,6 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 
 // Caminhos que NÃO devem ser redirecionados mesmo com subscription expirada
 const BYPASS_PATHS = [
+  "/",           // landing page — pública
   "/planos",
   "/configuracoes",
   "/suporte",
@@ -15,10 +16,13 @@ const BYPASS_PATHS = [
   "/favicon",
   "/icons",
   "/manifest",
+  "/instalar",   // página de instalação PWA — pública
 ];
 
 function isBypassPath(pathname: string): boolean {
-  return BYPASS_PATHS.some(p => pathname.startsWith(p));
+  return BYPASS_PATHS.some(p =>
+    p === "/" ? pathname === "/" : pathname.startsWith(p)
+  );
 }
 
 export async function middleware(request: NextRequest) {

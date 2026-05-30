@@ -96,12 +96,13 @@ export function SimuladoBanca({ subjects, profile }: Props) {
     if (isLast) {
       if (timerRef) clearInterval(timerRef);
       setStep("resultado");
-      // Salva resultado no histórico (score.correct já inclui a última resposta)
+      // Usa answers[] para contagem correta (score state pode estar desatualizado por batch de React)
       if (simuladoId) {
+        const correctCount = answers.filter(Boolean).length;
         fetch(`/api/simulados/${simuladoId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ correct: score.correct, timeSecs: elapsed }),
+          body: JSON.stringify({ correct: correctCount, timeSecs: elapsed }),
         }).catch(() => {});
       }
     } else {
@@ -371,6 +372,7 @@ export function SimuladoBanca({ subjects, profile }: Props) {
           <RotateCcw className="w-4 h-4" /> Novo simulado
         </button>
         <button onClick={() => {
+          if (timerRef) clearInterval(timerRef);
           setStep("simulado"); setCurrent(0); setSelected(null);
           setScore({ correct: 0, total: 0 }); setAnswers([]);
           const t = Date.now(); setStartTime(t); setElapsed(0);

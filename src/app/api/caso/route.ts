@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import type { MessageParam, ImageBlockParam, TextBlockParam } from "@anthropic-ai/sdk/resources";
 import { log } from "@/lib/logger";
+import { defaultAiLimiter } from "@/lib/rate-limit";
 
 const CASO_SYSTEM =
   "Você é um especialista em seleção e avaliação para concursos públicos brasileiros, com vasta experiência em estudos de caso, banca examinadora e critérios de avaliação discursiva. Responda apenas com JSON válido.";
@@ -48,6 +49,10 @@ export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autenticado" }, { status: 401 });
+
+  // Rate limit de burst — 10 req/min por usuário
+  const rl = await defaultAiLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   // Verificar acesso ao plano
   const { getAccessLevel } = await import("@/lib/access");

@@ -6,6 +6,7 @@ import { getWeekStart } from "@/lib/utils";
 import { buildAgentSystemPrompt } from "@/lib/agents";
 import { streamWithCache, MODELS } from "@/lib/anthropic";
 import { buildStudentContext } from "@/lib/student-context";
+import { chatLimiter } from "@/lib/rate-limit";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -14,6 +15,10 @@ export async function POST(req: Request) {
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
+  // Rate limit de burst — 20 msgs/min por usuário
+  const rl = await chatLimiter.check(dbUser.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const body = await req.json().catch(() => ({}));
   const { message, agentId, history = [] } = body;
