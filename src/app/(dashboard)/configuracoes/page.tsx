@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Target } from "lucide-react";
+import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Target, Lock, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 import { MeuPlanoSection } from "@/components/configuracoes/meu-plano-section";
 
 type Tab = "perfil" | "plano" | "notificacoes";
@@ -55,6 +56,22 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+
+  // Alterar senha
+  const [novaSenha, setNovaSenha]           = useState("");
+  const [confirmarSenha, setConfirmarSenha] = useState("");
+  const [senhaLoading, setSenhaLoading]     = useState(false);
+  const [senhaMsg, setSenhaMsg]             = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
+  // Exportar dados
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportMsg, setExportMsg]         = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+
+  // Deletar conta
+  const [deleteModal, setDeleteModal]     = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteMsg, setDeleteMsg]         = useState<string | null>(null);
 
   // Push notification state
   const [pushSupported, setPushSupported] = useState(false);
@@ -125,6 +142,74 @@ export default function ConfiguracoesPage() {
       setPushError(String(e));
     }
     setPushLoading(false);
+  }
+
+  async function alterarSenha() {
+    setSenhaMsg(null);
+    if (novaSenha.length < 8) {
+      setSenhaMsg({ tipo: "erro", texto: "A senha deve ter no mínimo 8 caracteres." });
+      return;
+    }
+    if (novaSenha !== confirmarSenha) {
+      setSenhaMsg({ tipo: "erro", texto: "As senhas não coincidem." });
+      return;
+    }
+    setSenhaLoading(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({ password: novaSenha });
+      if (error) {
+        setSenhaMsg({ tipo: "erro", texto: error.message });
+      } else {
+        setSenhaMsg({ tipo: "ok", texto: "Senha alterada com sucesso!" });
+        setNovaSenha("");
+        setConfirmarSenha("");
+      }
+    } catch {
+      setSenhaMsg({ tipo: "erro", texto: "Erro ao alterar senha." });
+    }
+    setSenhaLoading(false);
+  }
+
+  async function exportarDados() {
+    setExportMsg(null);
+    setExportLoading(true);
+    try {
+      const res = await fetch("/api/relatorio/export");
+      if (!res.ok) throw new Error("Erro ao exportar dados");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `meus-dados-aprovai-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+      setExportMsg({ tipo: "ok", texto: "Arquivo baixado com sucesso!" });
+    } catch {
+      setExportMsg({ tipo: "erro", texto: "Erro ao exportar dados. Tente novamente." });
+    }
+    setExportLoading(false);
+  }
+
+  async function deletarConta() {
+    setDeleteMsg(null);
+    setDeleteLoading(true);
+    try {
+      const res = await fetch("/api/auth/delete-account", { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setDeleteMsg((body as { error?: string }).error ?? "Erro ao excluir conta.");
+        setDeleteLoading(false);
+        return;
+      }
+      // Redirecionar após exclusão
+      window.location.href = "/cadastro?deleted=1";
+    } catch {
+      setDeleteMsg("Erro ao excluir conta. Tente novamente.");
+      setDeleteLoading(false);
+    }
   }
 
   async function save() {
@@ -350,20 +435,140 @@ export default function ConfiguracoesPage() {
           </section>
         )}
 
-        {/* Danger zone */}
+        {/* Alterar senha */}
         {tab === "perfil" && (
-          <section className="rounded-2xl bg-red-500/5 border border-red-500/20 p-5">
-            <h2 className="text-sm font-semibold text-red-400 mb-3">Zona de perigo</h2>
-            <p className="text-xs text-gray-500 mb-3">
-              Para cancelar sua assinatura ou excluir sua conta, entre em contato com o suporte.
-            </p>
-            <a
-              href="mailto:suporte@aprovai.com.br?subject=Cancelamento+de+conta"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 transition-colors"
-            >
-              Contatar suporte
-            </a>
-          </section>
+          <>
+            <hr className="border-white/8" />
+            <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5 bg-white/2">
+                <Lock className="w-4 h-4 text-indigo-400" />
+                <h2 className="text-sm font-semibold">Alterar senha</h2>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <label className="text-xs text-gray-500 mb-1.5 block">Nova senha</label>
+                  <input
+                    type="password"
+                    value={novaSenha}
+                    onChange={e => setNovaSenha(e.target.value)}
+                    placeholder="Mínimo 8 caracteres"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs text-gray-500 mb-1.5 block">Confirmar nova senha</label>
+                  <input
+                    type="password"
+                    value={confirmarSenha}
+                    onChange={e => setConfirmarSenha(e.target.value)}
+                    placeholder="Repita a nova senha"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  />
+                </div>
+                {senhaMsg && (
+                  <p className={cn("text-xs", senhaMsg.tipo === "ok" ? "text-green-400" : "text-red-400")}>
+                    {senhaMsg.texto}
+                  </p>
+                )}
+                <button
+                  onClick={alterarSenha}
+                  disabled={senhaLoading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium disabled:opacity-50 transition-all"
+                >
+                  {senhaLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
+                  Alterar senha
+                </button>
+              </div>
+            </section>
+
+            {/* Exportar dados (LGPD Art. 18) */}
+            <hr className="border-white/8" />
+            <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-white/5 bg-white/2">
+                <Download className="w-4 h-4 text-indigo-400" />
+                <h2 className="text-sm font-semibold">Exportar meus dados</h2>
+              </div>
+              <div className="p-5">
+                <p className="text-xs text-gray-500 mb-4">
+                  Baixe um arquivo CSV com todo o seu histórico de questões respondidas (LGPD Art. 18).
+                  <br />
+                  <span className="text-gray-600">Inclui: data, matéria, banca, ano, nível, acerto e próxima revisão.</span>
+                </p>
+                {exportMsg && (
+                  <p className={cn("text-xs mb-3", exportMsg.tipo === "ok" ? "text-green-400" : "text-red-400")}>
+                    {exportMsg.texto}
+                  </p>
+                )}
+                <button
+                  onClick={exportarDados}
+                  disabled={exportLoading}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-white text-sm font-medium disabled:opacity-50 transition-all"
+                >
+                  {exportLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                  {exportLoading ? "Exportando…" : "Exportar meus dados"}
+                </button>
+              </div>
+            </section>
+
+            {/* Zona de perigo — deletar conta (LGPD Art. 18) */}
+            <hr className="border-white/8" />
+            <section className="rounded-2xl bg-red-500/5 border border-red-500/20 p-5">
+              <h2 className="text-sm font-semibold text-red-400 mb-3">Zona de perigo</h2>
+              <p className="text-xs text-gray-500 mb-4">
+                Excluir sua conta apaga permanentemente seu progresso, notas e histórico de questões.
+                Sua assinatura será cancelada.
+              </p>
+              <button
+                onClick={() => { setDeleteModal(true); setDeleteConfirm(""); setDeleteMsg(null); }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-500/30 text-red-400 text-sm hover:bg-red-500/10 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Excluir minha conta
+              </button>
+            </section>
+
+            {/* Modal de confirmação de exclusão */}
+            {deleteModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+                <div className="bg-[#111] border border-red-500/30 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Trash2 className="w-5 h-5 text-red-400" />
+                    <h3 className="text-base font-bold text-red-400">Excluir conta permanentemente</h3>
+                  </div>
+                  <p className="text-sm text-red-300 bg-red-500/10 border border-red-500/20 rounded-lg p-3 mb-4">
+                    ⚠️ Esta ação é irreversível. Todos os seus dados serão apagados.
+                  </p>
+                  <p className="text-xs text-gray-400 mb-2">
+                    Para confirmar, digite <span className="font-mono font-bold text-white">EXCLUIR</span> no campo abaixo:
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirm}
+                    onChange={e => setDeleteConfirm(e.target.value)}
+                    placeholder="EXCLUIR"
+                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-red-500 mb-4"
+                  />
+                  {deleteMsg && <p className="text-xs text-red-400 mb-3">{deleteMsg}</p>}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteModal(false)}
+                      className="flex-1 px-4 py-2 rounded-xl border border-white/10 text-gray-400 text-sm hover:bg-white/5 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={deletarConta}
+                      disabled={deleteConfirm !== "EXCLUIR" || deleteLoading}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+                    >
+                      {deleteLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      Excluir permanentemente
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>}
     </div>

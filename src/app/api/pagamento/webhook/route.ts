@@ -3,8 +3,15 @@ import { db } from "@/lib/db";
 import MercadoPago, { Payment, MerchantOrder } from "mercadopago";
 import { createHmac } from "crypto";
 import { log as slog, LogEvent } from "@/lib/logger";
+import { sendEmail } from "@/lib/mailer";
 
-const mp = new MercadoPago({ accessToken: process.env.MERCADOPAGO_ACCESS_TOKEN! });
+// A instância é criada dentro do handler para evitar falha no module load
+// quando MERCADOPAGO_ACCESS_TOKEN não está definida no ambiente.
+function getMPInstance(): MercadoPago {
+  const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurada");
+  return new MercadoPago({ accessToken: token });
+}
 
 // ── Verificação de assinatura HMAC ────────────────────────────────────────────
 function verifySignature(req: Request, rawBody: string): boolean {
@@ -47,7 +54,15 @@ async function log(type: string, payload: unknown, error?: string) {
 // ── Helpers de subscription ────────────────────────────────────────────────────
 async function activateSubscription(userId: string, planId: string, mpPaymentId: string) {
   const { data: plan } = await db.from("Plan").select("intervalDays").eq("id", planId).single();
-  if (!plan) throw new Error(`Plano não encontrado: ${planId}`);
+  if (!plan) {
+    // Alerta ao admin — pagamento aprovado mas plano não existe no banco
+    sendEmail({
+      to: process.env.ADMIN_EMAIL ?? "alanbonin@gmail.com",
+      subject: "⚠️ AprovAI: Pagamento aprovado mas plano não encontrado",
+      html: `<p>Pagamento <b>${mpPaymentId}</b> aprovado para usuário <b>${userId}</b> mas plano <b>${planId}</b> não foi encontrado no banco. Ative a assinatura manualmente.</p>`,
+    }).catch(() => {}); // silencioso — não pode derrubar o webhook
+    throw new Error(`Plano não encontrado: ${planId}`);
+  }
 
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + plan.intervalDays);
@@ -105,7 +120,7 @@ export async function POST(req: Request) {
 
     // ── Evento: pagamento ──────────────────────────────────────────────────────
     if (eventType === "payment") {
-      const paymentApi = new Payment(mp);
+      const paymentApi = new Payment(getMPInstance());
       const paymentData = await paymentApi.get({ id: body.data?.id ?? body.data_id });
 
       const status = paymentData.status;
@@ -173,7 +188,7 @@ export async function POST(req: Request) {
 
     // ── Evento: merchant_order (agrupamento de pagamentos) ─────────────────────
     if (eventType === "merchant_order") {
-      const orderApi = new MerchantOrder(mp);
+      const orderApi = new MerchantOrder(getMPInstance());
       const order = await orderApi.get({ merchantOrderId: body.data?.id });
       const payments = (order.payments ?? []) as Array<{ status?: string | null; id?: number | null }>;
       const approved = payments.find((p) => p.status === "approved");
