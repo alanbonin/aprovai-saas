@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
 import { defaultAiLimiter } from "@/lib/rate-limit";
+import { getConfig } from "@/lib/system-config";
 
 // ── GET /api/mentor/proativo ─────────────────────────────────────────────────
 // Retorna uma mensagem proativa do mentor se o aluno precisar de contato.
@@ -41,13 +42,14 @@ export async function GET() {
       diasAteProva = Math.ceil((prova.getTime() - hoje.getTime()) / 86_400_000);
     }
 
-    // Lógica de acionamento — só gera em situações relevantes
+    // Lógica de acionamento — lê configurações dinâmicas
+    const diasProativo  = await getConfig("mentor.dias_proativo") as unknown as number[];
+    const diasAntesProva = await getConfig("mentor.dias_antes_prova") as number;
+
     const deveGerar =
-      diasDesdeOnboarding === 1 ||                        // 1º dia após onboarding
-      diasDesdeOnboarding === 7 ||                        // 1 semana
-      diasDesdeOnboarding === 30 ||                       // 1 mês
-      (diasAteProva !== null && diasAteProva <= 30) ||   // Prova em menos de 30 dias
-      (diasAteProva !== null && diasAteProva <= 7);       // Urgência: prova em menos de 1 semana
+      diasProativo.includes(diasDesdeOnboarding) ||
+      (diasAteProva !== null && diasAteProva <= diasAntesProva) ||
+      (diasAteProva !== null && diasAteProva <= 7); // urgência sempre ativa
 
     if (!deveGerar) return NextResponse.json({ message: null });
 

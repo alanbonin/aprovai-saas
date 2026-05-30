@@ -137,11 +137,18 @@ const SECTIONS_ADMIN: NavSection[] = [
     ],
   },
   {
+    id: "admin-sistema", title: "Sistema", color: "#64748b", defaultOpen: false,
+    items: [
+      { href: "/admin/configuracoes", label: "Configurações", icon: "⚙️" },
+    ],
+  },
+  {
     id: "admin-comunicacao", title: "Comunicação", color: "#06b6d4", defaultOpen: false,
     items: [
-      { href: "/admin/anuncio",        label: "Anúncios",      icon: "📢" },
-      { href: "/admin/push",           label: "Push",          icon: "📲" },
-      { href: "/admin/reengajamento",  label: "Reengajamento", icon: "🔄" },
+      { href: "/admin/anuncio",        label: "Anúncios",          icon: "📢" },
+      { href: "/admin/push",           label: "Push",              icon: "📲" },
+      { href: "/admin/reengajamento",  label: "Reengajamento",     icon: "🔄" },
+      { href: "/admin/emails",         label: "Templates de Email", icon: "✉️" },
     ],
   },
 ];

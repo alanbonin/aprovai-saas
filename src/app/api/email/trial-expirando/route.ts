@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
+import { getConfig } from "@/lib/system-config";
 
-const FROM_EMAIL = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.com.br>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.com.br";
 
 function checkAuth(req: Request): boolean {
@@ -12,6 +13,7 @@ function checkAuth(req: Request): boolean {
   return auth === `Bearer ${secret}`;
 }
 
+// Mantida para compatibilidade, mas não é mais usada no envio principal
 function buildTrialHtml({ name, daysLeft }: { name: string; daysLeft: number }) {
   const isUrgent = daysLeft <= 1;
   const dayLabel = daysLeft === 1 ? "1 dia" : `${daysLeft} dias`;
@@ -80,7 +82,9 @@ async function runCron() {
   try {
     const now = new Date();
     const today = now.toISOString().slice(0, 10);
-    const plus3 = new Date(now.getTime() + 3 * 86400000).toISOString().slice(0, 10);
+    const avisarDiasAntes = await getConfig("trial.aviso_dias_antes");
+    const plusN = new Date(now.getTime() + (avisarDiasAntes as number) * 86400000).toISOString().slice(0, 10);
+    const plus3 = plusN; // alias para compatibilidade com o restante do código
 
     // Busca assinaturas trial expirando entre hoje e hoje+3 dias
     const { data: subscriptions } = await db
@@ -117,11 +121,17 @@ async function runCron() {
       const firstName = (user.name as string).split(" ")[0];
 
       try {
+        const template = await getEmailTemplate("trial-expirando");
+        const { assunto, html } = renderTemplate(template, {
+          nome: firstName,
+          daysLeft: String(daysLeft),
+          planos_url: `${APP_URL}/planos`,
+        });
+
         await sendEmail({
-          from: FROM_EMAIL,
           to: user.email as string,
-          subject: `⏰ Seu trial gratuito expira em ${daysLeft === 1 ? "1 dia" : `${daysLeft} dias`} — garanta seu acesso`,
-          html: buildTrialHtml({ name: firstName, daysLeft }),
+          subject: assunto,
+          html,
         });
 
         console.info(JSON.stringify({

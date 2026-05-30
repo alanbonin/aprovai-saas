@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
 import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
+import { getConfig } from "@/lib/system-config";
 
 /**
  * GET /api/email/reativacao
@@ -119,12 +120,16 @@ function buildHtml({
 }
 
 async function runCron() {
-  
+
   const now = new Date();
 
-  // Janela de inatividade: 7-30 dias atrás
-  const sevenDaysAgo  = new Date(now.getTime() - 7  * 86400000).toISOString();
-  const thirtyDaysAgo = new Date(now.getTime() - 30 * 86400000).toISOString();
+  // Lê configurações dinâmicas do banco
+  const inativoDias    = await getConfig("reativacao.inativo_apos_dias");
+  const maxInativoDias = await getConfig("reativacao.max_inativo_dias");
+
+  // Janela de inatividade configurável
+  const sevenDaysAgo  = new Date(now.getTime() - (inativoDias as number)    * 86400000).toISOString();
+  const thirtyDaysAgo = new Date(now.getTime() - (maxInativoDias as number) * 86400000).toISOString();
 
   // Alunos com assinatura ativa
   const { data: subscriptions } = await db

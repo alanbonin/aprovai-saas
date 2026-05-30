@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getConfig } from "@/lib/system-config";
 
 /**
  * Anotações de estudo — armazenadas na tabela Note com subjectId = "__STUDY_NOTES__".
@@ -71,8 +72,8 @@ export async function POST(req: Request) {
 
   const notes = await loadNotes(dbUser.id);
 
-  // Limite de 500 notas por usuário (evita payload JSON gigante no banco)
-  const MAX_NOTES = 500;
+  // Limite de notas configurável
+  const MAX_NOTES = await getConfig("limites.max_notas") as number;
   if (notes.length >= MAX_NOTES) {
     return NextResponse.json(
       { error: `Limite de ${MAX_NOTES} anotações atingido. Exclua anotações antigas para continuar.` },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getConfig } from "@/lib/system-config";
 
 const PREFIX = "__FAV_Q__";
 
@@ -54,9 +55,10 @@ export async function POST(req: Request) {
 
   const favs = await getFavs(dbUser.id);
 
-  // Limite de 1000 favoritos por usuário
-  if (action === "add" && favs.length >= 1000) {
-    return NextResponse.json({ error: "Limite de 1000 favoritos atingido" }, { status: 422 });
+  // Limite de favoritos configurável
+  const maxFavoritos = await getConfig("limites.max_favoritos") as number;
+  if (action === "add" && favs.length >= maxFavoritos) {
+    return NextResponse.json({ error: `Limite de ${maxFavoritos} favoritos atingido` }, { status: 422 });
   }
 
   let updated: number[];

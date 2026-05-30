@@ -4,6 +4,7 @@ import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PomodoroFloat } from "@/components/layout/pomodoro-float";
 import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
+import { getConfig } from "@/lib/system-config";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -53,6 +54,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
     trialDaysLeft = Math.max(0, Math.ceil(diffMs / 86_400_000));
   }
 
+  // Banner global e modo manutenção
+  const bannerGlobal = await getConfig("geral.banner_global");
+  const modoManutencao = await getConfig("geral.modo_manutencao");
+
   return (
     <UpgradeModalProvider>
     <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
@@ -64,11 +69,23 @@ export default async function DashboardLayout({ children }: { children: React.Re
         isPremium={isPremium}
         trialDaysLeft={trialDaysLeft}
       />
+      <div className="flex-1 min-w-0 flex flex-col">
+      {modoManutencao && (
+        <div className="bg-red-500/20 border-b border-red-500/40 px-4 py-2 text-center text-sm text-red-300 font-medium">
+          🔧 Sistema em manutenção. Algumas funcionalidades podem estar indisponíveis.
+        </div>
+      )}
+      {bannerGlobal && (
+        <div className="bg-amber-500/20 border-b border-amber-500/30 px-4 py-2 text-center text-sm text-amber-300">
+          {String(bannerGlobal)}
+        </div>
+      )}
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
       <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
       <PomodoroFloat />
+      </div>
     </div>
     </UpgradeModalProvider>
   );
