@@ -52,15 +52,14 @@ interface ActionCardProps {
   desc: string;
   badge?: number | string;
   badgeColor?: string;
-  accent?: string;
   urgent?: boolean;
 }
 
-function ActionCard({ href, icon, title, desc, badge, badgeColor = "bg-indigo-500", accent = "border-white/[0.06]", urgent }: ActionCardProps) {
+function ActionCard({ href, icon, title, desc, badge, badgeColor = "bg-indigo-500", urgent }: ActionCardProps) {
   return (
     <Link href={href} className={cn(
       "flex items-center gap-4 p-4 rounded-xl border transition-all hover:bg-white/[0.04] group",
-      urgent ? "border-amber-500/30 bg-amber-500/[0.04]" : `border-${accent} bg-white/[0.02]`
+      urgent ? "border-amber-500/30 bg-amber-500/[0.04]" : "border-white/[0.06] bg-white/[0.02]"
     )}>
       <div className={cn(
         "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
@@ -131,7 +130,18 @@ export default function HojePage() {
     );
   }
 
-  const d = data!;
+  if (!data) {
+    return (
+      <div className="min-h-screen text-white p-6 max-w-2xl mx-auto flex flex-col items-center justify-center gap-4">
+        <p className="text-gray-400 text-sm">Não foi possível carregar seu briefing. Tente recarregar a página.</p>
+        <button onClick={() => load()} className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-sm text-white transition-colors">
+          Tentar novamente
+        </button>
+      </div>
+    );
+  }
+
+  const d = data;
   const totalPendente = d.questoesVencidas + d.flashcardsVencidos;
 
   return (
