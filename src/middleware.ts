@@ -107,9 +107,9 @@ export async function middleware(request: NextRequest) {
     if (!subRes.ok) return response;
     const subs = await subRes.json();
 
-    // Sem subscription ou expirada → redireciona para /planos
+    // Sem subscription ou expirada → redireciona para /planos com ?expired=1
     if (!subs?.length) {
-      return NextResponse.redirect(new URL("/planos", request.url));
+      return NextResponse.redirect(new URL("/planos?expired=1", request.url));
     }
 
     const sub = subs[0];
@@ -119,7 +119,7 @@ export async function middleware(request: NextRequest) {
       (sub.endDate && new Date(sub.endDate) < new Date());
 
     if (isExpired) {
-      return NextResponse.redirect(new URL("/planos", request.url));
+      return NextResponse.redirect(new URL("/planos?expired=1", request.url));
     }
   } catch {
     // Em caso de erro, não bloqueia o usuário

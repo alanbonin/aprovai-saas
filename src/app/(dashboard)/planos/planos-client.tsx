@@ -15,7 +15,12 @@ interface Plan {
   features: string[]; active: boolean;
 }
 
-interface Props { plans: Plan[]; currentPlanId: string | null; }
+interface Props {
+  plans: Plan[];
+  currentPlanId: string | null;
+  trialExpired?: boolean;
+  paymentError?: boolean;
+}
 
 const SLUG_CONFIG: Record<string, {
   icon: typeof Zap; tagline: string; highlight: string;
@@ -42,7 +47,7 @@ function isOneTime(plan: Plan) { return plan.intervalDays >= 365 || plan.slug ==
 function isAnual(plan: Plan) { return plan.intervalDays >= 360 && plan.intervalDays < 3650 && plan.slug !== "prova-marcada"; }
 function isMensal(plan: Plan) { return !isOneTime(plan) && !isAnual(plan); }
 
-export function PlanosClient({ plans, currentPlanId }: Props) {
+export function PlanosClient({ plans, currentPlanId, trialExpired, paymentError }: Props) {
   const mensais  = plans.filter(isMensal);
   const anuais   = plans.filter(isAnual);
   const temAnuais = anuais.length > 0;
@@ -55,6 +60,33 @@ export function PlanosClient({ plans, currentPlanId }: Props) {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-6xl mx-auto">
+
+      {/* Banner: trial expirado */}
+      {trialExpired && (
+        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 flex items-start gap-3">
+          <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-300">Seu período de trial gratuito expirou</p>
+            <p className="text-xs text-amber-400/80 mt-0.5">
+              Assine um plano abaixo para continuar estudando sem interrupção. Seu progresso, flashcards e histórico estão salvos.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Banner: erro de pagamento */}
+      {paymentError && (
+        <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 flex items-start gap-3">
+          <X className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-red-300">Pagamento não aprovado</p>
+            <p className="text-xs text-red-400/80 mt-0.5">
+              Houve um problema ao processar seu pagamento. Verifique os dados do cartão e tente novamente.
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="text-center mb-10">
         <h1 className="text-3xl font-bold mb-2">Escolha seu plano</h1>
         <p className="text-gray-400 text-sm">Do trial gratuito ao Elite — evolua no seu ritmo.</p>
