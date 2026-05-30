@@ -789,10 +789,11 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "Direito Penal",
       "Direito Processual Penal",
+      "Legislação Penal Especial",
       "Legislação Específica",
       "Ética no Serviço Público",
     ],
-    observacoes: "Banca CESPE. Edital 2021: 893 vagas. Nível superior. Bloco de Informática representa ~30% da prova. Contabilidade também aparece em alguns editais.",
+    observacoes: "Banca CESPE. Edital 2021: 893 vagas. Nível superior. Legislação Especial inclui Lei de Drogas, Maria da Penha, Estatuto do Desarmamento. Bloco de Informática representa ~30% da prova.",
   },
 
   "escrivao-pf": {
@@ -804,10 +805,11 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "Direito Penal",
       "Direito Processual Penal",
+      "Legislação Penal Especial",
       "Legislação Específica",
       "Ética no Serviço Público",
     ],
-    observacoes: "Banca CESPE. Edital 2021: 400 vagas. Prova prática de digitação obrigatória.",
+    observacoes: "Banca CESPE. Edital 2021: 400 vagas. Legislação Especial Penal cobrada. Prova prática de digitação obrigatória.",
   },
 
   "perito-pf": {
@@ -873,12 +875,14 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Civil",
       "Medicina Legal",
       "Criminalística",
+      "Criminologia",
+      "Legislação Penal Especial",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Nível superior (bacharelado em Direito). Exigências variam por estado: BA exige lei orgânica da PC-BA; SP exige LOBPC. Medicina Legal e Criminalística têm peso alto. Legislação Especial Penal sempre presente.",
+    observacoes: "Nível superior (bacharelado em Direito). Criminologia e Legislação Penal Especial obrigatórias em quase todos os editais (CESPE, FGV, AOCP). BA exige lei orgânica da PC-BA. Medicina Legal e Criminalística têm peso alto.",
   },
 
   "escrivao-pc": {
@@ -891,12 +895,14 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "Direito Penal",
       "Direito Processual Penal",
+      "Legislação Penal Especial",
+      "Legislação Policial",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Nível médio ou superior, dependendo do estado. Legislação da PC estadual cobrada.",
+    observacoes: "Nível médio ou superior, dependendo do estado. Legislação da PC estadual e Lei Penal Especial cobradas.",
   },
 
   "agente-investigador-pc": {
@@ -910,12 +916,15 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Penal",
       "Direito Processual Penal",
       "Medicina Legal",
+      "Criminologia",
+      "Legislação Penal Especial",
+      "Legislação Policial",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Varia muito por estado. MG: inclui Lei Orgânica PC-MG, Noções de Criminologia, Informática. SP: inclui Noções de Direitos Humanos. Nível médio ou superior por estado.",
+    observacoes: "Varia por estado. MG/BA/GO: inclui Criminologia e Lei Orgânica da PC. SP: inclui Direitos Humanos. Legislação Penal Especial (Lei de Drogas, Maria da Penha) sempre presente.",
   },
 
   "perito-pc": {
@@ -964,11 +973,12 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "História do Brasil",
       "Geografia do Brasil",
       "Atualidades",
+      "Legislação Policial",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Varia muito por estado. SP (FGV): Português, Matemática, Conhecimentos Gerais (História/Geografia), Atualidades, Informática básica, Redação. Inclui TAF e avaliação psicológica. Noções de Direito e Legislação PM estadual podem aparecer.",
+    observacoes: "Varia por estado. Regulamento Disciplinar e Lei Orgânica da PM estadual sempre presentes. SP (FGV): Português, Matemática, Conhecimentos Gerais, Atualidades, Informática. Inclui TAF e avaliação psicológica.",
   },
 
   "pm-sargento": {
@@ -981,11 +991,12 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "História do Brasil",
       "Atualidades",
+      "Legislação Policial",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Conteúdo mais denso que soldado. Legislação PM estadual e Regulamento Disciplinar obrigatórios.",
+    observacoes: "Conteúdo mais denso que soldado. Regulamento Disciplinar PM e Lei Orgânica estadual obrigatórios em todos os editais.",
   },
 
   "pm-oficial": {
@@ -1018,11 +1029,12 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "História do Brasil",
       "Geografia do Brasil",
       "Atualidades",
+      "Legislação Policial",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Similar ao PM Soldado. Inclui Noções de Combate a Incêndio em alguns editais. TAF obrigatório.",
+    observacoes: "Similar ao PM Soldado. Lei Orgânica do CBM estadual cobrada. Inclui Noções de Combate a Incêndio em alguns editais. TAF obrigatório.",
   },
 
   "cbm-oficial": {
@@ -1088,9 +1100,10 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "História do Brasil",
       "Atualidades",
+      "Legislação Policial",
       "Legislação Específica",
     ],
-    observacoes: "Banca CESPE. Legislação da PMDF e do DF cobradas.",
+    observacoes: "Banca CESPE. Regulamento Disciplinar da PMDF e legislação do DF cobradas. Lei Orgânica do DF sempre presente.",
   },
 
   "cbm-cbmdf": {
@@ -1117,12 +1130,15 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "Direito Penal",
       "Direito Processual Penal",
+      "Criminologia",
+      "Legislação Penal Especial",
+      "Legislação Policial",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
     materiasEstaduais: ["Legislação Específica"],
     legislacaoEstadual: true,
-    observacoes: "Lei de Execução Penal (Lei 7.210/84) e Lei Orgânica da Polícia Penal estadual são obrigatórias. Noções de Direitos Humanos cobradas em vários editais.",
+    observacoes: "Lei de Execução Penal (Lei 7.210/84) e Lei Orgânica da Polícia Penal estadual são obrigatórias. Criminologia cobrada em vários editais. Legislação Penal Especial: Lei de Drogas, Maria da Penha.",
   },
 
   // ══════════════════════════════════════════════════
@@ -1138,9 +1154,11 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Informática",
       "Matemática Financeira",
       "Conhecimentos Bancários",
+      "Atendimento ao Cliente e Vendas",
+      "Atualidades do Mercado Financeiro",
       "Atualidades",
     ],
-    observacoes: "Banca CESGRANRIO. Concurso mais popular do país. Edital 2023: 6.000 vagas. Vendas e Negociação cobradas como parte dos Conhecimentos Específicos. Matemática Financeira inclusa em Conhecimentos Bancários no BB.",
+    observacoes: "Banca CESGRANRIO. Concurso mais popular do país. Edital 2023: 6.000 vagas. Vendas, Negociação e Atendimento são cobrados como Conhecimentos Específicos com alto peso.",
   },
 
   "analista-bb": {
@@ -1168,9 +1186,11 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Informática",
       "Matemática Financeira",
       "Conhecimentos Bancários",
+      "Atendimento ao Cliente e Vendas",
+      "Atualidades do Mercado Financeiro",
       "Atualidades",
     ],
-    observacoes: "Banca CESGRANRIO. Técnico Bancário Nova Série (TBNS). Conhecimentos sobre habitação e FGTS por ser a CEF.",
+    observacoes: "Banca CESGRANRIO. Técnico Bancário Nova Série (TBNS). Vendas e Atendimento com peso alto. Conhecimentos sobre habitação e FGTS específicos da CEF.",
   },
 
   "analista-cef": {
@@ -1444,10 +1464,12 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Constitucional",
       "Direito Administrativo",
       "Direito Previdenciário",
+      "Custeio da Previdência Social",
+      "Reforma da Previdência (EC 103/2019)",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
-    observacoes: "Banca CESPE. Último edital 2022. Direito Previdenciário (Regime Geral, benefícios, custeio) é a matéria de maior peso. Noções de Direito Civil também cobradas.",
+    observacoes: "Banca CESPE. Direito Previdenciário com custeio, benefícios e EC 103/2019 é a matéria de maior peso. Noções de Direito Civil também cobradas.",
   },
 
   "analista-inss": {
@@ -1458,12 +1480,14 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Constitucional",
       "Direito Administrativo",
       "Direito Previdenciário",
+      "Custeio da Previdência Social",
+      "Reforma da Previdência (EC 103/2019)",
       "Direito Civil",
       "Administração Pública",
       "Ética no Serviço Público",
       "Legislação Específica",
     ],
-    observacoes: "Banca CESPE. Nível superior. Mais aprofundado que o técnico.",
+    observacoes: "Banca CESPE. Nível superior. EC 103/2019 e custeio com alto peso.",
   },
 
   "perito-inss": {
@@ -1471,12 +1495,14 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Língua Portuguesa",
       "Raciocínio Lógico",
       "Direito Previdenciário",
+      "Custeio da Previdência Social",
+      "Reforma da Previdência (EC 103/2019)",
       "Medicina Legal",
       "Biologia",
       "Legislação Específica",
       "Ética no Serviço Público",
     ],
-    observacoes: "Banca CESPE. Exige diploma em Medicina. Avaliação de incapacidade laboral e benefícios por incapacidade.",
+    observacoes: "Banca CESPE. Exige diploma em Medicina. Avaliação de incapacidade laboral e benefícios por incapacidade. EC 103/2019 cobrada.",
   },
 
   "ti-prev-inss": { materias: ["Língua Portuguesa","Raciocínio Lógico","Banco de Dados","Redes de Computadores","Segurança da Informação","Engenharia de Software","Governança de TI","Algoritmos e Estruturas de Dados","Legislação Específica"], observacoes: "Banca CESPE." },
@@ -1605,15 +1631,21 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
     materias: [
       "Língua Portuguesa",
       "Língua Inglesa",
+      "Língua Francesa (CACD)",
+      "Língua Espanhola (CACD)",
       "História do Brasil",
       "Geografia do Brasil",
+      "História Mundial e Relações Internacionais",
+      "Política Internacional e Teoria das RI",
       "Economia",
+      "Economia Política Internacional",
       "Direito Constitucional",
       "Direito Administrativo",
-      "Direito Internacional Público", 
+      "Direito Internacional Público",
+      "Direito Internacional Privado",
       "Atualidades",
     ],
-    observacoes: "Banca CESPE (CACD). Concurso CACD — Carreira de Diplomata. Inclui: História Mundial, Política Internacional, Língua Francesa ou Espanhola, Relações Internacionais. Exame em duas fases + oral. Um dos concursos mais exigentes do Brasil.",
+    observacoes: "Banca CESPE (CACD). Um dos concursos mais difíceis do país. Exame em 4 fases + oral em língua estrangeira. Todas as matérias têm peso alto. Língua Francesa ou Espanhola obrigatória como 2ª língua estrangeira.",
   },
 
   "oficial-chancelaria": {
