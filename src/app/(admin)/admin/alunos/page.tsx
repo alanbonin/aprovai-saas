@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AlunosAdminPage() {
   const [{ data: users }, { data: plans }, { data: partners }] = await Promise.all([
-    db.from("User").select("id, name, email, role, createdAt, origin, partnerId, groupTag").order("createdAt", { ascending: false }).limit(500),
+    db.from("User").select("id, name, email, role, createdAt, origin, partnerId, groupTag").order("createdAt", { ascending: false }).limit(1000),
     db.from("Plan").select("id, name, slug").eq("active", true).order("price"),
     db.from("Partner").select("id, name, slug").eq("active", true).order("name"),
   ]);
