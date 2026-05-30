@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CONFIG_DEFAULTS } from "@/lib/system-config";
-import type { ConfigValue } from "@/lib/system-config";
+import { CONFIG_DEFAULTS } from "@/lib/config-defaults";
+import type { ConfigValue } from "@/lib/config-defaults";
 
 /* ── Tipos ──────────────────────────────────────────────────────────────── */
 interface Props {
