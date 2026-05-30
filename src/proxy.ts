@@ -159,6 +159,50 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/workspace", request.url));
   }
 
+  // ── Verifica subscription expirada → redireciona para /planos ───────────
+  // Só para rotas do dashboard (não admin, não configuracoes, não planos)
+  const isExpirationBypass =
+    pathname.startsWith("/planos") ||
+    pathname.startsWith("/configuracoes") ||
+    pathname.startsWith("/onboarding") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/suporte") ||
+    pathname.startsWith("/manutencao");
+
+  if (user && !isExpirationBypass) {
+    try {
+      const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
+      const apiUrl = (process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL) ?? "";
+
+      const userRes = await fetch(
+        `${apiUrl}/rest/v1/User?supabaseId=eq.${user.id}&select=id`,
+        { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, next: { revalidate: 30 } }
+      );
+      const users = userRes.ok ? await userRes.json() : [];
+
+      if (users?.length) {
+        const subRes = await fetch(
+          `${apiUrl}/rest/v1/Subscription?userId=eq.${users[0].id}&select=endDate,status&order=createdAt.desc&limit=1`,
+          { headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}` }, next: { revalidate: 30 } }
+        );
+        const subs = subRes.ok ? await subRes.json() : [];
+
+        if (!subs?.length) {
+          return NextResponse.redirect(new URL("/planos?expired=1", request.url));
+        }
+        const sub = subs[0];
+        const isExpired =
+          sub.status === "EXPIRED" ||
+          sub.status === "CANCELLED" ||
+          (sub.endDate && new Date(sub.endDate) < new Date());
+
+        if (isExpired) {
+          return NextResponse.redirect(new URL("/planos?expired=1", request.url));
+        }
+      }
+    } catch { /* em caso de erro, não bloqueia */ }
+  }
+
   // Nota: verificação de role ADMIN é feita no layout do grupo (admin)/
   // pois a role está no banco (User.role), não no Supabase user_metadata.
 
