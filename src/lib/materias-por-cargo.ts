@@ -855,10 +855,11 @@ export const MATERIAS_POR_CARGO: Record<string, MateriasCargo> = {
       "Direito Administrativo",
       "Direito Penal",
       "Direito Processual Penal",
-      "Legislação Específica",   // CTB — Código de Trânsito Brasileiro
+      "Legislação de Trânsito",  // CTB — Código de Trânsito Brasileiro (matéria específica PRF)
+      "Legislação Penal Especial",
       "Ética no Serviço Público",
     ],
-    observacoes: "Banca CESPE. Último edital 2021. CTB (Código de Trânsito Brasileiro) é matéria específica de alto peso. Física (cinemática veicular) também cobrada. Legislação Especial inclui: Lei de Drogas, Maria da Penha, Desarmamento.",
+    observacoes: "Banca CESPE. CTB (Código de Trânsito Brasileiro) é a matéria específica de maior peso — infrações, habilitação, crimes de trânsito, fiscalização. Física cobre cinemática veicular. Legislação Especial: Lei de Drogas, Maria da Penha, Estatuto do Desarmamento.",
   },
 
   "delegado-pc": {
