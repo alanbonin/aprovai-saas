@@ -395,10 +395,11 @@ const TRIAL_LOCKED_HREFS = new Set([
 interface SidebarProps {
   isAdmin?: boolean; userName?: string; planName?: string;
   aiCreditsLeft?: number; aiCreditsTotal?: number; isPremium?: boolean;
+  trialDaysLeft?: number | null;
 }
 
 /* ── Componente principal ───────────────────────────────────────────────── */
-export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium }: SidebarProps) {
+export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium, trialDaysLeft }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -591,6 +592,46 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               ⚙️ Painel Admin
             </span>
           </div>
+        )}
+
+        {/* Banner de trial — exibe quando está no período gratuito */}
+        {!isAdmin && trialDaysLeft !== null && trialDaysLeft !== undefined && (
+          <div className={cn(
+            "rounded-lg border px-2.5 py-2 space-y-1.5",
+            trialDaysLeft <= 3
+              ? "bg-amber-500/10 border-amber-500/30"
+              : "bg-white/[0.03] border-white/[0.06]"
+          )}>
+            <p className={cn(
+              "text-[10px] font-semibold",
+              trialDaysLeft <= 3 ? "text-amber-400" : "text-gray-400"
+            )}>
+              {trialDaysLeft === 0
+                ? "⏰ Trial expira hoje!"
+                : `⏰ ${trialDaysLeft} dia${trialDaysLeft !== 1 ? "s" : ""} de trial restante${trialDaysLeft !== 1 ? "s" : ""}`}
+            </p>
+            <Link
+              href="/planos"
+              className={cn(
+                "flex items-center justify-center gap-1.5 w-full py-1.5 rounded-lg text-[11px] font-bold transition-all",
+                trialDaysLeft <= 3
+                  ? "bg-amber-500 hover:bg-amber-400 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-500 text-white"
+              )}
+            >
+              ⚡ Fazer upgrade
+            </Link>
+          </div>
+        )}
+
+        {/* Botão de upgrade para planos não-premium sem trial ativo */}
+        {!isAdmin && !isPremium && (trialDaysLeft === null || trialDaysLeft === undefined) && (
+          <Link
+            href="/planos"
+            className="flex items-center justify-center gap-1.5 w-full py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold transition-all"
+          >
+            ⚡ Fazer upgrade
+          </Link>
         )}
 
         {/* Toggle dark/light */}

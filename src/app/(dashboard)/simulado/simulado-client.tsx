@@ -271,21 +271,43 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
             </p>
           )}
 
-          <p className="text-gray-500 text-xs mb-8">Tempo: {fmtDuration(result.timeSecs)}</p>
+          <p className="text-gray-500 text-xs mb-4">Tempo: {fmtDuration(result.timeSecs)}</p>
 
-          <div className="flex flex-col gap-3 items-center">
+          {/* Comparação com histórico */}
+          {history.length > 1 && (() => {
+            const prev = history[1]; // [0] é o recém-adicionado
+            const prevPct = prev.total > 0 ? Math.round((prev.correct / prev.total) * 100) : 0;
+            const delta = pct - prevPct;
+            return (
+              <div className="w-full max-w-xs mb-6 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm">
+                <p className="text-xs text-gray-500 mb-1">Comparação com simulado anterior</p>
+                <p className={cn("font-semibold", delta > 0 ? "text-green-400" : delta < 0 ? "text-red-400" : "text-gray-400")}>
+                  {delta > 0 ? `▲ +${delta}%` : delta < 0 ? `▼ ${delta}%` : "= Sem variação"} em relação ao último ({prevPct}%)
+                </p>
+              </div>
+            );
+          })()}
+
+          <div className="flex flex-col gap-3 items-center w-full max-w-xs">
             <button onClick={() => { setGabaritoExpanded(null); setPhase("gabarito"); }}
-              className="w-full max-w-xs px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 justify-center">
+              className="w-full px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 justify-center">
               <ClipboardList className="w-4 h-4" /> Ver gabarito completo
             </button>
-            <div className="flex gap-3 justify-center">
+            {/* Revisar questões erradas */}
+            {result.correct < result.total && (
+              <a href="/questoes?erros=1"
+                className="w-full px-6 py-2.5 rounded-xl border border-red-500/40 bg-red-500/10 text-red-300 hover:bg-red-500/20 text-sm font-medium transition-colors flex items-center gap-2 justify-center">
+                <BookOpen className="w-4 h-4" /> Revisar questões erradas
+              </a>
+            )}
+            <div className="flex gap-3 justify-center w-full">
               <button onClick={() => setPhase("menu")}
-                className="px-4 py-2 rounded-lg border border-white/10 text-sm text-gray-400 hover:text-white transition-colors">
+                className="flex-1 px-4 py-2 rounded-lg border border-white/10 text-sm text-gray-400 hover:text-white transition-colors">
                 Início
               </button>
               <button onClick={() => setPhase("config")}
-                className="px-4 py-2 border border-white/10 rounded-lg text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2">
-                <RotateCcw className="w-4 h-4" /> Novo simulado
+                className="flex-1 px-4 py-2 border border-white/10 rounded-lg text-sm text-gray-400 hover:text-white transition-colors flex items-center gap-2 justify-center">
+                <RotateCcw className="w-4 h-4" /> Novo
               </button>
             </div>
           </div>

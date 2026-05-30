@@ -223,9 +223,17 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
         })}
       </div>
 
-      <p className="text-center text-gray-600 text-xs mt-8">
-        Planos recorrentes podem ser cancelados a qualquer momento. Sem multa.
-      </p>
+      {/* Garantia + segurança */}
+      <div className="mt-8 flex flex-col items-center gap-2">
+        <div className="flex items-center gap-6 text-xs text-gray-500 flex-wrap justify-center">
+          <span className="flex items-center gap-1.5">🔒 Pagamento seguro via Mercado Pago</span>
+          <span className="flex items-center gap-1.5">↩️ Cancelamento a qualquer momento, sem multa</span>
+          <span className="flex items-center gap-1.5">💾 Seu progresso e histórico ficam salvos</span>
+        </div>
+        <p className="text-center text-gray-700 text-xs mt-1">
+          Ao clicar em assinar, você será redirecionado para o Mercado Pago para concluir o pagamento com segurança.
+        </p>
+      </div>
     </div>
   );
 }

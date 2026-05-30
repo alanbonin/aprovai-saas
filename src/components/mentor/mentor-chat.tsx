@@ -600,10 +600,27 @@ export function MentorChat({
               {messages.length === 0 && singleAgent && (
                 <div className="flex items-end gap-2.5">
                   <MentorAvatar agent={singleAgent} size={36} className="mb-1" />
-                  <div className="max-w-lg">
+                  <div className="max-w-lg w-full">
                     <p className="text-xs text-gray-500 mb-1 ml-1">{getPersonaName(singleAgent)}</p>
                     <div className="px-4 py-3 rounded-2xl rounded-bl-sm bg-white/[0.06] border border-white/[0.07] text-sm text-gray-200 leading-relaxed">
                       {getPersonaGreeting(singleAgent)}
+                    </div>
+                    {/* Sugestões de perguntas iniciais */}
+                    <div className="mt-3 flex flex-wrap gap-2 ml-1">
+                      {[
+                        "Quais são os tópicos mais cobrados?",
+                        "Me explique o conteúdo prioritário",
+                        "Como devo organizar meus estudos?",
+                        "Crie um plano de revisão para mim",
+                      ].map(sugestao => (
+                        <button
+                          key={sugestao}
+                          onClick={() => { setInput(sugestao); }}
+                          className="text-xs px-3 py-1.5 rounded-full border border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20 transition-colors"
+                        >
+                          {sugestao}
+                        </button>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -698,9 +715,26 @@ export function MentorChat({
             </div>
 
             {error && (
-              <div className="mx-5 mb-2 flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
-                <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                {error}
+              <div className="mx-5 mb-2 flex items-start gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p>{error}</p>
+                  {(error.toLowerCase().includes("limite") || error.toLowerCase().includes("crédito") || credits <= 0) && (
+                    <a href="/planos" className="inline-block mt-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200 underline underline-offset-2">
+                      ⚡ Ver planos e fazer upgrade →
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Banner créditos esgotados */}
+            {credits <= 0 && !error && (
+              <div className="mx-5 mb-2 flex items-center justify-between gap-3 p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-sm">
+                <span className="text-xs">Limite semanal de mensagens atingido.</span>
+                <a href="/planos" className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-white transition-colors">
+                  ⚡ Upgrade
+                </a>
               </div>
             )}
 

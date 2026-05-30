@@ -37,17 +37,18 @@ export default async function WorkspacePage() {
   // Primeiro acesso sem onboarding → redireciona para a experiência de onboarding
   if (!profile?.onboardingDone) redirect("/onboarding");
 
-  // Todos os agentes ativos (para o seletor do mentor)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data: allAgentsRaw } = await db.from("Agent").select("*").eq("active", true).order("name");
-  const allAgents: any[] = allAgentsRaw ?? [];
-
-  // IDs dos agentes do perfil ativo (filtra por profileId se disponível)
+  // Todos os agentes ativos + IDs dos agentes do perfil — em paralelo
   const userAgentQuery = activeProfile
     ? db.from("UserAgent").select("agentId").eq("userId", dbUser.id).eq("profileId", activeProfile.id)
     : db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
 
-  const { data: userAgentRows } = await userAgentQuery;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [{ data: allAgentsRaw }, { data: userAgentRows }] = await Promise.all([
+    db.from("Agent").select("*").eq("active", true).order("name"),
+    userAgentQuery,
+  ]);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const allAgents: any[] = allAgentsRaw ?? [];
   const activeAgentIds = (userAgentRows ?? []).map((ua: { agentId: string }) => ua.agentId);
 
   // Agentes do perfil ativo
@@ -60,18 +61,17 @@ export default async function WorkspacePage() {
   // Matérias do perfil ativo (filtra por profileId)
   let subjects: { id: string; name: string; slug: string }[] = [];
   if (profile?.onboardingDone && activeProfile) {
-    const { data: studentSubjects } = await db
-      .from("StudentSubject")
-      .select("subjectId, Subject(id, name, slug, description)")
-      .eq("userId", dbUser.id)
-      .eq("profileId", activeProfile.id);
-
-    // Também inclui matérias legadas (sem profileId) para compatibilidade
-    const { data: legacySubjects } = await db
-      .from("StudentSubject")
-      .select("subjectId, Subject(id, name, slug, description)")
-      .eq("userId", dbUser.id)
-      .is("profileId", null);
+    // Matérias do perfil ativo + legadas em paralelo
+    const [{ data: studentSubjects }, { data: legacySubjects }] = await Promise.all([
+      db.from("StudentSubject")
+        .select("subjectId, Subject(id, name, slug, description)")
+        .eq("userId", dbUser.id)
+        .eq("profileId", activeProfile.id),
+      db.from("StudentSubject")
+        .select("subjectId, Subject(id, name, slug, description)")
+        .eq("userId", dbUser.id)
+        .is("profileId", null),
+    ]);
 
     const allSubs = [...(studentSubjects ?? []), ...(legacySubjects ?? [])];
     const seen = new Set<string>();

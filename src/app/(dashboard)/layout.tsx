@@ -46,6 +46,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isExpiredSub = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
   const isPremium = !isExpiredSub && !!(sub && (sub.plan?.price ?? 0) > 0);
 
+  // Calcula dias restantes do trial
+  let trialDaysLeft: number | null = null;
+  if (sub && (sub as { status?: string }).status === "TRIAL" && sub.endDate) {
+    const diffMs = new Date(sub.endDate).getTime() - Date.now();
+    trialDaysLeft = Math.max(0, Math.ceil(diffMs / 86_400_000));
+  }
+
   return (
     <UpgradeModalProvider>
     <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
@@ -55,6 +62,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         aiCreditsLeft={aiCreditsLeft}
         aiCreditsTotal={aiCreditsTotal}
         isPremium={isPremium}
+        trialDaysLeft={trialDaysLeft}
       />
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
       <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
