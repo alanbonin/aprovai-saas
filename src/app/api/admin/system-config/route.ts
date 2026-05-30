@@ -8,14 +8,14 @@ async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
-  const { data } = await db.from("User").select("role").eq("supabaseId", user.id).single();
-  return data?.role === "ADMIN" ? user : null;
+  const { data } = await db.from("User").select("id, role").eq("supabaseId", user.id).single();
+  return data?.role === "ADMIN" ? { supabaseUser: user, dbId: data.id as string } : null;
 }
 
 // GET /api/admin/system-config — retorna todas as configs
 export async function GET() {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const configs = await getAllConfigs();
   return NextResponse.json({ configs, defaults: CONFIG_DEFAULTS });
@@ -23,8 +23,8 @@ export async function GET() {
 
 // POST /api/admin/system-config — { key, value } — salva uma config
 export async function POST(req: Request) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   let body: { key?: string; value?: ConfigValue };
   try {
@@ -42,14 +42,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Chave de configuração inválida" }, { status: 400 });
   }
 
-  await setConfig(key, value);
+  await setConfig(key, value, admin.dbId);
   return NextResponse.json({ ok: true, key, value });
 }
 
 // DELETE /api/admin/system-config?key=xxx — restaura para o default
 export async function DELETE(req: Request) {
-  const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const admin = await requireAdmin();
+  if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const url = new URL(req.url);
   const key = url.searchParams.get("key");

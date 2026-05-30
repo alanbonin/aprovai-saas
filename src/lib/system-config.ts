@@ -69,7 +69,8 @@ export async function getConfig<K extends ConfigKey>(key: K): Promise<typeof CON
       .from("Note")
       .select("content")
       .eq("subjectId", `${CONFIG_PREFIX}${key}`)
-      .is("userId", null)
+      .order("updatedAt", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (data?.content) {
@@ -85,8 +86,7 @@ export async function getConfigs<K extends ConfigKey>(keys: K[]): Promise<Record
   const { data } = await db
     .from("Note")
     .select("subjectId, content")
-    .in("subjectId", prefixedKeys)
-    .is("userId", null);
+    .in("subjectId", prefixedKeys);
 
   const result = {} as Record<K, typeof CONFIG_DEFAULTS[K]>;
   for (const key of keys) {
@@ -101,8 +101,7 @@ export async function getAllConfigs(): Promise<Record<string, ConfigValue>> {
   const { data } = await db
     .from("Note")
     .select("subjectId, content")
-    .like("subjectId", `${CONFIG_PREFIX}%`)
-    .is("userId", null);
+    .like("subjectId", `${CONFIG_PREFIX}%`);
 
   const result: Record<string, ConfigValue> = { ...(CONFIG_DEFAULTS as Record<string, ConfigValue>) };
   for (const row of data ?? []) {
@@ -114,8 +113,8 @@ export async function getAllConfigs(): Promise<Record<string, ConfigValue>> {
   return result;
 }
 
-/** Salva uma configuração no banco */
-export async function setConfig(key: string, value: ConfigValue): Promise<void> {
+/** Salva uma configuração no banco (adminUserId = ID do admin logado) */
+export async function setConfig(key: string, value: ConfigValue, adminUserId: string): Promise<void> {
   const subjectId = `${CONFIG_PREFIX}${key}`;
   const content = JSON.stringify(value);
 
@@ -123,7 +122,7 @@ export async function setConfig(key: string, value: ConfigValue): Promise<void> 
     .from("Note")
     .select("id")
     .eq("subjectId", subjectId)
-    .is("userId", null)
+    .limit(1)
     .maybeSingle();
 
   if (existing) {
@@ -134,7 +133,7 @@ export async function setConfig(key: string, value: ConfigValue): Promise<void> 
       id: crypto.randomUUID(),
       subjectId,
       content,
-      userId: null,
+      userId: adminUserId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
@@ -146,6 +145,5 @@ export async function deleteConfig(key: string): Promise<void> {
   await db
     .from("Note")
     .delete()
-    .eq("subjectId", `${CONFIG_PREFIX}${key}`)
-    .is("userId", null);
+    .eq("subjectId", `${CONFIG_PREFIX}${key}`);
 }
