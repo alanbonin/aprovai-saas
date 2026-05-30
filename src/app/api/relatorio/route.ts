@@ -59,7 +59,8 @@ export async function GET() {
       .or(pf),
     db.from("Progress").select("correct, questionId, createdAt")
       .eq("userId", dbUser.id)
-      .or(pf),
+      .or(pf)
+      .limit(5000), // evita varredura total em tabelas grandes
     db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt")
       .eq("userId", dbUser.id)
       .order("createdAt", { ascending: false })
@@ -92,7 +93,14 @@ export async function GET() {
   }
 
   // ── XP e Level ─────────────────────────────────────────────────────────────
-  const xp = allRecords.reduce((sum, r) => sum + (r.correct ? 15 : 5), 0);
+  // XP lido do StudentProfile (fonte canônica — calculado via lib/xp.ts)
+  // Fallback: estimativa pela contagem de acertos (2 XP/acerto, conforme XP_CORRECT_QUESTION)
+  const { data: spProfile } = await db
+    .from("StudentProfile")
+    .select("xp")
+    .eq("userId", dbUser.id)
+    .maybeSingle();
+  const xp = spProfile?.xp ?? allRecords.reduce((sum, r) => sum + (r.correct ? 2 : 0), 0);
   const level = getLevel(xp);
   const nextLevel = getNextLevel(xp);
   const nextLevelXp = nextLevel?.min ?? xp;
