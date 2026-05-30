@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 
 /**
  * GET /api/email/reativacao
@@ -216,18 +217,16 @@ async function runCron() {
         topSubject = subj?.name ?? null;
       }
 
-      const html = buildHtml({
-        name: user.name,
-        diasInativo,
-        cargo: profile?.cargo ?? null,
-        topSubject,
-        totalQuestoes: totalQuestoes ?? 0,
+      const template = await getEmailTemplate("reativacao");
+      const { assunto, html } = renderTemplate(template, {
+        nome: user.name.split(" ")[0],
+        app_url: APP_URL,
       });
 
       await sendEmail({
         from: FROM,
         to: user.email,
-        subject: `${user.name.split(" ")[0]}, você está perdendo tempo de estudo ⏰ — Aprovai`,
+        subject: assunto,
         html,
       });
 

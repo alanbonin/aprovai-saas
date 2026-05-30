@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 
 /**
  * GET /api/email/relatorio-semanal
@@ -230,20 +231,21 @@ async function runCron() {
       if (ranked.length > 0) topSubject = ranked[0].name;
       if (ranked.length > 1) piorSubject = ranked[ranked.length - 1].name;
 
-      const html = buildHtml({
-        name: user.name,
-        questoes,
-        acertos,
-        flashcardsRevisados,
-        streak,
-        topSubject,
-        piorSubject,
+      const accuracy = questoes > 0 ? Math.round((acertos / questoes) * 100) : 0;
+
+      const template = await getEmailTemplate("relatorio-semanal");
+      const { assunto, html } = renderTemplate(template, {
+        nome: user.name.split(" ")[0],
+        questoes: String(questoes),
+        acertos: String(accuracy),
+        streak: String(streak),
+        app_url: APP_URL,
       });
 
       await sendEmail({
         from: FROM,
         to: user.email,
-        subject: `📊 Seu resumo da semana — ${acertos}/${questoes} acertos — Aprovai`,
+        subject: assunto,
         html,
       });
 

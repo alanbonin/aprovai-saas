@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 import webpush from "web-push";
 
 const PUSH_PREFIX = "__PUSH_SUBSCRIPTION__";
@@ -168,7 +169,7 @@ async function runCron() {
           .lte("createdAt", `${yesterday}T23:59:59`);
         const streakRisk = (yesterdayActivity as unknown as { count: number })?.count === 0;
 
-        const html = buildLembreteHtml({
+        const rawHtml = buildLembreteHtml({
           name: user.name.split(" ")[0],
           flashcardsDue,
           daysToProva,
@@ -177,14 +178,22 @@ async function runCron() {
         });
 
         // Só envia se tiver algo relevante
-        if (!html) continue;
+        if (!rawHtml) continue;
 
+        const template = await getEmailTemplate("lembrete");
+        const { assunto, html } = renderTemplate(template, {
+          nome: user.name.split(" ")[0],
+          flashcardsDue: String(flashcardsDue),
+          app_url: APP_URL,
+        });
+
+        // Subject dinâmico conforme contexto; fallback para o do template
         const provAlerta = daysToProva !== null && [30, 7, 1].includes(daysToProva);
         const subject = provAlerta
           ? `⏰ Faltam ${daysToProva} dias para sua prova — Aprovai`
           : flashcardsDue > 0
           ? `🃏 ${flashcardsDue} flashcard${flashcardsDue > 1 ? "s" : ""} aguardando revisão — Aprovai`
-          : "🔥 Não perca sua sequência de estudos — Aprovai";
+          : assunto;
 
         await sendEmail({
           from: FROM_EMAIL,

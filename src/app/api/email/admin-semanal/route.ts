@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 
 /**
  * GET /api/email/admin-semanal
@@ -194,23 +195,22 @@ async function runCron() {
   const weekLabel = new Date(weekStart).toLocaleDateString("pt-BR", { day: "2-digit", month: "long" }) +
     " – " + new Date(now).toLocaleDateString("pt-BR", { day: "2-digit", month: "long", year: "numeric" });
 
-  const html = buildHtml({
-    novosAlunos: novosAlunos ?? 0,
-    totalAlunos: totalAlunos ?? 0,
-    questoesRespondidas: questoesRespondidas ?? 0,
-    simuladosRealizados: simuladosRealizados ?? 0,
-    novasAssinaturas: novasAssinaturas ?? 0,
-    assinaturasAtivas: assinaturasAtivas ?? 0,
-    topAlunos,
-    alunosInativos,
-    weekLabel,
+  const template = await getEmailTemplate("admin-semanal");
+  const { assunto, html } = renderTemplate(template, {
+    semana: weekLabel,
+    novos_alunos: String(novosAlunos ?? 0),
+    questoes_respondidas: String(questoesRespondidas ?? 0),
+    simulados: String(simuladosRealizados ?? 0),
+    novas_assinaturas: String(novasAssinaturas ?? 0),
+    total_alunos: String(totalAlunos ?? 0),
+    assinaturas_ativas: String(assinaturasAtivas ?? 0),
+    app_url: APP_URL,
   });
 
-  
   const { error } = await sendEmail({
     from: FROM_EMAIL,
     to: ADMIN_EMAIL,
-    subject: `📊 Relatório Semanal Aprovai — ${weekLabel}`,
+    subject: assunto,
     html,
   });
 
