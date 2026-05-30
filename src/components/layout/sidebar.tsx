@@ -386,7 +386,7 @@ const TRIAL_LOCKED_HREFS = new Set([
   "/simulado", "/simulado/filtrado", "/simulado/revisao", "/simulado/exame", "/historico-simulados",
   "/arena",
   "/revisao", "/agenda-revisoes", "/favoritos",
-  "/glossario", "/artigos", "/caso", "/redacao", "/materiais",
+  "/glossario", "/artigos", "/caso", "/redacao",
   "/resumo-semanal", "/diagnostico", "/bancas", "/nivel", "/comparar",
   "/plano-semanal",
   "/ranking", "/grupos", "/conquistas", "/timeline", "/notificacoes",

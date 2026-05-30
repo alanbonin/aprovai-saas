@@ -167,13 +167,19 @@ html.light ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.28); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Onboarding input — força texto branco ───────────────────────────────── */
+/* ── Onboarding input — usa variável de tema; força branco só no dark mode ── */
 .onboarding-input {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
+  color: var(--text-primary) !important;
   caret-color: #0ab5bd !important;
 }
 .onboarding-input::placeholder {
+  color: rgba(128,128,128,0.7) !important;
+}
+.dark .onboarding-input {
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+.dark .onboarding-input::placeholder {
   color: rgba(255,255,255,0.45) !important;
   -webkit-text-fill-color: rgba(255,255,255,0.45) !important;
 }

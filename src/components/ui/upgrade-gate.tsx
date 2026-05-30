@@ -1,4 +1,7 @@
 "use client";
+// Componente para uso futuro: bloqueia acesso a features por plano, exibindo
+// preview desfocado e overlay com CTA de upgrade. Ainda não utilizado em rotas
+// de produção — aguardando integração nas páginas de funcionalidades premium.
 
 import { Lock } from "lucide-react";
 

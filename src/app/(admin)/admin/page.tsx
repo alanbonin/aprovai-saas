@@ -161,7 +161,7 @@ export default async function AdminPage() {
   const kpis = [
     { label: "Total de alunos",           value: (totalAlunos ?? 0).toLocaleString("pt-BR"), icon: Users,       color: "text-indigo-400", bg: "bg-indigo-500/10" },
     { label: "Assinaturas ativas",         value: assinaturasAtivas.toLocaleString("pt-BR"),   icon: UserCheck,   color: "text-green-400",  bg: "bg-green-500/10" },
-    { label: "MRR",                        value: `R$ ${mrr.toFixed(2).replace(".", ",")}`,    icon: TrendingUp,  color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    { label: "MRR",                        value: mrr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),    icon: TrendingUp,  color: "text-emerald-400", bg: "bg-emerald-500/10" },
     { label: "Questões respondidas hoje",  value: (questoesHoje ?? 0).toLocaleString("pt-BR"), icon: Target,      color: "text-blue-400",   bg: "bg-blue-500/10" },
     { label: "Novos alunos (7 dias)",      value: (novosAlunosEstaSemana ?? 0).toLocaleString("pt-BR"), icon: Activity, color: "text-yellow-400", bg: "bg-yellow-500/10" },
     { label: "Simulados este mês",         value: (simuladosEsteMes ?? 0).toLocaleString("pt-BR"), icon: Brain,   color: "text-purple-400", bg: "bg-purple-500/10" },
