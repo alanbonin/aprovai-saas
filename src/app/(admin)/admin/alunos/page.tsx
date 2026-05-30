@@ -3,15 +3,39 @@ import { AlunosClient } from "./alunos-client";
 
 export const dynamic = "force-dynamic";
 
-export default async function AlunosAdminPage() {
-  const [{ data: users }, { data: plans }, { data: partners }] = await Promise.all([
-    db.from("User").select("id, name, email, role, createdAt, origin, partnerId, groupTag").order("createdAt", { ascending: false }).limit(1000),
+const PAGE_SIZE = 50;
+
+export default async function AlunosAdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string; search?: string }>;
+}) {
+  const params = await searchParams;
+  const page = Math.max(1, parseInt(params.page ?? "1", 10));
+  const search = (params.search ?? "").trim();
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  let userQuery = db
+    .from("User")
+    .select("id, name, email, role, createdAt, origin, partnerId, groupTag", { count: "exact" })
+    .order("createdAt", { ascending: false })
+    .range(from, to);
+
+  if (search) {
+    userQuery = userQuery.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+
+  const [{ data: users, count: totalCount }, { data: plans }, { data: partners }] = await Promise.all([
+    userQuery,
     db.from("Plan").select("id, name, slug").eq("active", true).order("price"),
     db.from("Partner").select("id, name, slug").eq("active", true).order("name"),
   ]);
 
+  const total = totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
   const userIds = (users ?? []).map((u: { id: string }) => u.id);
-  // Busca subscrições ACTIVE ordenadas por createdAt desc — pega a mais recente por usuário
   const { data: subs } = userIds.length
     ? await db
         .from("Subscription")
@@ -22,7 +46,6 @@ export default async function AlunosAdminPage() {
     : { data: [] };
 
   const planMap = Object.fromEntries((plans ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
-  // Como está ordenado desc, o primeiro para cada userId é o mais recente
   const subMap: Record<string, string> = {};
   for (const s of (subs ?? []) as { userId: string; planId: string }[]) {
     if (!subMap[s.userId]) subMap[s.userId] = s.planId;
@@ -40,6 +63,10 @@ export default async function AlunosAdminPage() {
       planMap={planMap}
       subMap={subMap}
       partnerMap={partnerMap}
+      page={page}
+      totalPages={totalPages}
+      total={total}
+      search={search}
     />
   );
 }

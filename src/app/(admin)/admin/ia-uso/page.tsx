@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
-import { Brain, Users, TrendingUp, Bot, AlertTriangle } from "lucide-react";
+import { Brain, Users, TrendingUp, Bot, AlertTriangle, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface UserUsage {
@@ -65,6 +65,12 @@ export default function IaUsoPage() {
   const maxWeek = Math.max(...data.weeklyTrend.map(w => w.count), 1);
   const maxAgent = Math.max(...data.topAgents.map(a => a.count), 1);
 
+  // Custo estimado: média ponderada ~$0.002/chamada
+  const COST_PER_CALL = 0.002;
+  const estimatedWeek = data.totalThisWeek * COST_PER_CALL;
+  const estimatedMonth = data.totalThisMonth * COST_PER_CALL;
+  const fmtUSD = (v: number) => v.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
   return (
     <div className="p-8 text-white max-w-5xl">
       {/* Header */}
@@ -93,6 +99,28 @@ export default function IaUsoPage() {
             <p className="text-xs text-gray-500 mt-1">{kpi.label}</p>
           </div>
         ))}
+      </div>
+
+      {/* Custo estimado */}
+      <div className="mb-6 rounded-xl bg-amber-500/[0.04] border border-amber-500/20 p-5">
+        <div className="flex items-center gap-2 mb-3">
+          <DollarSign className="w-4 h-4 text-amber-400" />
+          <h2 className="text-sm font-semibold text-amber-300">Custo estimado de IA</h2>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Esta semana</p>
+            <p className="text-2xl font-black text-amber-400">{fmtUSD(estimatedWeek)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 mb-0.5">Este mês (30 dias)</p>
+            <p className="text-2xl font-black text-amber-400">{fmtUSD(estimatedMonth)}</p>
+          </div>
+        </div>
+        <p className="text-[10px] text-gray-600 mt-3 leading-relaxed">
+          Estimativa baseada em uso médio de tokens por tipo de requisição:
+          Mentor/Chat (Sonnet ~$0.0045/chamada) · Diagnóstico/Glossário/Artigos (Haiku ~$0.00025/chamada) · média ponderada ~$0.002/chamada.
+        </p>
       </div>
 
       <div className="grid grid-cols-5 gap-6">

@@ -14,6 +14,34 @@ async function requireAdmin() {
   return data?.role === "ADMIN" ? user : null;
 }
 
+// GET — lista alunos com paginação e busca
+export async function GET(req: Request) {
+  const user = await requireAdmin();
+  if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const url = new URL(req.url);
+  const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
+  const search = (url.searchParams.get("search") ?? "").trim();
+  const PAGE_SIZE = 50;
+  const from = (page - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  let query = db.from("User").select("id, name, email, role, createdAt, origin, partnerId, groupTag", { count: "exact" })
+    .order("createdAt", { ascending: false });
+
+  if (search) {
+    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+  }
+
+  const { data, count, error } = await query.range(from, to);
+  if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  return NextResponse.json({ data: data ?? [], total, page, totalPages });
+}
+
 // POST — cria novo aluno
 export async function POST(req: Request) {
   const user = await requireAdmin();

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   UserPlus, Crown, Trash2, ChevronDown, X, AlertCircle, CheckCircle2,
@@ -23,6 +24,10 @@ interface Props {
   planMap: Record<string, string>;
   subMap: Record<string, string>;
   partnerMap: Record<string, string>;
+  page: number;
+  totalPages: number;
+  total: number;
+  search: string;
 }
 
 // ── Tabs de grupo ─────────────────────────────────────────────────────────────
@@ -100,11 +105,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const INPUT = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function AlunosClient({ users: initialUsers, plans, partners, planMap, subMap: initialSubMap, partnerMap }: Props) {
+export function AlunosClient({ users: initialUsers, plans, partners, planMap, subMap: initialSubMap, partnerMap, page, totalPages, total, search: initialSearch }: Props) {
+  const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [subMap, setSubMap] = useState(initialSubMap);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(false);
+
+  const navigatePage = useCallback((newPage: number) => {
+    const params = new URLSearchParams();
+    if (newPage > 1) params.set("page", String(newPage));
+    if (search) params.set("search", search);
+    router.push(`/admin/alunos${params.toString() ? "?" + params.toString() : ""}`);
+  }, [router, search]);
+
+  const handleSearchSubmit = useCallback((e: React.FormEvent) => {
+    e.preventDefault();
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    router.push(`/admin/alunos${params.toString() ? "?" + params.toString() : ""}`);
+  }, [router, search]);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("todos");
   const [partnerFilter, setPartnerFilter] = useState<string>("");
@@ -425,12 +445,17 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
 
       {/* ── Barra de busca + filtro parceiro ───────────────────────────────── */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nome ou e-mail..."
-            className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
-        </div>
+        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar por nome ou e-mail..."
+              className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+          </div>
+          <button type="submit" className="px-3 py-2 bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 hover:bg-indigo-500/30 transition-colors">
+            Buscar
+          </button>
+        </form>
 
         {/* Sub-filtro por parceiro */}
         {activeTab === "partner" && partners.length > 0 && (
@@ -595,6 +620,38 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
           </tbody>
         </table>
       </div>
+
+      {/* ── Paginação ──────────────────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/5">
+          <p className="text-xs text-gray-500">
+            Total: <span className="text-white font-medium">{total}</span> usuário{total !== 1 ? "s" : ""}
+            {" · "}Página <span className="text-white font-medium">{page}</span> de{" "}
+            <span className="text-white font-medium">{totalPages}</span>
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigatePage(page - 1)}
+              disabled={page <= 1}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              ← Anterior
+            </button>
+            <button
+              onClick={() => navigatePage(page + 1)}
+              disabled={page >= totalPages}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white/5 border border-white/10 text-gray-300 hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            >
+              Próxima →
+            </button>
+          </div>
+        </div>
+      )}
+      {totalPages === 1 && total > 0 && (
+        <p className="text-xs text-gray-600 mt-3 pt-3 border-t border-white/5">
+          {total} usuário{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}
+        </p>
+      )}
 
       {/* ── Modal: Criar Usuário ─────────────────────────────────────────────── */}
       {showCreate && (

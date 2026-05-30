@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import {
   CheckCircle2, Trash2, Loader2, AlertCircle, ChevronDown, ChevronUp,
-  CheckSquare, Square, LayoutList, CheckCheck, XCircle,
+  CheckSquare, Square, LayoutList, CheckCheck, XCircle, Filter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PendingQuestion } from "./page";
@@ -31,7 +31,25 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<number | null>(null);
   const [batchLoading, setBatchLoading] = useState(false);
+  const [subjectFilter, setSubjectFilter] = useState<string>("");
   const [, startTransition] = useTransition();
+
+  // Lista de matérias presentes nas questões pendentes
+  const subjectOptions = useMemo(() => {
+    const ids = [...new Set(questions.map(q => q.subjectId).filter(Boolean) as string[])];
+    return ids
+      .map(id => ({ id, name: subjectMap[id] ?? id }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [questions, subjectMap]);
+
+  // Questões filtradas por matéria
+  const filteredQuestions = useMemo(() =>
+    subjectFilter ? questions.filter(q => q.subjectId === subjectFilter) : questions,
+    [questions, subjectFilter]
+  );
+
+  // Contagem por matéria selecionada
+  const filteredCount = filteredQuestions.length;
 
   function toggleExpand(id: number) {
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -39,11 +57,11 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
   function toggleSelect(id: number) {
     setSelected(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
   }
-  function selectAll() { setSelected(new Set(questions.map(q => q.id))); }
+  function selectAll() { setSelected(new Set(filteredQuestions.map(q => q.id))); }
   function clearSelection() { setSelected(new Set()); }
 
-  const allSelected = questions.length > 0 && selected.size === questions.length;
-  const someSelected = selected.size > 0 && !allSelected;
+  const allSelected = filteredQuestions.length > 0 && filteredQuestions.every(q => selected.has(q.id));
+  const someSelected = filteredQuestions.some(q => selected.has(q.id)) && !allSelected;
 
   async function handleAction(id: number, aprovado: boolean) {
     setError(null);
@@ -101,6 +119,34 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Filtro por matéria */}
+      {subjectOptions.length > 0 && (
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <Filter className="w-3.5 h-3.5" />
+            Filtrar por matéria:
+          </div>
+          <select
+            value={subjectFilter}
+            onChange={e => { setSubjectFilter(e.target.value); setSelected(new Set()); }}
+            className="bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none focus:border-[#0ab5bd]/50 transition-colors"
+          >
+            <option value="">Todas as matérias ({questions.length})</option>
+            {subjectOptions.map(s => {
+              const count = questions.filter(q => q.subjectId === s.id).length;
+              return (
+                <option key={s.id} value={s.id}>{s.name} ({count})</option>
+              );
+            })}
+          </select>
+          {subjectFilter && (
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#0ab5bd]/15 text-[#0ab5bd] border border-[#0ab5bd]/30">
+              {filteredCount} pendente{filteredCount !== 1 ? "s" : ""} nesta matéria
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Barra de seleção em lote */}
       <div className="flex items-center gap-3 p-3 rounded-xl border border-white/8 bg-white/[0.02] flex-wrap">
         <button
@@ -112,7 +158,7 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
             : someSelected
             ? <LayoutList className="w-4 h-4 text-[#0ab5bd]" />
             : <Square className="w-4 h-4" />}
-          {allSelected ? "Desmarcar todos" : `Selecionar todos (${questions.length})`}
+          {allSelected ? "Desmarcar todos" : `Selecionar todos (${filteredQuestions.length})`}
         </button>
 
         {selected.size > 0 && (
@@ -144,7 +190,7 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
 
         {selected.size === 0 && (
           <span className="ml-auto text-xs text-gray-600">
-            {questions.length} pendente{questions.length !== 1 ? "s" : ""}
+            {filteredCount} pendente{filteredCount !== 1 ? "s" : ""}
           </span>
         )}
       </div>
@@ -160,7 +206,7 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
 
       {/* Lista */}
       <div className="space-y-2">
-        {questions.map((q) => {
+        {filteredQuestions.map((q) => {
           const isLoading = loadingId === q.id;
           const isExpanded = expanded.has(q.id);
           const isSelected = selected.has(q.id);
@@ -340,7 +386,8 @@ export function ModeracaoClient({ questions: initial, subjectMap }: Props) {
       </div>
 
       <p className="text-xs text-gray-700 pt-1">
-        Exibindo {questions.length} questão{questions.length !== 1 ? "ões" : ""} pendentes (limite: 200)
+        Exibindo {filteredCount} questão{filteredCount !== 1 ? "ões" : ""} pendentes
+        {subjectFilter ? " nesta matéria" : " (limite: 200)"}
       </p>
     </div>
   );
