@@ -27,7 +27,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!profileRows || profileRows.length === 0) redirect("/onboarding");
 
   // Busca créditos de IA da semana — total vem do plano real
-  const sub = (dbUser as any).subscription;
+  const sub = dbUser.subscription;
   const rawTotal = sub?.plan?.aiCreditsPerWeek ?? 10;
   const aiCreditsTotal = rawTotal === -1 || rawTotal >= 9999 ? 9999 : rawTotal;
   let aiCreditsLeft = aiCreditsTotal;

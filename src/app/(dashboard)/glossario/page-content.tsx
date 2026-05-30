@@ -111,6 +111,7 @@ export function GlossarioInner() {
           placeholder="Cole aqui um enunciado, trecho de lei, ou texto de questão..."
           rows={4}
           maxLength={800}
+          aria-label="Texto para análise de glossário"
           className="w-full bg-transparent text-sm text-white placeholder-gray-600 resize-none focus:outline-none leading-relaxed"
         />
         <div className="flex items-center justify-between mt-2 pt-2 border-t border-white/[0.04]">

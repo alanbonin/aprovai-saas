@@ -45,7 +45,7 @@ export async function GET(req: Request) {
     }
     entries = Object.entries(counts)
       .map(([userId, score]) => ({ userId, score }))
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => b.score - a.score || a.userId.localeCompare(b.userId));
   } else {
     // Rank by XP
     const { data: profiles } = await db

@@ -220,15 +220,24 @@ export async function PATCH(req: Request) {
   try { current = note?.content ? JSON.parse(note.content) : []; } catch { /* ok */ }
 
   if (body.all) {
-    // Re-fetch all notif IDs from GET to mark all
-    const res = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/api/notificacoes`,
-      { headers: { cookie: req.headers.get("cookie") ?? "" } }
-    ).catch(() => null);
-    if (res?.ok) {
-      const d = await res.json() as { notifs?: { id: string }[] };
-      const allIds = (d.notifs ?? []).map((n) => n.id);
-      current = [...new Set([...current, ...allIds])];
+    // Busca IDs de notificações via URL absoluta (NEXT_PUBLIC_APP_URL deve estar configurada)
+    // Fallback: tenta derivar do header Host da requisição para evitar falha em produção
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
+      (req.headers.get("x-forwarded-proto") && req.headers.get("host")
+        ? `${req.headers.get("x-forwarded-proto")}://${req.headers.get("host")}`
+        : null);
+
+    if (appUrl) {
+      const res = await fetch(
+        `${appUrl}/api/notificacoes`,
+        { headers: { cookie: req.headers.get("cookie") ?? "" } }
+      ).catch(() => null);
+      if (res?.ok) {
+        const d = await res.json() as { notifs?: { id: string }[] };
+        const allIds = (d.notifs ?? []).map((n) => n.id);
+        current = [...new Set([...current, ...allIds])];
+      }
     }
   } else if (body.ids?.length) {
     current = [...new Set([...current, ...body.ids])];

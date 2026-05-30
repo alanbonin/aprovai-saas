@@ -202,6 +202,8 @@ export function ArenaLobby() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setDisponivel(v => !v)}
+            role="switch"
+            aria-checked={disponivel}
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border transition-all",
               disponivel
@@ -430,6 +432,9 @@ export function ArenaLobby() {
                 <p className="text-xs text-gray-500">Aparece no lobby para todos entrarem</p>
               </div>
               <button onClick={() => setConfig(c => ({ ...c, publica: !c.publica }))}
+                role="switch"
+                aria-checked={config.publica}
+                aria-label="Sala pública"
                 className={cn("w-11 h-6 rounded-full transition-colors relative", config.publica ? "bg-indigo-600" : "bg-white/10")}>
                 <span className={cn("absolute top-1 w-4 h-4 bg-white rounded-full transition-transform", config.publica ? "translate-x-6" : "translate-x-1")} />
               </button>
@@ -452,6 +457,7 @@ export function ArenaLobby() {
               onKeyDown={e => e.key === "Enter" && entrarSala(joinCode)}
               placeholder="XXXXXX"
               maxLength={6}
+              aria-label="Código da sala"
               className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-2xl text-white font-mono text-center tracking-widest placeholder-gray-700 focus:outline-none focus:border-indigo-500" />
             <button onClick={() => entrarSala(joinCode)} disabled={joinCode.length < 4}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-xl font-bold text-white transition-colors">

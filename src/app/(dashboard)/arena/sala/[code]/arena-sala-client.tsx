@@ -388,13 +388,16 @@ export function ArenaSala({ code, isHostParam, qtdQuestoes, materia, publica }: 
     }));
 
     if (isHost) {
-      // Se todos responderam, encerra
-      const totalJogadores = jogadores.length;
-      const totalRespostas = Object.keys(game.respostas).length + 1;
-      if (totalRespostas >= totalJogadores) {
-        clearTick();
-        setTimeout(() => encerrarRodada(questoes, game.rodadaAtual - 1), 500);
-      }
+      // Se todos responderam, encerra — usa updater para ler respostas atualizadas
+      setGame(prev => {
+        const totalJogadores = jogadores.length;
+        const totalRespostas = Object.keys(prev.respostas).length; // já inclui a resposta recém-adicionada
+        if (totalRespostas >= totalJogadores) {
+          clearTick();
+          setTimeout(() => encerrarRodada(questoes, prev.rodadaAtual - 1), 500);
+        }
+        return prev;
+      });
     }
   }
 
@@ -441,7 +444,7 @@ export function ArenaSala({ code, isHostParam, qtdQuestoes, materia, publica }: 
 
         <div className="flex items-center gap-2">
           <Circle className={cn("w-2 h-2 fill-current", connected ? "text-emerald-400" : "text-gray-600")} />
-          <span className="text-xs text-gray-500">{jogadores.length + 1} na sala</span>
+          <span className="text-xs text-gray-500">{jogadores.length} na sala</span>
         </div>
       </div>
 
@@ -714,6 +717,8 @@ export function ArenaSala({ code, isHostParam, qtdQuestoes, materia, publica }: 
           {/* Toggle */}
           <button
             onClick={() => setChatAberto(v => !v)}
+            aria-label={chatAberto ? "Fechar chat" : "Abrir chat"}
+            aria-expanded={chatAberto}
             className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.07] w-full hover:bg-white/[0.03] transition-colors"
           >
             <MessageSquare className="w-4 h-4 text-gray-500 shrink-0" />
@@ -760,6 +765,7 @@ export function ArenaSala({ code, isHostParam, qtdQuestoes, materia, publica }: 
                   className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white placeholder-gray-700 focus:outline-none focus:border-indigo-500 min-w-0"
                 />
                 <button onClick={enviarChat} disabled={!chatInput.trim()}
+                  aria-label="Enviar mensagem"
                   className="p-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-40 rounded-lg text-white transition-colors shrink-0">
                   <Send className="w-3 h-3" />
                 </button>

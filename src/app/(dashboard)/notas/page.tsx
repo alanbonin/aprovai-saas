@@ -33,15 +33,20 @@ export default function NotasPage() {
 
   const loadNotes = useCallback(async () => {
     setLoading(true);
-    const [notesRes, subjectsRes] = await Promise.all([
-      fetch("/api/notas"),
-      fetch("/api/workspace/materias"),
-    ]);
-    const notesData    = await notesRes.json();
-    const subjectsData = await subjectsRes.json();
-    setNotes(notesData.notes ?? []);
-    setSubjects(subjectsData.subjects ?? []);
-    setLoading(false);
+    try {
+      const [notesRes, subjectsRes] = await Promise.all([
+        fetch("/api/notas"),
+        fetch("/api/workspace/materias"),
+      ]);
+      const notesData    = notesRes.ok    ? await notesRes.json()    : {};
+      const subjectsData = subjectsRes.ok ? await subjectsRes.json() : {};
+      setNotes(notesData.notes ?? []);
+      setSubjects(subjectsData.subjects ?? []);
+    } catch {
+      // Mantém estado vazio em caso de falha de rede
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { loadNotes(); }, [loadNotes]);
@@ -243,8 +248,9 @@ export default function NotasPage() {
 
             <div className="p-5 space-y-4">
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Título</label>
+                <label htmlFor="nota-titulo" className="text-xs text-gray-500 mb-1 block">Título</label>
                 <input
+                  id="nota-titulo"
                   autoFocus
                   value={editing.title ?? ""}
                   onChange={e => setEditing(v => ({ ...v, title: e.target.value }))}
@@ -254,8 +260,9 @@ export default function NotasPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Matéria (opcional)</label>
+                <label htmlFor="nota-materia" className="text-xs text-gray-500 mb-1 block">Matéria (opcional)</label>
                 <select
+                  id="nota-materia"
                   value={editing.subjectId ?? ""}
                   onChange={e => setEditing(v => ({ ...v, subjectId: e.target.value || "" }))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500"
@@ -266,8 +273,9 @@ export default function NotasPage() {
               </div>
 
               <div>
-                <label className="text-xs text-gray-500 mb-1 block">Conteúdo</label>
+                <label htmlFor="nota-conteudo" className="text-xs text-gray-500 mb-1 block">Conteúdo</label>
                 <textarea
+                  id="nota-conteudo"
                   rows={8}
                   value={editing.body ?? ""}
                   onChange={e => setEditing(v => ({ ...v, body: e.target.value }))}
