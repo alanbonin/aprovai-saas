@@ -65,6 +65,7 @@ export default function DesafioPage() {
   // Timer
   const [timeLeft, setTimeLeft]   = useState(0);
   const timerRef                  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const navigatingRef             = useRef(false); // previne double-call em next()
 
   // Track answers
   const answers = useRef<{ questionId: number; correct: boolean }[]>([]);
@@ -172,7 +173,9 @@ export default function DesafioPage() {
   }
 
   function next() {
-    if (!data) return;
+    if (!data || navigatingRef.current) return;
+    navigatingRef.current = true;
+    setTimeout(() => { navigatingRef.current = false; }, 600);
     if (current >= data.questions.length - 1) {
       clearInterval(timerRef.current!);
       setDone(true);
@@ -180,6 +183,7 @@ export default function DesafioPage() {
       setCurrent(c => c + 1);
       setSelected(null);
       setQuality(null);
+      navigatingRef.current = false;
     }
   }
 
