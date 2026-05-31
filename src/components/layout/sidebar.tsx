@@ -448,7 +448,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
 
     // Dados de stats — apenas para alunos
     if (!isAdmin) {
-      fetch("/api/relatorio", { cache: "no-store" })
+      const fetchStats = () => fetch("/api/relatorio", { cache: "no-store" })
         .then(r => r.ok ? r.json() : null)
         .then(d => {
           if (!d) return;
@@ -464,10 +464,18 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         })
         .catch(() => {});
 
+      fetchStats();
+
+      // Re-busca stats quando qualquer questão é respondida (mesmo na mesma página)
+      const onProgress = () => fetchStats();
+      window.addEventListener("aprovai:progress", onProgress);
+
       fetch("/api/notificacoes")
         .then(r => r.ok ? r.json() : null)
         .then(d => { if (d) setUnreadNotifs(d.unread ?? 0); })
         .catch(() => {});
+
+      return () => window.removeEventListener("aprovai:progress", onProgress);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdmin, pathname]);

@@ -105,6 +105,10 @@ export default function HojePage() {
 
   useEffect(() => {
     load();
+    // Atualiza contadores ao responder questões na mesma página
+    const onProgress = () => load();
+    window.addEventListener("aprovai:progress", onProgress);
+    return () => window.removeEventListener("aprovai:progress", onProgress);
     // Carrega resumo semanal em paralelo (não bloqueia)
     fetch("/api/relatorio/semanal")
       .then(r => r.ok ? r.json() : null)

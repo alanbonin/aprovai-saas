@@ -50,7 +50,11 @@ export function AutoRefresh() {
       const result = await origFetch(...args);
       const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url ?? "";
       if (url.includes("/api/questoes/progresso") && result.ok) {
-        setTimeout(() => doRefresh(), 500);
+        // Dispara evento para que outros componentes (sidebar) também atualizem
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent("aprovai:progress"));
+          doRefresh();
+        }, 500);
       }
       return result;
     };
