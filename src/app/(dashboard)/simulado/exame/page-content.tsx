@@ -32,7 +32,7 @@ const PRESETS = [
   { label: "Intensivo", total: 100, minutes: 240, icon: "🔥" },
 ];
 
-type Phase = "config" | "running" | "result";
+type Phase = "config" | "running" | "result" | "review";
 
 function formatTime(secs: number) {
   const m = Math.floor(secs / 60);
@@ -295,23 +295,152 @@ export function SimuladoExameInner() {
             </div>
           </div>
 
-          <div className="flex gap-3 justify-center">
+          <div className="flex flex-col gap-2 w-full max-w-xs mx-auto">
+            <button
+              onClick={() => setPhase("review")}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Estudar questões desta prova
+            </button>
+            <button
+              onClick={() => {
+                // Refaz com as mesmas questões — só reseta respostas e timer
+                setAnswers({});
+                setFlaggedArr([]);
+                setCurrent(0);
+                setFinished(false);
+                const cfg = PRESETS[preset];
+                const tl = timer.startTimer(cfg.minutes * 60);
+                setTimeLeft(tl);
+                setPhase("running");
+              }}
+              className="flex items-center justify-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold transition-colors"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Refazer a mesma prova
+            </button>
             <button
               onClick={() => { timer.clearTimer(); setQuestions([]); setAnswers({}); setFlaggedArr([]); setCurrent(0); setFinished(false); setPhase("config"); }}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm font-medium transition-colors"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm font-medium transition-colors"
             >
               <Clock className="w-4 h-4" />
               Novo exame
             </button>
-            <button
-              onClick={startExam}
-              disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 rounded-xl text-sm font-semibold transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Repetir
-            </button>
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── REVIEW ───────────────────────────────────────────────────────────────
+  if (phase === "review") {
+    return (
+      <div className="min-h-screen text-white p-4 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between mb-5">
+          <div>
+            <h2 className="text-lg font-bold flex items-center gap-2">
+              <CheckCircle2 className="w-5 h-5 text-indigo-400" /> Gabarito Comentado
+            </h2>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {correctCount}/{questions.length} corretas · {accuracy}%
+            </p>
+          </div>
+          <button
+            onClick={() => setPhase("result")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-white/10 text-gray-400 hover:text-white text-xs transition-colors"
+          >
+            ← Voltar
+          </button>
+        </div>
+
+        {/* Mini mapa de navegação */}
+        <div className="flex flex-wrap gap-1 mb-5">
+          {questions.map((qq, i) => {
+            const gave = answers[i];
+            const ok = gave === qq.answer;
+            return (
+              <button
+                key={i}
+                onClick={() => document.getElementById(`review-q-${i}`)?.scrollIntoView({ behavior: "smooth" })}
+                className={cn(
+                  "w-7 h-7 rounded-lg text-[10px] font-bold border flex items-center justify-center",
+                  !gave ? "bg-white/5 border-white/10 text-gray-600" :
+                  ok    ? "bg-emerald-500/20 border-emerald-500/40 text-emerald-400" :
+                          "bg-red-500/20 border-red-500/40 text-red-400"
+                )}
+              >
+                {i + 1}
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="space-y-4">
+          {questions.map((qq, i) => {
+            const gave = answers[i];
+            const ok = gave === qq.answer;
+            const opts = OPTS.map(l => ({ l, v: qq[`option${l}` as keyof Question] as string | null })).filter(o => o.v);
+            return (
+              <div
+                id={`review-q-${i}`}
+                key={qq.id}
+                className={cn(
+                  "rounded-2xl border p-5",
+                  !gave ? "border-white/10 bg-white/[0.02]" :
+                  ok    ? "border-emerald-500/20 bg-emerald-500/[0.04]" :
+                          "border-red-500/20 bg-red-500/[0.04]"
+                )}
+              >
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <span className={cn(
+                    "text-xs font-bold flex items-center gap-1",
+                    !gave ? "text-gray-500" : ok ? "text-emerald-400" : "text-red-400"
+                  )}>
+                    {!gave ? "— Sem resposta" : ok ? <><CheckCircle2 className="w-3.5 h-3.5" /> Correta</> : <><XCircle className="w-3.5 h-3.5" /> Errada</>}
+                  </span>
+                  <span className="text-[10px] text-gray-600 font-semibold">Q{i + 1}</span>
+                  {qq.banca && <span className="text-[10px] text-gray-600">{qq.banca}{qq.year ? ` ${qq.year}` : ""}</span>}
+                </div>
+
+                <p className="text-sm text-gray-200 leading-relaxed mb-3">{qq.statement}</p>
+
+                <div className="space-y-1.5 mb-3">
+                  {opts.map(({ l, v }) => {
+                    const isCorrect = l === qq.answer;
+                    const isSelected = gave === l;
+                    let cls = "border-white/5 text-gray-600";
+                    if (isCorrect) cls = "border-emerald-500/40 bg-emerald-500/10 text-emerald-300";
+                    else if (isSelected) cls = "border-red-500/40 bg-red-500/10 text-red-300";
+                    return (
+                      <div key={l} className={cn("flex items-start gap-2 p-2.5 rounded-lg border text-xs", cls)}>
+                        <span className="w-5 h-5 rounded flex items-center justify-center font-bold flex-shrink-0 bg-white/10 text-[10px]">{l}</span>
+                        <span>{v}</span>
+                        {isCorrect && <CheckCircle2 className="w-3.5 h-3.5 ml-auto flex-shrink-0 text-emerald-400" />}
+                        {isSelected && !isCorrect && <XCircle className="w-3.5 h-3.5 ml-auto flex-shrink-0 text-red-400" />}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {qq.explanation && (
+                  <div className="rounded-lg bg-white/5 border border-white/10 p-3">
+                    <p className="text-[10px] font-semibold text-gray-500 mb-1">Explicação</p>
+                    <p className="text-xs text-gray-300 leading-relaxed">{qq.explanation}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="mt-6 flex gap-3 justify-center pb-8">
+          <button
+            onClick={() => setPhase("result")}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors"
+          >
+            ← Voltar ao resultado
+          </button>
         </div>
       </div>
     );
