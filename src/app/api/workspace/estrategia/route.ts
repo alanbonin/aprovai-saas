@@ -47,34 +47,33 @@ function getWeekStart(): string {
   return monday.toISOString().split("T")[0];
 }
 
+const PLANO_SUBJECT_KEY = "__PLANO_SEMANAL__";
+
 async function getPlanNote(userId: string, profileId: string | null): Promise<{ id: string; data: PlanNoteData } | null> {
-  const query = db
+  const baseQuery = db
     .from("Note")
     .select("id, content")
     .eq("userId", userId)
-    .is("subjectId", null)
+    .eq("subjectId", PLANO_SUBJECT_KEY)
     .order("updatedAt", { ascending: false })
     .limit(10);
 
-  // Busca nota do perfil ativo; também verifica legadas (profileId=null) como fallback
   const { data: notes } = profileId
-    ? await query.eq("profileId", profileId)
-    : await query.is("profileId", null);
+    ? await baseQuery.eq("profileId", profileId)
+    : await baseQuery;
 
-  if (notes) {
-    for (const note of notes) {
-      try {
-        const parsed = JSON.parse(note.content as string) as PlanNoteData;
-        if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
-      } catch { /* skip */ }
-    }
+  for (const note of notes ?? []) {
+    try {
+      const parsed = JSON.parse(note.content as string) as PlanNoteData;
+      if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
+    } catch { /* skip */ }
   }
 
-  // Fallback: notas legadas sem profileId
+  // Fallback: busca sem filtro de perfil (legado)
   if (profileId) {
     const { data: legacy } = await db
       .from("Note").select("id, content")
-      .eq("userId", userId).is("subjectId", null).is("profileId", null)
+      .eq("userId", userId).eq("subjectId", PLANO_SUBJECT_KEY)
       .order("updatedAt", { ascending: false }).limit(5);
     for (const note of legacy ?? []) {
       try {
@@ -93,9 +92,10 @@ async function savePlanNote(userId: string, profileId: string | null, data: Plan
     await db.from("Note").update({ content: JSON.stringify(data), updatedAt: now }).eq("id", existingId);
   } else {
     await db.from("Note").insert({
+      id: crypto.randomUUID(),
       userId,
-      profileId,
-      subjectId: null,
+      profileId: profileId ?? undefined,
+      subjectId: PLANO_SUBJECT_KEY,
       content: JSON.stringify(data),
       createdAt: now,
       updatedAt: now,
@@ -273,7 +273,7 @@ Retorne APENAS JSON válido:
 
     // ── GERAR ─────────────────────────────────────────────────────────────────
     const horasPorDia = body.horasPorDia ?? (profile?.horasEstudo as number | null) ?? 3;
-    const diasDisp = body.diasDisp ?? ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
+    const diasDisp = body.diasDisp ?? ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
     const systemPrompt = `Você é um estrategista especializado em concursos públicos brasileiros.
 Gere um cronograma semanal de estudos PERSONALIZADO e DETALHADO no formato JSON.
@@ -297,8 +297,8 @@ REGRAS PEDAGÓGICAS:
 6. Se diasProva < 7: apenas pontos críticos
 7. Dica PRÁTICA e específica para cada matéria de cada dia
 
-Retorne APENAS JSON (sem texto antes ou depois):
-{"semana":[{"dia":"Segunda","materias":[{"nome":"Direito Administrativo","horas":1.5,"prioridade":"alta","dica":"Foque nos princípios LIMPE — 10 questões do Art. 37 CF/88"}],"totalHoras":3.0,"folga":false}],"resumo":"Frase motivadora personalizada","metaSemanal":"Objetivo específico e mensurável","horasTotais":18}`;
+Retorne APENAS JSON (sem texto antes ou depois), incluindo TODOS os 7 dias (Segunda a Domingo — sem pular nenhum, inclusive Sábado e Domingo que também são dias de estudo):
+{"semana":[{"dia":"Segunda","materias":[{"nome":"Direito Administrativo","horas":1.5,"prioridade":"alta","dica":"Foque nos princípios LIMPE — 10 questões do Art. 37 CF/88"}],"totalHoras":3.0,"folga":false}],"resumo":"Frase motivadora personalizada","metaSemanal":"Objetivo específico e mensurável","horasTotais":21}`;
 
     const response = await createWithCache({
       model: MODELS.sonnet,

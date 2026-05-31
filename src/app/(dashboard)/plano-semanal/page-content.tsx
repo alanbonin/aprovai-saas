@@ -27,7 +27,7 @@ const PRIORITY_STYLE: Record<string, string> = {
   baixa: "bg-green-500/10 border-green-500/20 text-green-400",
 };
 const PRIORITY_LABEL: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa" };
-const DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
+const DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo", "Domingo"];
 
 // ── DayCard ───────────────────────────────────────────────────────────────────
 function DayCard({ day, defaultOpen }: { day: DaySchedule; defaultOpen?: boolean }) {
@@ -215,7 +215,7 @@ export function PlanoSemanalInner() {
 
   // Config
   const [horasPorDia, setHorasPorDia] = useState(3);
-  const [diasDisp, setDiasDisp] = useState<string[]>(["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"]);
+  const [diasDisp, setDiasDisp] = useState<string[]>(["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingota", "Quinta", "Sexta", "Sábado"]);
 
   // Carrega (e auto-gera se necessário) na montagem
   useEffect(() => {

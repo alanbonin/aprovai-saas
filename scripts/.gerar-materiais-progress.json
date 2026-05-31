@@ -70,10 +70,16 @@
     "db59ee3a-a52e-4693-b50d-8a1f4fc10245:8528b58b-fc3e-4677-8cad-5c74c1e6ecb2": true,
     "db59ee3a-a52e-4693-b50d-8a1f4fc10245:5b8dddeb-7ba0-498c-a387-a170c32f22b9": true,
     "db59ee3a-a52e-4693-b50d-8a1f4fc10245:65223eee-9281-436e-92ae-28ec983e2dda": true,
-    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:f6d391c0-b35e-4055-b2f1-9b29d445c2ed": true
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:f6d391c0-b35e-4055-b2f1-9b29d445c2ed": true,
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:490ea47a-fe84-4f62-928b-232ec45ca6e4": true,
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:99785fa6-c657-4356-b2a8-70a8d5752e72": true,
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:f265499b-8b70-43bf-8683-f34402df4f83": true,
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:c3342830-48f4-46ad-8518-69139c45a8b3": true,
+    "427cc6d1-4760-451f-9d69-c95571d2d072:909c0a4a-7509-4daf-bce3-23190e4e5f55": true,
+    "427cc6d1-4760-451f-9d69-c95571d2d072:61545320-4b34-45fb-986b-6bf1ca6807ab": true
   },
   "stats": {
-    "gerados": 71,
-    "erros": 1892
+    "gerados": 77,
+    "erros": 1894
   }
 }
