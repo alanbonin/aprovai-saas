@@ -214,10 +214,19 @@ ${AVALIACAO_FIELDS}`,
     const messages: MessageParam[] = [{ role: "user", content: parts }];
 
     try {
-      const msg = await createWithCache({
-        model: MODELS.sonnet, maxTokens: 1400, systemPrompt: CASO_SYSTEM, cacheSystem: false,
-        messages,
-      });
+      let msg;
+      try {
+        msg = await createWithCache({
+          model: MODELS.haiku, maxTokens: 1600, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          messages,
+        });
+      } catch (haikuErr) {
+        log.warn("ai.caso_avaliar_haiku_fallback", {}, haikuErr);
+        msg = await createWithCache({
+          model: MODELS.sonnet, maxTokens: 1600, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          messages,
+        });
+      }
       const raw = (msg.content[0] as { type: string; text: string }).text.trim();
       const parsed = extractJSON<{
         ilegivel?: boolean;
@@ -238,8 +247,9 @@ ${AVALIACAO_FIELDS}`,
 
       return NextResponse.json(parsed);
     } catch (e) {
-      log.error("ai.caso_avaliar_error", {}, e);
-      return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+      const msg = (e as Error)?.message ?? "desconhecido";
+      log.error("ai.caso_avaliar_error", { msg }, e);
+      return NextResponse.json({ error: `Erro ao avaliar: ${msg}` }, { status: 500 });
     }
   }
 
