@@ -1395,11 +1395,21 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     const isFav = favoritos.has(id);
     const next = new Set(favoritos);
     isFav ? next.delete(id) : next.add(id);
-    setFavoritos(next);
-    await fetch("/api/questoes/favoritos", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: id, action: isFav ? "remove" : "add" }),
-    }).catch(() => {});
+    setFavoritos(next); // otimista
+    try {
+      const res = await fetch("/api/questoes/favoritos", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ questionId: id, action: isFav ? "remove" : "add" }),
+      });
+      if (!res.ok) {
+        // Reverte estado em caso de erro
+        setFavoritos(new Set(favoritos));
+        console.error("[favoritos] erro ao salvar:", res.status, await res.text().catch(() => ""));
+      }
+    } catch (e) {
+      setFavoritos(new Set(favoritos));
+      console.error("[favoritos] erro de rede:", e);
+    }
   }
 
   function resetFilters() {
