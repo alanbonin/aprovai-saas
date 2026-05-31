@@ -28,8 +28,10 @@ export async function GET() {
   const profileId = activeProfile?.id ?? null;
 
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  // Usa BRT (UTC-3) para consistência com o restante do sistema
+  const brtNow = new Date(now.getTime() - 3 * 60 * 60 * 1000);
+  const todayStr = brtNow.toISOString().slice(0, 10);
+  const todayStart = new Date(brtNow.getFullYear(), brtNow.getMonth(), brtNow.getDate()).toISOString();
 
   const [
     profileRes,

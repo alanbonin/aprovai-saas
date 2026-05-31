@@ -53,10 +53,11 @@ export async function POST(req: Request) {
 
   // Save desafio record
   const record = JSON.stringify({ date: todayKey, score, total, timeSecs, xpEarned: xpTotal });
+  const now = new Date().toISOString();
   if (existing?.id) {
-    await db.from("Note").update({ content: record }).eq("id", existing.id);
+    await db.from("Note").update({ content: record, updatedAt: now }).eq("id", existing.id);
   } else {
-    await db.from("Note").insert({ userId: dbUser.id, subjectId: "__DESAFIO__", content: record });
+    await db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: "__DESAFIO__", content: record, createdAt: now, updatedAt: now });
   }
 
   // Register Progress for each answer
