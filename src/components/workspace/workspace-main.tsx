@@ -1384,12 +1384,23 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     setTimeout(() => { setReportando(null); setReportSent(false); setReportDesc(""); setReportMotivo("gabarito_errado"); }, 1800);
   }
 
+  const [favoritosItems, setFavoritosItems] = useState<Question[]>([]);
+
   // Carrega favoritos
   useEffect(() => {
     fetch("/api/questoes/favoritos").then(r => r.json()).then(d => {
       setFavoritos(new Set(d.favoritos ?? []));
     }).catch(() => {});
   }, []);
+
+  // Carrega questões favoritas da API quando filtro "favoritas" é selecionado
+  useEffect(() => {
+    if (filterStatus !== "favoritas") return;
+    fetch("/api/questoes?favoritos=1&limit=50")
+      .then(r => r.ok ? r.json() : { questions: [] })
+      .then(d => setFavoritosItems((d.questions ?? []) as Question[]))
+      .catch(() => {});
+  }, [filterStatus]);
 
   async function toggleFavorito(id: number) {
     const isFav = favoritos.has(id);
@@ -1433,13 +1444,13 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     return a;
   }
 
-  let filtered = items;
+  // Favoritas buscam de todas as matérias via API (não só da matéria atual)
+  let filtered = filterStatus === "favoritas" ? favoritosItems : items;
   if (filterLevel) filtered = filtered.filter(q => q.level === filterLevel);
   // Pendentes = nunca respondida OU respondeu errado na última tentativa
   if (filterStatus === "pendentes") filtered = filtered.filter(q => !q._seen || q._correct === false);
   // Revisadas = respondeu CORRETAMENTE pelo menos uma vez
   if (filterStatus === "revisadas") filtered = filtered.filter(q => q._correct === true);
-  if (filterStatus === "favoritas") filtered = filtered.filter(q => favoritos.has(q.id));
   // Embaralha as questões para não seguir sempre a mesma ordem
   filtered = shuffleArray(filtered, shuffleSeed);
 
