@@ -46,28 +46,20 @@ export async function GET() {
   const activeProfile = await getActiveProfile(dbUser.id);
   const profileId = activeProfile?.id ?? null;
 
-  // Filtro de perfil: registros do perfil ativo OU legados (null)
-  const pf = profileId
-    ? `profileId.eq.${profileId},profileId.is.null`
-    : "profileId.is.null";
-
-  // Busca paralela de todos os dados
+  // Busca paralela de todos os dados — filtro ESTRITO por perfil ativo
   const [progressRes, subjectProgressRes, simuladosRes, flashcardSetsRes] = await Promise.all([
-    db.from("Progress").select("correct, createdAt, questionId")
-      .eq("userId", dbUser.id)
-      .gte("createdAt", since.toISOString())
-      .or(pf),
-    db.from("Progress").select("correct, questionId, createdAt")
-      .eq("userId", dbUser.id)
-      .or(pf)
-      .limit(5000), // evita varredura total em tabelas grandes
-    db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt")
-      .eq("userId", dbUser.id)
-      .order("createdAt", { ascending: false })
-      .limit(50)
-      .or(pf),
-    db.from("FlashcardSet").select("id, subjectId, cards, updatedAt")
-      .eq("userId", dbUser.id),
+    profileId
+      ? db.from("Progress").select("correct, createdAt, questionId").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", since.toISOString())
+      : db.from("Progress").select("correct, createdAt, questionId").eq("userId", dbUser.id).gte("createdAt", since.toISOString()),
+    profileId
+      ? db.from("Progress").select("correct, questionId, createdAt").eq("userId", dbUser.id).eq("profileId", profileId).limit(5000)
+      : db.from("Progress").select("correct, questionId, createdAt").eq("userId", dbUser.id).limit(5000),
+    profileId
+      ? db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).eq("profileId", profileId).order("createdAt", { ascending: false }).limit(50)
+      : db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).order("createdAt", { ascending: false }).limit(50),
+    profileId
+      ? db.from("FlashcardSet").select("id, subjectId, cards, updatedAt").eq("userId", dbUser.id).eq("profileId", profileId)
+      : db.from("FlashcardSet").select("id, subjectId, cards, updatedAt").eq("userId", dbUser.id),
   ]);
 
   const profileRes = { data: activeProfile };
