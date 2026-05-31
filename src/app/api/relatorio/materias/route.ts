@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/relatorio/materias
@@ -15,11 +16,14 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
 
-  // Busca todo o progresso do aluno
-  const { data: progress } = await db
-    .from("Progress")
-    .select("questionId, correct")
-    .eq("userId", dbUser.id);
+  // Perfil ativo — relatório isolado por perfil
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  // Busca progresso do perfil ativo
+  let progressQuery = db.from("Progress").select("questionId, correct").eq("userId", dbUser.id);
+  if (profileId) progressQuery = progressQuery.eq("profileId", profileId);
+  const { data: progress } = await progressQuery;
 
   if (!progress?.length) {
     return NextResponse.json({ materias: [] });

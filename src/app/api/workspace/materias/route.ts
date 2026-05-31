@@ -39,16 +39,18 @@ export async function GET(req: Request) {
     let rows: { subjectId: string; Subject: unknown }[] = [];
 
     if (profileId) {
+      // Somente matérias deste perfil — sem misturar com outros perfis
       const { data: withProfile } = await baseQuery.eq("profileId", profileId);
-      const { data: legacy } = await db
-        .from("StudentSubject")
-        .select("subjectId, Subject(id, name, slug, description)")
-        .eq("userId", dbUser.id)
-        .is("profileId", null);
+      rows = withProfile ?? [];
 
-      const seen = new Set<string>();
-      for (const r of [...(withProfile ?? []), ...(legacy ?? [])]) {
-        if (!seen.has(r.subjectId)) { seen.add(r.subjectId); rows.push(r); }
+      // Fallback apenas se o perfil não tiver matérias configuradas ainda
+      if (rows.length === 0) {
+        const { data: legacy } = await db
+          .from("StudentSubject")
+          .select("subjectId, Subject(id, name, slug, description)")
+          .eq("userId", dbUser.id)
+          .is("profileId", null);
+        rows = legacy ?? [];
       }
     } else {
       const { data } = await baseQuery.is("profileId", null);

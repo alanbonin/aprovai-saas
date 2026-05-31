@@ -76,10 +76,22 @@
     "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:f265499b-8b70-43bf-8683-f34402df4f83": true,
     "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:c3342830-48f4-46ad-8518-69139c45a8b3": true,
     "427cc6d1-4760-451f-9d69-c95571d2d072:909c0a4a-7509-4daf-bce3-23190e4e5f55": true,
-    "427cc6d1-4760-451f-9d69-c95571d2d072:61545320-4b34-45fb-986b-6bf1ca6807ab": true
+    "427cc6d1-4760-451f-9d69-c95571d2d072:61545320-4b34-45fb-986b-6bf1ca6807ab": true,
+    "427cc6d1-4760-451f-9d69-c95571d2d072:f39c1d53-1750-4a9e-ab8f-c218d1fea11f": true,
+    "427cc6d1-4760-451f-9d69-c95571d2d072:6fababeb-0819-4df4-8e6e-b35dc51b1315": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:a22c358c-c0d4-468c-b12b-53e442ca489e": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:61801f05-60f6-49d7-8278-7f0153878992": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:2ca0b9bb-3a0c-4a69-b62a-a83f82434306": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:04e74df0-29a0-459f-a23f-8ccff72f55fe": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:0ed0f61a-1c06-4c0e-bdeb-4f992b48c6f8": true,
+    "c2ffed53-104f-4776-8354-e0157c80c1bd:211c4893-e6ac-435e-b0e7-df302356ac20": true,
+    "714dd3a2-d62c-4c48-bbfd-ce3b2da9e780:58603123-014b-4739-9bfd-73772cd1f3fd": true,
+    "714dd3a2-d62c-4c48-bbfd-ce3b2da9e780:ebaf5da2-6c69-49fb-90a9-5a9147935965": true,
+    "714dd3a2-d62c-4c48-bbfd-ce3b2da9e780:0b4a07cd-3ddd-447a-b8ba-8dd91494ad48": true,
+    "714dd3a2-d62c-4c48-bbfd-ce3b2da9e780:6fe8f38e-841a-47cd-88f2-f46d43319752": true
   },
   "stats": {
-    "gerados": 77,
-    "erros": 1894
+    "gerados": 89,
+    "erros": 1895
   }
 }

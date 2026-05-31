@@ -243,7 +243,7 @@ export default function DesafioPage() {
             Tempo: {formatTime(r.timeSecs)}
           </div>
         </div>
-        <Link href="/questoes" className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
+        <Link href="/workspace" className="px-5 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
           Continuar estudando
         </Link>
       </div>
@@ -318,7 +318,7 @@ export default function DesafioPage() {
         </div>
 
         <div className="w-full space-y-2">
-          <Link href="/questoes"
+          <Link href="/workspace"
             className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
             <RotateCcw className="w-4 h-4" />
             Continuar estudando

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/relatorio/evolucao
@@ -19,13 +20,16 @@ export async function GET() {
   const now = new Date();
   const twelveWeeksAgo = new Date(now.getTime() - 12 * 7 * 24 * 60 * 60 * 1000);
 
-  // Busca progresso com data
-  const { data: progress } = await db
-    .from("Progress")
-    .select("questionId, correct, createdAt")
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  // Busca progresso com data — isolado por perfil ativo
+  let progressQuery = db.from("Progress").select("questionId, correct, createdAt")
     .eq("userId", dbUser.id)
     .gte("createdAt", twelveWeeksAgo.toISOString())
     .order("createdAt", { ascending: true });
+  if (profileId) progressQuery = progressQuery.eq("profileId", profileId);
+  const { data: progress } = await progressQuery;
 
   if (!progress?.length) {
     return NextResponse.json({ semanas: [], materias: [] });
