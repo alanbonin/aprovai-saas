@@ -16,9 +16,9 @@ const SECTIONS_STUDENT: NavSection[] = [
   {
     id: "planejar", title: "Planejar", color: "#ec4899", defaultOpen: true,
     items: [
-      { href: "/metas",        label: "Metas",       icon: "🎯" },
-      { href: "/cronograma",   label: "Cronograma",  icon: "📅" },
       { href: "/plano-semanal",label: "Plano IA",    icon: "🤖" },
+      { href: "/cronograma",   label: "Cronograma",  icon: "📅" },
+      { href: "/metas",        label: "Metas",       icon: "🎯" },
     ],
   },
   {
