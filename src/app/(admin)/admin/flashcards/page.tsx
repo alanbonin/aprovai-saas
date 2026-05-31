@@ -4,7 +4,7 @@ import { FlashcardsAdmin } from "./flashcards-client";
 
 export default async function FlashcardsAdminPage() {
   const [{ data: sets }, { data: subjects }, { data: agents }] = await Promise.all([
-    db.from("FlashcardSet").select("id, name, subjectId, cards, createdAt, Subject(name)").order("createdAt", { ascending: false }),
+    db.from("FlashcardSet").select("id, name, subjectId, cards, createdAt").order("createdAt", { ascending: false }),
     db.from("Subject").select("id, name, categoria").order("categoria").order("name"),
     db.from("Agent").select("id, name, banca, area, description, color").eq("active", true).order("name"),
   ]);

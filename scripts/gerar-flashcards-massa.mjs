@@ -184,12 +184,14 @@ async function processarTopico(topic, subject, adminUserId, progress) {
   // Salva no banco
   if (!isDry) {
     if (setId) {
-      await supabase.from("FlashcardSet").update({
+      const { error: updErr } = await supabase.from("FlashcardSet").update({
         cards: finalCards,
         updatedAt: new Date().toISOString(),
       }).eq("id", setId);
+      if (updErr) throw new Error(`Falha ao atualizar set: ${updErr.message}`);
     } else {
-      const { data: newSet } = await supabase.from("FlashcardSet").insert({
+      const { data: newSet, error: insErr } = await supabase.from("FlashcardSet").insert({
+        id: crypto.randomUUID(),
         userId: adminUserId,
         subjectId: subject.id,
         name: setName,
@@ -197,6 +199,7 @@ async function processarTopico(topic, subject, adminUserId, progress) {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
       }).select("id").single();
+      if (insErr) throw new Error(`Falha ao inserir set: ${insErr.message}`);
       setId = newSet?.id;
     }
   }
@@ -254,6 +257,40 @@ async function main() {
   const toProcess = topics.filter(t => subjectMap[t.subjectId]);
 
   const progress = loadProgress();
+
+  // ── Reconcilia progress.done com o banco real ────────────────────────────
+  const doneIds = Object.keys(progress.done);
+  if (doneIds.length > 0) {
+    process.stdout.write("🔍 Reconciliando progress com banco...");
+    // Busca todos os sets existentes do admin
+    const { data: existingSets } = await supabase
+      .from("FlashcardSet")
+      .select("name")
+      .eq("userId", adminUserId);
+
+    // Monta set de nomes que realmente existem
+    const existingNames = new Set((existingSets ?? []).map(s => s.name));
+
+    // Para cada tópico marcado como done, verifica se o set existe
+    let removidos = 0;
+    for (const topicId of doneIds) {
+      const topic = topics.find(t => t.id === topicId);
+      if (!topic) continue;
+      const subject = subjectMap[topic.subjectId];
+      if (!subject) continue;
+      const expectedName = `${topic.name} — ${subject.name}`;
+      if (!existingNames.has(expectedName)) {
+        delete progress.done[topicId];
+        removidos++;
+      }
+    }
+    if (removidos > 0) {
+      saveProgress(progress);
+      process.stdout.write(` removidos ${removidos} falsos "done"\n`);
+    } else {
+      process.stdout.write(" tudo ok\n");
+    }
+  }
 
   // Contagem
   const done    = Object.keys(progress.done).length;
