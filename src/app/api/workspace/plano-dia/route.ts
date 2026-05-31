@@ -107,7 +107,7 @@ REGRAS:
 - desc deve ser motivacional, específica ao cargo, máx 60 chars
 - frase deve ser curta (máx 80 chars), motivacional para o dia
 
-Tipos disponíveis: questoes, desafio, quiz, desafio_semanal, flashcards, revisao, pdf, redacao, caso, simulado, modo_exame
+Tipos disponíveis: questoes, desafio, quiz, desafio_semanal, flashcards, revisao, redacao, caso, simulado, modo_exame
 
 Retorne APENAS JSON válido:
 {
@@ -146,8 +146,7 @@ Retorne APENAS JSON válido:
         { tipo: "desafio", desc: "10 questões cronometradas — XP bônus" },
         ...(revisoesPendentes > 0 ? [{ tipo: "revisao" as TarefaTipo, desc: "Revisões SM-2 vencidas", urgente: true }] : []),
         ...(flashcardsPendentes > 0 ? [{ tipo: "flashcards" as TarefaTipo, desc: "Flashcards para revisar hoje" }] : []),
-        { tipo: "pdf", desc: "Leitura de materiais da Biblioteca" },
-      ],
+          ],
       frase: "Foco e consistência levam à aprovação!",
       geradoEm: todayStr,
     };

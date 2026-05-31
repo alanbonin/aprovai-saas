@@ -222,13 +222,6 @@ export default function HojePage() {
       getDesc: (t) => d.revisaoFeitaHoje ? "Revisões feitas hoje!" : (d.questoesVencidas > 0 ? `${d.questoesVencidas} questões pendentes` : t.desc),
       getBadge: () => d.revisaoFeitaHoje ? undefined : (d.questoesVencidas > 0 ? d.questoesVencidas : undefined),
     },
-    pdf: {
-      href: "/biblioteca",
-      icon: (done) => <BookOpen className={cn("w-5 h-5", done ? "text-emerald-400" : "text-emerald-400")} />,
-      title: "Leitura de PDFs",
-      getDone: () => d.pdfMinutosHoje >= d.metaLeituraPdfHoje,
-      getDesc: () => d.pdfMinutosHoje > 0 ? `${d.pdfMinutosHoje}/${d.metaLeituraPdfHoje} min lidos hoje` : `Meta: ${d.metaLeituraPdfHoje} min na Biblioteca`,
-    },
     redacao: {
       href: "/redacao",
       icon: (done) => <BookOpen className={cn("w-5 h-5", done ? "text-emerald-400" : "text-indigo-400")} />,
