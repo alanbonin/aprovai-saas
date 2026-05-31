@@ -346,15 +346,33 @@ export function SimuladoExameInner() {
           </div>
         </div>
 
-        {/* Timer */}
-        <div className={cn(
-          "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-sm font-bold",
-          timeWarning
-            ? "bg-red-500/15 border-red-500/30 text-red-400 animate-pulse"
-            : "bg-white/[0.05] border-white/[0.08] text-white"
-        )}>
-          <Clock className="w-3.5 h-3.5" />
-          {formatTime(timeLeft)}
+        <div className="flex items-center gap-2">
+          {/* Timer */}
+          <div className={cn(
+            "flex items-center gap-1.5 px-3 py-1.5 rounded-xl border font-mono text-sm font-bold",
+            timeWarning
+              ? "bg-red-500/15 border-red-500/30 text-red-400 animate-pulse"
+              : "bg-white/[0.05] border-white/[0.08] text-white"
+          )}>
+            <Clock className="w-3.5 h-3.5" />
+            {formatTime(timeLeft)}
+          </div>
+
+          {/* Entregar prova antecipado */}
+          <button
+            onClick={() => {
+              const respondidas = Object.keys(answers).length;
+              const faltando = questions.length - respondidas;
+              const msg = faltando > 0
+                ? `Você respondeu ${respondidas} de ${questions.length} questões. As ${faltando} restantes ficarão em branco.\n\nDeseja entregar a prova assim mesmo?`
+                : `Você respondeu todas as ${questions.length} questões. Deseja entregar a prova?`;
+              if (confirm(msg)) finish();
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-red-500/40 bg-red-500/10 text-red-400 text-xs font-semibold hover:bg-red-500/20 transition-colors"
+          >
+            <Trophy className="w-3.5 h-3.5" />
+            Entregar
+          </button>
         </div>
       </div>
 
