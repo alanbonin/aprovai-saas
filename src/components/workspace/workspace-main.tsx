@@ -376,31 +376,41 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
 
   useEffect(() => {
-    fetch("/api/relatorio")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        if (!d) return;
-        setHomeStats({
-          totalAnswered: d.totalAnswered ?? 0,
-          overallAccuracy: Math.round(d.overallAccuracy ?? 0),
-          streak: d.streak ?? 0,
-          todayCount: d.todayCount ?? 0,
-          xp: d.xp ?? 0,
-          levelName: d.level?.name ?? "Iniciante",
-          levelColor: d.level?.color ?? "#8b949e",
-          xpProgress: d.progress ?? 0,
-          subjectStats: d.subjectStats ?? [],
-          flashcardDueToday: d.flashcardStats?.dueToday ?? 0,
-          pontoCritico: d.pontoCritico ?? [],
-          prontidao: d.prontidao ?? null,
-        });
-      })
-      .catch(() => {});
-    // Carrega metas semanais em paralelo
-    fetch("/api/workspace/metas")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setMetas(d); })
-      .catch(() => {});
+    function fetchStats() {
+      fetch("/api/relatorio")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => {
+          if (!d) return;
+          setHomeStats({
+            totalAnswered: d.totalAnswered ?? 0,
+            overallAccuracy: Math.round(d.overallAccuracy ?? 0),
+            streak: d.streak ?? 0,
+            todayCount: d.todayCount ?? 0,
+            xp: d.xp ?? 0,
+            levelName: d.level?.name ?? "Iniciante",
+            levelColor: d.level?.color ?? "#8b949e",
+            xpProgress: d.progress ?? 0,
+            subjectStats: d.subjectStats ?? [],
+            flashcardDueToday: d.flashcardStats?.dueToday ?? 0,
+            pontoCritico: d.pontoCritico ?? [],
+            prontidao: d.prontidao ?? null,
+          });
+        })
+        .catch(() => {});
+      fetch("/api/workspace/metas")
+        .then(r => r.ok ? r.json() : null)
+        .then(d => { if (d) setMetas(d); })
+        .catch(() => {});
+    }
+
+    fetchStats();
+
+    // Re-busca ao voltar para a aba/janela após estudar questões
+    function onVisible() {
+      if (document.visibilityState === "visible") fetchStats();
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   useEffect(() => {
