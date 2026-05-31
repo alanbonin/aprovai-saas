@@ -14,6 +14,14 @@ interface NavSection { id: string; title: string; color: string; items: NavItem[
 /* ── Seções do aluno ────────────────────────────────────────────────────── */
 const SECTIONS_STUDENT: NavSection[] = [
   {
+    id: "planejar", title: "Planejar", color: "#ec4899", defaultOpen: true,
+    items: [
+      { href: "/metas",        label: "Metas",       icon: "🎯" },
+      { href: "/cronograma",   label: "Cronograma",  icon: "📅" },
+      { href: "/plano-semanal",label: "Plano IA",    icon: "🤖" },
+    ],
+  },
+  {
     id: "praticar", title: "Praticar", color: "#6366f1", defaultOpen: true,
     items: [
       { href: "/workspace",     label: "Estudar",         icon: "📚" },
@@ -63,14 +71,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/diagnostico",     label: "Diagnóstico",    icon: "🩺" },
       { href: "/nivel",           label: "Por Nível",      icon: "📶" },
       { href: "/comparar",        label: "Vs. Média",      icon: "📊" },
-    ],
-  },
-  {
-    id: "planejar", title: "Planejar", color: "#ec4899", defaultOpen: false,
-    items: [
-      { href: "/metas",        label: "Metas",       icon: "🎯" },
-      { href: "/cronograma",   label: "Cronograma",  icon: "📅" },
-      { href: "/plano-semanal",label: "Plano IA",    icon: "🤖" },
     ],
   },
   {
