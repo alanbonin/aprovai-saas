@@ -329,13 +329,13 @@ export function SimuladoExameInner() {
           <span className="text-sm font-bold text-gray-300">
             {current + 1}<span className="text-gray-600">/{questions.length}</span>
           </span>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1 max-w-xs">
             {questions.map((_, i) => (
               <button
                 key={i}
                 onClick={() => setCurrent(i)}
                 className={cn(
-                  "w-3 h-3 rounded-sm transition-all",
+                  "w-2.5 h-2.5 rounded-sm transition-all flex-shrink-0",
                   i === current ? "bg-red-500 scale-110" :
                   answers[i] ? "bg-indigo-600/60" :
                   flagged.has(i) ? "bg-amber-500/60" :
