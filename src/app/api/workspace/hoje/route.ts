@@ -37,27 +37,35 @@ export async function GET() {
     progressDueRes,
     flashcardSetsRes,
     metasRes,
+    desafioRes,
+    simuladoHojeRes,
+    revisaoHojeRes,
+    pdfLeituraRes,
   ] = await Promise.all([
     db.from("StudentProfile")
       .select("streak, lastStudyDate, xp, horasEstudo")
       .eq("userId", dbUser.id)
       .single(),
-    // Questões respondidas hoje (por perfil)
     profileId
       ? db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", todayStart)
       : db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart),
-    // Questões vencidas para revisão SM-2 (por perfil)
     profileId
       ? db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).eq("profileId", profileId).lte("nextReview", now.toISOString()).not("nextReview", "is", null)
       : db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).lte("nextReview", now.toISOString()).not("nextReview", "is", null),
-    // Flashcard sets do perfil
     profileId
       ? db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id).eq("profileId", profileId)
       : db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id),
-    // Metas semanais do perfil
     profileId
       ? db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").eq("profileId", profileId).maybeSingle()
       : db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").maybeSingle(),
+    // Desafio concluído hoje
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__DESAFIO__").maybeSingle(),
+    // Simulado feito hoje
+    db.from("SimuladoHistory").select("id", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart).limit(1),
+    // Revisão SM-2 feita hoje (Progress atualizado hoje com nextReview > hoje = questão revisada)
+    db.from("Progress").select("id", { count: "exact" }).eq("userId", dbUser.id).gte("reviewedAt", todayStart).gt("nextReview", now.toISOString()).limit(1),
+    // Leitura de PDF hoje (minutos acumulados)
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", `__PDF_LEITURA__:${todayStr}`).maybeSingle(),
   ]);
 
   const profile = profileRes.data;
@@ -121,6 +129,19 @@ export async function GET() {
     }
   }
 
+  // Desafio concluído hoje
+  let desafioConcluido = false;
+  try {
+    const desafioData = desafioRes.data?.content ? JSON.parse(desafioRes.data.content) as { date?: string } : null;
+    desafioConcluido = desafioData?.date === todayStr;
+  } catch { /* ignore */ }
+
+  // PDF lido hoje (minutos)
+  let pdfMinutosHoje = 0;
+  try {
+    pdfMinutosHoje = pdfLeituraRes.data?.content ? (JSON.parse(pdfLeituraRes.data.content) as { minutos?: number }).minutos ?? 0 : 0;
+  } catch { /* ignore */ }
+
   return NextResponse.json({
     questoesHoje,
     questoesVencidas,
@@ -128,9 +149,13 @@ export async function GET() {
     streak,
     streakAtRisk,
     metaQuestoesHoje,
-    metaLeituraPdfHoje, // minutos de leitura de PDFs recomendados hoje
+    metaLeituraPdfHoje,
     progressoPct: Math.min(100, Math.round((questoesHoje / metaQuestoesHoje) * 100)),
     prioridade,
     estudouHoje: lastStudy === todayStr,
+    desafioConcluido,
+    simuladoHoje: (simuladoHojeRes.count ?? 0) > 0,
+    revisaoFeitaHoje: (revisaoHojeRes.count ?? 0) > 0,
+    pdfMinutosHoje,
   });
 }

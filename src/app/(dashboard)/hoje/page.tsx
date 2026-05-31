@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WeeklyDigestMini {
@@ -19,10 +19,14 @@ interface HojeData {
   streak: number;
   streakAtRisk: boolean;
   metaQuestoesHoje: number;
-  metaLeituraPdfHoje: number; // minutos de leitura de PDFs recomendados
+  metaLeituraPdfHoje: number;
   progressoPct: number;
   prioridade: { subjectName: string; erros: number } | null;
   estudouHoje: boolean;
+  desafioConcluido: boolean;
+  simuladoHoje: boolean;
+  revisaoFeitaHoje: boolean;
+  pdfMinutosHoje: number;
 }
 
 function RingProgress({ pct, size = 80 }: { pct: number; size?: number }) {
@@ -53,30 +57,34 @@ interface ActionCardProps {
   badge?: number | string;
   badgeColor?: string;
   urgent?: boolean;
+  done?: boolean;
 }
 
-function ActionCard({ href, icon, title, desc, badge, badgeColor = "bg-indigo-500", urgent }: ActionCardProps) {
+function ActionCard({ href, icon, title, desc, badge, badgeColor = "bg-indigo-500", urgent, done }: ActionCardProps) {
   return (
     <Link href={href} className={cn(
       "flex items-center gap-4 p-4 rounded-xl border transition-all hover:bg-white/[0.04] group",
+      done ? "border-emerald-500/30 bg-emerald-500/[0.03]" :
       urgent ? "border-amber-500/30 bg-amber-500/[0.04]" : "border-white/[0.06] bg-white/[0.02]"
     )}>
       <div className={cn(
         "w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0",
-        urgent ? "bg-amber-500/15" : "bg-white/[0.05]"
+        done ? "bg-emerald-500/15" : urgent ? "bg-amber-500/15" : "bg-white/[0.05]"
       )}>
         {icon}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-semibold text-white">{title}</p>
+        <p className={cn("text-sm font-semibold", done ? "text-emerald-300" : "text-white")}>{title}</p>
         <p className="text-xs text-gray-500 mt-0.5 truncate">{desc}</p>
       </div>
       <div className="flex items-center gap-2 flex-shrink-0">
-        {badge !== undefined && (
+        {done ? (
+          <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+        ) : badge !== undefined ? (
           <span className={cn("min-w-[22px] h-[22px] rounded-full text-white text-[10px] font-bold flex items-center justify-center px-1.5", badgeColor)}>
             {badge}
           </span>
-        )}
+        ) : null}
         <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-gray-400 transition-colors" />
       </div>
     </Link>
@@ -250,26 +258,32 @@ export default function HojePage() {
 
         <ActionCard
           href="/questoes"
-          icon={<Target className="w-5 h-5 text-indigo-400" />}
+          icon={<Target className={cn("w-5 h-5", d.questoesHoje >= d.metaQuestoesHoje ? "text-emerald-400" : "text-indigo-400")} />}
           title="Questões"
-          desc={
-            d.questoesHoje === 0
-              ? "Comece respondendo questões agora"
-              : `${d.questoesHoje} respondida${d.questoesHoje !== 1 ? "s" : ""} — continue!`
-          }
-          badge={d.metaQuestoesHoje - d.questoesHoje > 0 ? `+${d.metaQuestoesHoje - d.questoesHoje}` : "✓"}
-          badgeColor={d.questoesHoje >= d.metaQuestoesHoje ? "bg-emerald-600" : "bg-indigo-600"}
+          desc={d.questoesHoje === 0 ? "Comece respondendo questões agora" : `${d.questoesHoje} respondida${d.questoesHoje !== 1 ? "s" : ""} — continue!`}
+          badge={d.questoesHoje >= d.metaQuestoesHoje ? undefined : `+${d.metaQuestoesHoje - d.questoesHoje}`}
+          badgeColor="bg-indigo-600"
+          done={d.questoesHoje >= d.metaQuestoesHoje}
+        />
+
+        <ActionCard
+          href="/desafio"
+          icon={<Zap className={cn("w-5 h-5", d.desafioConcluido ? "text-emerald-400" : "text-amber-400")} />}
+          title="Desafio Diário"
+          desc={d.desafioConcluido ? "Desafio de hoje concluído!" : "10 questões cronometradas — XP bônus"}
+          done={d.desafioConcluido}
         />
 
         {d.questoesVencidas > 0 && (
           <ActionCard
             href="/revisao"
-            icon={<RotateCcw className="w-5 h-5 text-rose-400" />}
-            title="Revisão SM-2 vencida"
-            desc="Questões com revisão espaçada pendente"
-            badge={d.questoesVencidas}
+            icon={<RotateCcw className={cn("w-5 h-5", d.revisaoFeitaHoje ? "text-emerald-400" : "text-rose-400")} />}
+            title="Revisão SM-2"
+            desc={d.revisaoFeitaHoje ? "Revisões feitas hoje!" : "Questões com revisão espaçada pendente"}
+            badge={d.revisaoFeitaHoje ? undefined : d.questoesVencidas}
             badgeColor="bg-rose-600"
-            urgent
+            urgent={!d.revisaoFeitaHoje}
+            done={d.revisaoFeitaHoje}
           />
         )}
 
@@ -286,17 +300,13 @@ export default function HojePage() {
         )}
 
         <ActionCard
-          href="/desafio"
-          icon={<Zap className="w-5 h-5 text-amber-400" />}
-          title="Desafio Diário"
-          desc="1 questão cronometrada por dia — XP bônus"
-        />
-
-        <ActionCard
           href="/biblioteca"
-          icon={<BookOpen className="w-5 h-5 text-emerald-400" />}
+          icon={<BookOpen className={cn("w-5 h-5", d.pdfMinutosHoje >= d.metaLeituraPdfHoje ? "text-emerald-400" : "text-emerald-400")} />}
           title="Leitura de PDFs"
-          desc={`Meta: ${d.metaLeituraPdfHoje ?? 18} min na Biblioteca de materiais`}
+          desc={d.pdfMinutosHoje > 0
+            ? `${d.pdfMinutosHoje}/${d.metaLeituraPdfHoje} min lidos hoje`
+            : `Meta: ${d.metaLeituraPdfHoje} min na Biblioteca de materiais`}
+          done={d.pdfMinutosHoje >= d.metaLeituraPdfHoje}
         />
 
         <ActionCard
@@ -305,6 +315,16 @@ export default function HojePage() {
           title="Agenda de Revisões"
           desc="Veja todas as revisões programadas"
         />
+
+        {d.simuladoHoje && (
+          <ActionCard
+            href="/simulado"
+            icon={<Target className="w-5 h-5 text-emerald-400" />}
+            title="Simulado"
+            desc="Simulado feito hoje!"
+            done
+          />
+        )}
       </div>
 
       {/* Matéria prioritária */}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { BookOpen, Search, Filter, FileText, Loader2, ChevronRight, X, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
@@ -33,6 +33,31 @@ export function BibliotecaClient() {
   const [selectedDoc, setSelectedDoc]         = useState<Doc | null>(null);
   const [pdfUrl, setPdfUrl]                   = useState<string | null>(null);
   const [userEmail, setUserEmail]             = useState("");
+  const readingStartRef = useRef<number | null>(null);
+
+  // Salva tempo de leitura acumulado ao fechar o PDF
+  async function salvarTempoLeitura() {
+    if (!readingStartRef.current) return;
+    const mins = Math.round((Date.now() - readingStartRef.current) / 60000);
+    readingStartRef.current = null;
+    if (mins < 1) return;
+    await fetch("/api/biblioteca/tempo-leitura", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ minutos: mins }),
+    }).catch(() => {});
+  }
+
+  function abrirPdf(url: string) {
+    readingStartRef.current = Date.now();
+    setPdfUrl(url);
+  }
+
+  function fecharPdf() {
+    void salvarTempoLeitura();
+    setSelectedDoc(null);
+    setPdfUrl(null);
+  }
   const [loadingPdf, setLoadingPdf]           = useState(false);
   const [urlExpired, setUrlExpired]           = useState(false);
 
@@ -86,7 +111,7 @@ export function BibliotecaClient() {
         return;
       }
       await r.json(); // valida acesso (auth + plano)
-      setPdfUrl(`/api/biblioteca/pdf?id=${doc.id}`);
+      abrirPdf(`/api/biblioteca/pdf?id=${doc.id}`);
     } catch {
       alert("Erro ao carregar documento");
       setSelectedDoc(null);
@@ -108,7 +133,7 @@ export function BibliotecaClient() {
         return;
       }
       await r.json();
-      setPdfUrl(`/api/biblioteca/pdf?id=${selectedDoc.id}`);
+      abrirPdf(`/api/biblioteca/pdf?id=${selectedDoc.id}`);
     } catch {
       alert("Erro ao renovar link do documento");
     } finally {
@@ -242,7 +267,7 @@ export function BibliotecaClient() {
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold text-gray-300 truncate">{selectedDoc.title}</h2>
             <button
-              onClick={() => { setSelectedDoc(null); setPdfUrl(null); }}
+              onClick={fecharPdf}
               className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
             >
               <X className="w-4 h-4" />
