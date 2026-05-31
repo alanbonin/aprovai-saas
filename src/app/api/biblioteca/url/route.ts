@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { db, getUserWithPlan } from "@/lib/db";
 import { log } from "@/lib/logger";
 
@@ -34,8 +35,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Seu plano não inclui este documento" }, { status: 403 });
   }
 
-  // Gera URL assinada — expira em 30 minutos
-  const storageClient = await createClient();
+  // Gera URL assinada usando service role (bucket privado requer permissão elevada)
+  const storageClient = createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
   const { data: signed, error: signError } = await storageClient.storage
     .from("pdfs")
     .createSignedUrl(doc.storagePath, 1800); // 30 min
