@@ -166,6 +166,7 @@ export async function proxy(request: NextRequest) {
     pathname.startsWith("/configuracoes") ||
     pathname.startsWith("/onboarding") ||
     pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/") ||
     pathname.startsWith("/suporte") ||
     pathname.startsWith("/manutencao");
 
