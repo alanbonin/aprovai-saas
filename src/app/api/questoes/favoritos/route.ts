@@ -16,11 +16,12 @@ async function saveFavs(userId: string, ids: number[]) {
   const content = JSON.stringify(ids);
   const { data: ex, error: selErr } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).maybeSingle();
   if (selErr) console.error("[saveFavs] select error:", selErr);
+  const now = new Date().toISOString();
   if (ex?.id) {
-    const { error } = await db.from("Note").update({ content }).eq("id", ex.id);
+    const { error } = await db.from("Note").update({ content, updatedAt: now }).eq("id", ex.id);
     if (error) console.error("[saveFavs] update error:", error);
   } else {
-    const { error } = await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: PREFIX, content });
+    const { error } = await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: PREFIX, content, createdAt: now, updatedAt: now });
     if (error) console.error("[saveFavs] insert error:", error);
   }
 }
