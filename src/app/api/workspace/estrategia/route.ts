@@ -50,37 +50,28 @@ function getWeekStart(): string {
 const PLANO_SUBJECT_KEY = "__PLANO_SEMANAL__";
 
 async function getPlanNote(userId: string, profileId: string | null): Promise<{ id: string; data: PlanNoteData } | null> {
-  const baseQuery = db
+  // Plano ESTRITAMENTE do perfil ativo — sem fallback cross-perfil
+  let query = db
     .from("Note")
     .select("id, content")
     .eq("userId", userId)
     .eq("subjectId", PLANO_SUBJECT_KEY)
     .order("updatedAt", { ascending: false })
-    .limit(10);
+    .limit(5);
 
-  const { data: notes } = profileId
-    ? await baseQuery.eq("profileId", profileId)
-    : await baseQuery;
+  if (profileId) {
+    query = query.eq("profileId", profileId);
+  } else {
+    query = query.is("profileId", null);
+  }
+
+  const { data: notes } = await query;
 
   for (const note of notes ?? []) {
     try {
       const parsed = JSON.parse(note.content as string) as PlanNoteData;
       if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
     } catch { /* skip */ }
-  }
-
-  // Fallback: busca sem filtro de perfil (legado)
-  if (profileId) {
-    const { data: legacy } = await db
-      .from("Note").select("id, content")
-      .eq("userId", userId).eq("subjectId", PLANO_SUBJECT_KEY)
-      .order("updatedAt", { ascending: false }).limit(5);
-    for (const note of legacy ?? []) {
-      try {
-        const parsed = JSON.parse(note.content as string) as PlanNoteData;
-        if (parsed.__key === "plano_semanal") return { id: note.id as string, data: parsed };
-      } catch { /* skip */ }
-    }
   }
 
   return null;

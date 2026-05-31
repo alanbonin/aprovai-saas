@@ -16,7 +16,7 @@
  *   node --env-file=.env scripts/gerar-materiais-massa.mjs --dry
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
@@ -55,7 +55,7 @@ const FILTER = (() => { const i = args.indexOf("--subject"); return i >= 0 ? arg
 const ONLY_SUBJECT = args.includes("--only-subject"); // gera só 1 tópico por matéria para teste
 
 // ── Clientes ──────────────────────────────────────────────────────────────────
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -126,19 +126,22 @@ REGRAS:
 Retorne APENAS JSON válido sem markdown:
 {"titulo":"...","subtitulo":"...","cargo":"Concursos Públicos","materia":"${subjectName}","banca":"","numero_aula":"1","introducao":"...","secoes":[]}`;
 
-  const msg = await anthropic.messages.create({
-    model: "claude-sonnet-4-5",
+  const msg = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
     max_tokens: 8000,
     messages: [
+      {
+        role: "system",
+        content: "Você é um professor especialista em concursos públicos brasileiros. Gere apenas JSON válido, sem markdown, sem comentários.",
+      },
       {
         role: "user",
         content: prompt,
       },
     ],
-    system: "Você é um professor especialista em concursos públicos brasileiros. Gere apenas JSON válido, sem markdown, sem comentários.",
   });
 
-  const raw = (msg.content[0].text ?? "").trim();
+  const raw = (msg.choices[0]?.message?.content ?? "").trim();
   return extractJSON(raw);
 }
 
