@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { defaultAiLimiter } from "@/lib/rate-limit";
 import { resolveCargoId } from "@/lib/cargos";
@@ -36,8 +37,11 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const weekKey = getWeekKey();
-  const cacheKey = `${NOTE_PREFIX}:${weekKey}`;
+  const cacheKey = `${NOTE_PREFIX}:${weekKey}:${profileId ?? "global"}`;
 
   // Tenta retornar diagnóstico já gerado esta semana
   const { data: cached } = await db
@@ -68,6 +72,9 @@ export async function POST() {
   const rl = await defaultAiLimiter.check(dbUser.id);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const { start, end } = getWeekBounds();
 
   // ── Coleta dados da semana ─────────────────────────────────────────────────
@@ -78,10 +85,13 @@ export async function POST() {
     { data: pomodoroNotes },
     { data: profile },
   ] = await Promise.all([
-    db.from("Progress").select("id", { count: "exact", head: true })
-      .eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end) as unknown as Promise<{ count: number }>,
-    db.from("Progress").select("correct, Subject(name)")
-      .eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end),
+    (profileId
+      ? db.from("Progress").select("id", { count: "exact", head: true }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", start).lte("createdAt", end)
+      : db.from("Progress").select("id", { count: "exact", head: true }).eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end)
+    ) as unknown as Promise<{ count: number }>,
+    profileId
+      ? db.from("Progress").select("correct, Subject(name)").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", start).lte("createdAt", end)
+      : db.from("Progress").select("correct, Subject(name)").eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end),
     db.from("SimuladoHistory").select("id", { count: "exact", head: true })
       .eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end) as unknown as Promise<{ count: number }>,
     db.from("Note").select("content")
@@ -199,9 +209,9 @@ Retorne APENAS o JSON válido.`;
     generatedAt: new Date().toISOString(),
   };
 
-  // Salva no cache da semana
+  // Salva no cache da semana (por perfil)
   const weekKey = getWeekKey();
-  const cacheKey = `${NOTE_PREFIX}:${weekKey}`;
+  const cacheKey = `${NOTE_PREFIX}:${weekKey}:${profileId ?? "global"}`;
   const { data: existing } = await db.from("Note").select("id").eq("userId", dbUser.id).eq("subjectId", cacheKey).maybeSingle();
   if (existing) {
     await db.from("Note").update({ content: JSON.stringify(result), updatedAt: new Date().toISOString() }).eq("id", existing.id);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { log } from "@/lib/logger";
 
 const PREFIX = "__CADERNO_APRENDIDO__";
@@ -23,12 +24,14 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Fetch all progress entries — get all entries to compute wrong count
-  const { data: progressAll, error: progressErr } = await db
-    .from("Progress")
-    .select("questionId, correct, reviewedAt")
-    .eq("userId", dbUser.id)
-    .order("reviewedAt", { ascending: false });
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  // Fetch progress do perfil ativo
+  let progressQuery = db.from("Progress").select("questionId, correct, reviewedAt")
+    .eq("userId", dbUser.id).order("reviewedAt", { ascending: false });
+  if (profileId) progressQuery = progressQuery.eq("profileId", profileId);
+  const { data: progressAll, error: progressErr } = await progressQuery;
 
   if (progressErr) {
     log.error("db.caderno_progress_error", { table: "Progress" }, progressErr);

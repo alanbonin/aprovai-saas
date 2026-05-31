@@ -109,10 +109,13 @@
     "692d8a9f-eab1-4517-ba3e-995da06a6c21:b316d8e9-ae80-45c6-aacd-6201698c54e4": true,
     "c1f15776-dde7-41e0-836d-eb8bfee46722:da8b4b19-0e01-465d-bffc-2d313191d773": true,
     "8c5c7cfc-9ec3-4da5-a031-e45f1985ba3d:4f24f140-c9a9-4422-b6f3-0530fd99e8ce": true,
-    "6f393d28-dcb8-45cc-98bd-feb7cdcb4089:c3b6dc30-943e-472c-8aef-2cbb557b05ee": true
+    "6f393d28-dcb8-45cc-98bd-feb7cdcb4089:c3b6dc30-943e-472c-8aef-2cbb557b05ee": true,
+    "6f393d28-dcb8-45cc-98bd-feb7cdcb4089:e8bafb0c-2726-482e-bf17-731c19baf4f8": true,
+    "6f393d28-dcb8-45cc-98bd-feb7cdcb4089:4994d71f-5150-41e4-a978-fd5350f4a008": true,
+    "97dde987-a778-4b1e-ae1e-2c39eb95adb1:9e9e1f74-8acf-4ec2-a98c-568790542e89": true
   },
   "stats": {
-    "gerados": 110,
-    "erros": 1952
+    "gerados": 113,
+    "erros": 1958
   }
 }
