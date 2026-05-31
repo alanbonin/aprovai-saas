@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic"; // nunca cachear — dados mudam a cada questão respondida
+
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { getActiveProfile } from "@/lib/get-active-profile";

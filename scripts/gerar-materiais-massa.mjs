@@ -126,23 +126,35 @@ REGRAS:
 Retorne APENAS JSON válido sem markdown:
 {"titulo":"...","subtitulo":"...","cargo":"Concursos Públicos","materia":"${subjectName}","banca":"","numero_aula":"1","introducao":"...","secoes":[]}`;
 
-  const msg = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    max_tokens: 8000,
-    messages: [
-      {
-        role: "system",
-        content: "Você é um professor especialista em concursos públicos brasileiros. Gere apenas JSON válido, sem markdown, sem comentários.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-  });
+  // Tenta até 3 vezes com response_format json_object para garantir JSON válido
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const msg = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        max_tokens: 8000,
+        response_format: { type: "json_object" },
+        messages: [
+          {
+            role: "system",
+            content: "Você é um professor especialista em concursos públicos brasileiros. Retorne APENAS JSON válido conforme o formato solicitado.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+      });
 
-  const raw = (msg.choices[0]?.message?.content ?? "").trim();
-  return extractJSON(raw);
+      const raw = (msg.choices[0]?.message?.content ?? "").trim();
+      const parsed = extractJSON(raw);
+      if (parsed?.titulo && parsed?.secoes) return parsed;
+      if (attempt < 3) await new Promise(r => setTimeout(r, 1000));
+    } catch (e) {
+      if (attempt === 3) throw e;
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+  return null;
 }
 
 // ── Upload + registro ─────────────────────────────────────────────────────────

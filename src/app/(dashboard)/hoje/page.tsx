@@ -115,6 +115,10 @@ export default function HojePage() {
         }
       })
       .catch(() => {});
+    // Re-busca quando a aba/janela ganha foco (usuário volta de outra página)
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
   if (loading) {

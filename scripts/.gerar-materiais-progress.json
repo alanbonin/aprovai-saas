@@ -119,10 +119,24 @@
     "cb452ee6-0ac7-465b-93a3-70cc253bfdd8:38b68265-c155-4fa0-be5e-ced1b8a153a2": true,
     "851108b8-49fb-40b4-8c2b-37717bd5053f:607c5a08-1f61-46ed-8fa9-a9dce96d464c": true,
     "e1e54c4f-940a-42ba-9e06-9351d0094e00:98aa9686-07f3-49e8-91b8-c7d1e50eb9c0": true,
-    "e075b62e-9345-4bc1-be0d-0626089d164e:d47fe381-a9c8-459f-94e9-7cdf73eed473": true
+    "e075b62e-9345-4bc1-be0d-0626089d164e:d47fe381-a9c8-459f-94e9-7cdf73eed473": true,
+    "50825d52-5418-413f-87dd-c831f78d3147:f349933f-ff54-489a-a8be-25d860b823be": true,
+    "ab1e7997-db7e-499e-8e0c-d0fb3f8a0596:202770ce-43fe-4a24-879f-3e0a8e096b14": true,
+    "2d667c4f-762e-4c2d-a075-6cb42cef93c8:4dd566af-e015-4309-ab0e-aab276dbc21e": true,
+    "9a43bfd1-89c2-4a68-9d3f-f5ebda4c6095:00617a37-4da7-4dde-a0d2-56b854596322": true,
+    "9a43bfd1-89c2-4a68-9d3f-f5ebda4c6095:3084e1ad-5f10-4a02-ab73-468f1f7d8450": true,
+    "851f23e8-cf6c-4558-8a4a-ed7c3204bebc:d7772117-717e-4cee-8a6b-c360cee90c68": true,
+    "427cc6d1-4760-451f-9d69-c95571d2d072:66c5fd91-5ebc-4210-a445-b2043bd08618": true,
+    "162229ef-bdac-4fb7-880a-a350fb0b0230:e2949333-f50f-4184-b4c9-fc418642faaf": true,
+    "162229ef-bdac-4fb7-880a-a350fb0b0230:45afbfd4-1078-4584-ab02-d474ec8a2e7f": true,
+    "162229ef-bdac-4fb7-880a-a350fb0b0230:3a7fdc79-d505-41d9-8262-2a2343459f15": true,
+    "d8c19c52-da1a-467d-a858-57fe8c8960db:b32c7afe-f9d3-49af-8e78-ba87958ef4d8": true,
+    "d8c19c52-da1a-467d-a858-57fe8c8960db:501dfb20-b426-4f0b-8930-d0fdc41bfece": true,
+    "d8c19c52-da1a-467d-a858-57fe8c8960db:1c7ea02e-d91b-47db-aa93-468dd5a532eb": true,
+    "d8c19c52-da1a-467d-a858-57fe8c8960db:2be8e0b0-c136-4717-93ee-09b087f11fd7": true
   },
   "stats": {
-    "gerados": 120,
-    "erros": 2006
+    "gerados": 134,
+    "erros": 2022
   }
 }

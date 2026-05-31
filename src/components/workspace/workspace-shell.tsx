@@ -1,5 +1,6 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { SubjectSelector } from "./subject-selector";
 import { WorkspaceMain } from "./workspace-main";
 import { MentorProativo } from "./mentor-proativo";
@@ -39,7 +40,15 @@ export function WorkspaceShell({
   profile: initialProfile, subjects: initialSubjects,
   userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired,
 }: Props) {
+  const router = useRouter();
   const [subjects, setSubjects] = useState(initialSubjects);
+
+  // Atualiza dados do servidor quando a janela ganha foco (usuário volta de responder questões)
+  useEffect(() => {
+    const onFocus = () => router.refresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [router]);
   // onboarding agora ocorre em /onboarding — workspace só recebe usuários com onboardingDone=true
   const [step, setStep] = useState<"subject-select" | "workspace">(
     initialSubjects.length === 0 ? "subject-select" : "workspace"
