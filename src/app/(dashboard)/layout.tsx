@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PomodoroFloat } from "@/components/layout/pomodoro-float";
+import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 import { getConfig } from "@/lib/system-config";
 
@@ -84,6 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
+      <AutoRefresh />
       <PomodoroFloat />
       </div>
     </div>
