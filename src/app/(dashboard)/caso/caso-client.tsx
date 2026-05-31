@@ -610,8 +610,8 @@ export function CasoClient() {
                 </div>
                 <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap mb-5">{cenario.contexto}</div>
                 <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                  <p className="text-xs text-purple-400 font-semibold mb-1">❓ Pergunta:</p>
-                  <p className="text-sm text-purple-200">{cenario.pergunta}</p>
+                  <p className="text-xs font-semibold mb-1 text-purple-700 dark:text-purple-400">❓ Pergunta:</p>
+                  <p className="text-sm font-medium text-gray-950 dark:text-white">{cenario.pergunta}</p>
                 </div>
 
                 <button
