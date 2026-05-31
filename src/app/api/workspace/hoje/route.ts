@@ -41,6 +41,11 @@ export async function GET() {
     simuladoHojeRes,
     revisaoHojeRes,
     pdfLeituraRes,
+    desafioSemanalRes,
+    quizHojeRes,
+    redacaoSemanaRes,
+    casoSemanaRes,
+    flashcardsHojeRes,
   ] = await Promise.all([
     db.from("StudentProfile")
       .select("streak, lastStudyDate, xp, horasEstudo")
@@ -58,14 +63,24 @@ export async function GET() {
     profileId
       ? db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").eq("profileId", profileId).maybeSingle()
       : db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").maybeSingle(),
-    // Desafio concluído hoje
+    // Desafio diário concluído hoje
     db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__DESAFIO__").maybeSingle(),
     // Simulado feito hoje
     db.from("SimuladoHistory").select("id", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart).limit(1),
-    // Revisão SM-2 feita hoje (Progress atualizado hoje com nextReview > hoje = questão revisada)
+    // Revisão SM-2 feita hoje
     db.from("Progress").select("id", { count: "exact" }).eq("userId", dbUser.id).gte("reviewedAt", todayStart).gt("nextReview", now.toISOString()).limit(1),
-    // Leitura de PDF hoje (minutos acumulados)
+    // Leitura de PDF hoje
     db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", `__PDF_LEITURA__:${todayStr}`).maybeSingle(),
+    // Desafio semanal concluído esta semana
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__DESAFIO_SEMANAL__").maybeSingle(),
+    // Quiz rápido feito hoje
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", `__QUIZ_HOJE__:${todayStr}`).maybeSingle(),
+    // Redação feita esta semana
+    db.from("WeeklyUsage").select("count").eq("userId", dbUser.id).eq("resource", "redacao").eq("weekStart", (() => { const d = new Date(now); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); })()).maybeSingle(),
+    // Casos feitos esta semana
+    db.from("WeeklyUsage").select("count").eq("userId", dbUser.id).eq("resource", "caso").eq("weekStart", (() => { const d = new Date(now); d.setDate(d.getDate() - d.getDay()); return d.toISOString().slice(0, 10); })()).maybeSingle(),
+    // Flashcards revisados hoje (FlashcardSet atualizado hoje)
+    db.from("FlashcardSet").select("id", { count: "exact" }).eq("userId", dbUser.id).gte("updatedAt", todayStart).limit(1),
   ]);
 
   const profile = profileRes.data;
@@ -129,12 +144,32 @@ export async function GET() {
     }
   }
 
-  // Desafio concluído hoje
+  // Desafio diário concluído hoje
   let desafioConcluido = false;
   try {
-    const desafioData = desafioRes.data?.content ? JSON.parse(desafioRes.data.content) as { date?: string } : null;
-    desafioConcluido = desafioData?.date === todayStr;
+    const d = desafioRes.data?.content ? JSON.parse(desafioRes.data.content) as { date?: string } : null;
+    desafioConcluido = d?.date === todayStr;
   } catch { /* ignore */ }
+
+  // Desafio semanal concluído esta semana
+  let desafioSemanalFeito = false;
+  try {
+    const d = desafioSemanalRes.data?.content ? JSON.parse(desafioSemanalRes.data.content) as { weekKey?: string; completed?: boolean } : null;
+    const weekStart = (() => { const dt = new Date(now); dt.setDate(dt.getDate() - dt.getDay()); return dt.toISOString().slice(0, 10); })();
+    desafioSemanalFeito = !!(d?.completed && d?.weekKey === weekStart);
+  } catch { /* ignore */ }
+
+  // Quiz feito hoje
+  const quizHoje = !!quizHojeRes.data;
+
+  // Redação feita esta semana
+  const redacaoSemana = ((redacaoSemanaRes.data as { count?: number } | null)?.count ?? 0) > 0;
+
+  // Caso feito esta semana
+  const casoSemana = ((casoSemanaRes.data as { count?: number } | null)?.count ?? 0) > 0;
+
+  // Flashcards revisados hoje
+  const flashcardsRevisadosHoje = (flashcardsHojeRes.count ?? 0) > 0;
 
   // PDF lido hoje (minutos)
   let pdfMinutosHoje = 0;
@@ -157,5 +192,10 @@ export async function GET() {
     simuladoHoje: (simuladoHojeRes.count ?? 0) > 0,
     revisaoFeitaHoje: (revisaoHojeRes.count ?? 0) > 0,
     pdfMinutosHoje,
+    desafioSemanalFeito,
+    quizHoje,
+    redacaoSemana,
+    casoSemana,
+    flashcardsRevisadosHoje,
   });
 }

@@ -121,6 +121,8 @@ export function QuizInner() {
   function nextQuestion() {
     if (current + 1 >= questions.length) {
       setPhase("result");
+      // Registra quiz concluído hoje para o Briefing
+      fetch("/api/quiz/concluir", { method: "POST" }).catch(() => {});
       return;
     }
     setCurrent(c => c + 1);

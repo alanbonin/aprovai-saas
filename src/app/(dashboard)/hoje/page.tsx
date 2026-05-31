@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2 } from "lucide-react";
+import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2, Trophy, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface WeeklyDigestMini {
@@ -27,6 +27,11 @@ interface HojeData {
   simuladoHoje: boolean;
   revisaoFeitaHoje: boolean;
   pdfMinutosHoje: number;
+  desafioSemanalFeito: boolean;
+  quizHoje: boolean;
+  redacaoSemana: boolean;
+  casoSemana: boolean;
+  flashcardsRevisadosHoje: boolean;
 }
 
 function RingProgress({ pct, size = 80 }: { pct: number; size?: number }) {
@@ -316,15 +321,54 @@ export default function HojePage() {
           desc="Veja todas as revisões programadas"
         />
 
-        {d.simuladoHoje && (
+        <ActionCard
+          href="/quiz"
+          icon={<Zap className={cn("w-5 h-5", d.quizHoje ? "text-emerald-400" : "text-yellow-400")} />}
+          title="Quiz Rápido"
+          desc={d.quizHoje ? "Quiz concluído hoje!" : "Questões relâmpago com XP"}
+          done={d.quizHoje}
+        />
+
+        <ActionCard
+          href="/desafio-semanal"
+          icon={<Trophy className={cn("w-5 h-5", d.desafioSemanalFeito ? "text-emerald-400" : "text-orange-400")} />}
+          title="Desafio Semanal"
+          desc={d.desafioSemanalFeito ? "Desafio da semana concluído!" : "10 questões difíceis — XP extra"}
+          done={d.desafioSemanalFeito}
+        />
+
+        <ActionCard
+          href="/redacao"
+          icon={<BookOpen className={cn("w-5 h-5", d.redacaoSemana ? "text-emerald-400" : "text-indigo-400")} />}
+          title="Redação"
+          desc={d.redacaoSemana ? "Redação feita esta semana!" : "Pratique redação e receba correção com IA"}
+          done={d.redacaoSemana}
+        />
+
+        <ActionCard
+          href="/caso"
+          icon={<Brain className={cn("w-5 h-5", d.casoSemana ? "text-emerald-400" : "text-rose-400")} />}
+          title="Estudo de Caso"
+          desc={d.casoSemana ? "Caso feito esta semana!" : "Resolva um caso prático com correção IA"}
+          done={d.casoSemana}
+        />
+
+        {(d.simuladoHoje || !d.simuladoHoje) && (
           <ActionCard
             href="/simulado"
-            icon={<Target className="w-5 h-5 text-emerald-400" />}
+            icon={<Target className={cn("w-5 h-5", d.simuladoHoje ? "text-emerald-400" : "text-indigo-400")} />}
             title="Simulado"
-            desc="Simulado feito hoje!"
-            done
+            desc={d.simuladoHoje ? "Simulado feito hoje!" : "Teste seus conhecimentos com tempo cronometrado"}
+            done={d.simuladoHoje}
           />
         )}
+
+        <ActionCard
+          href="/simulado/exame"
+          icon={<Clock className={cn("w-5 h-5", "text-red-400")} />}
+          title="Modo Exame"
+          desc="Simulação oficial sem gabarito durante a prova"
+        />
       </div>
 
       {/* Matéria prioritária */}
