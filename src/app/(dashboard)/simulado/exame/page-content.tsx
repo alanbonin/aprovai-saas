@@ -26,10 +26,10 @@ const OPTS = ["A", "B", "C", "D", "E"] as const;
 
 // Preset durations (minutes) and question counts
 const PRESETS = [
-  { label: "Curto", total: 10, minutes: 15, icon: "⚡" },
-  { label: "Médio", total: 20, minutes: 30, icon: "🎯" },
-  { label: "Padrão", total: 30, minutes: 60, icon: "📝" },
-  { label: "Intensivo", total: 50, minutes: 90, icon: "🔥" },
+  { label: "Curto",     total: 20,  minutes: 30,  icon: "⚡" },
+  { label: "Médio",     total: 30,  minutes: 55,  icon: "🎯" },
+  { label: "Padrão",    total: 50,  minutes: 100, icon: "📝" },
+  { label: "Intensivo", total: 100, minutes: 240, icon: "🔥" },
 ];
 
 type Phase = "config" | "running" | "result";
