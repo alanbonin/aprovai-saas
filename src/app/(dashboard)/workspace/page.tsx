@@ -61,19 +61,21 @@ export default async function WorkspacePage() {
   // Matérias do perfil ativo (filtra por profileId)
   let subjects: { id: string; name: string; slug: string }[] = [];
   if (profile?.onboardingDone && activeProfile) {
-    // Matérias do perfil ativo + legadas em paralelo
-    const [{ data: studentSubjects }, { data: legacySubjects }] = await Promise.all([
-      db.from("StudentSubject")
-        .select("subjectId, Subject(id, name, slug, description)")
-        .eq("userId", dbUser.id)
-        .eq("profileId", activeProfile.id),
-      db.from("StudentSubject")
-        .select("subjectId, Subject(id, name, slug, description)")
-        .eq("userId", dbUser.id)
-        .is("profileId", null),
-    ]);
+    // Matérias exclusivas do perfil ativo
+    const { data: studentSubjects } = await db.from("StudentSubject")
+      .select("subjectId, Subject(id, name, slug, description)")
+      .eq("userId", dbUser.id)
+      .eq("profileId", activeProfile.id);
 
-    const allSubs = [...(studentSubjects ?? []), ...(legacySubjects ?? [])];
+    // Fallback: legadas só se o perfil não tiver matérias próprias
+    let allSubs = studentSubjects ?? [];
+    if (allSubs.length === 0) {
+      const { data: legacySubjects } = await db.from("StudentSubject")
+        .select("subjectId, Subject(id, name, slug, description)")
+        .eq("userId", dbUser.id)
+        .is("profileId", null);
+      allSubs = legacySubjects ?? [];
+    }
     const seen = new Set<string>();
     subjects = allSubs
       .map((ss: { subjectId: string; Subject: unknown }) => {
