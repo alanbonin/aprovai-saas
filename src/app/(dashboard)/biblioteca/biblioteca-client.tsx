@@ -84,8 +84,8 @@ export function BibliotecaClient() {
         setSelectedDoc(null);
         return;
       }
-      const { url } = await r.json();
-      setPdfUrl(url);
+      await r.json(); // valida acesso (auth + plano)
+      setPdfUrl(`/api/biblioteca/pdf?id=${doc.id}`);
     } catch {
       alert("Erro ao carregar documento");
       setSelectedDoc(null);
@@ -106,8 +106,8 @@ export function BibliotecaClient() {
         setLoadingPdf(false);
         return;
       }
-      const { url } = await r.json();
-      setPdfUrl(url);
+      await r.json();
+      setPdfUrl(`/api/biblioteca/pdf?id=${selectedDoc.id}`);
     } catch {
       alert("Erro ao renovar link do documento");
     } finally {
