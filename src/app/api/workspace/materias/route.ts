@@ -15,19 +15,7 @@ export async function GET(req: Request) {
   const profile = await getActiveProfile(dbUser.id);
   const profileId = profile?.id ?? null;
 
-  // Buscar agentes do aluno para pegar categorias/areas
-  const { data: userAgents } = await db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
-  const agentIds = (userAgents ?? []).map((ua: { agentId: string }) => ua.agentId);
-  const { data: agents } = agentIds.length
-    ? await db.from("Agent").select("categoria, area").in("id", agentIds)
-    : { data: [] };
-
-  // Usa categoria se disponível, senão area (seed pode ter só um dos dois)
-  const categorias = [...new Set(
-    (agents ?? [])
-      .map((a: { categoria: string | null; area: string | null }) => a.categoria || a.area)
-      .filter(Boolean)
-  )];
+  // Matérias sempre filtradas por perfil ativo (StudentSubject com profileId)
 
   // Matérias do perfil ativo (profileId) + legadas sem profileId
   const buildSubjectList = async () => {
@@ -80,18 +68,8 @@ export async function GET(req: Request) {
     return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
   }
 
-  if (categorias.length === 0) {
-    const rawSubjects = await buildSubjectList();
-    return NextResponse.json({ subjects: mergeByName(rawSubjects as { id: string; name: string }[]), profileId });
-  }
-
-  const { data: subjects } = await db
-    .from("Subject")
-    .select("id, name, slug, description")
-    .in("categoria", categorias as string[])
-    .order("ordem");
-
-  return NextResponse.json({ subjects: mergeByName(subjects ?? []), profileId });
+  const rawSubjects = await buildSubjectList();
+  return NextResponse.json({ subjects: mergeByName(rawSubjects as { id: string; name: string }[]), profileId });
 }
 
 export async function POST(req: Request) {
