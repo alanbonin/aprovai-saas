@@ -125,7 +125,13 @@ export default function FlashcardsPage() {
     }
   }, []);
 
-  useEffect(() => { void loadDecks(); }, [loadDecks]);
+  useEffect(() => {
+    void loadDecks();
+    // Atualiza quando questões são respondidas (novos erros viram flashcards)
+    const onProgress = () => void loadDecks();
+    window.addEventListener("aprovai:progress", onProgress);
+    return () => window.removeEventListener("aprovai:progress", onProgress);
+  }, [loadDecks]);
 
   async function openDeck(deckId: string) {
     // Deck especial de erros automáticos — já temos os dados em memória

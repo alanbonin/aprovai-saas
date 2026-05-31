@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 // GET — lista todos os decks com stats de revisão, filtrados pelas matérias do aluno
 export async function GET() {
@@ -11,13 +12,20 @@ export async function GET() {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  // Matérias que o aluno selecionou
-  const { data: studentSubjects } = await db
-    .from("StudentSubject")
-    .select("subjectId")
-    .eq("userId", dbUser.id);
+  // Matérias do perfil ativo
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
 
-  const subjectIds = (studentSubjects ?? []).map(s => s.subjectId);
+  let ssQuery = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
+  if (profileId) ssQuery = ssQuery.eq("profileId", profileId);
+  const { data: studentSubjects } = await ssQuery;
+
+  let subjectIds = (studentSubjects ?? []).map(s => s.subjectId as string);
+  // Fallback para legados se o perfil não tiver matérias
+  if (subjectIds.length === 0 && profileId) {
+    const { data: legacy } = await db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id).is("profileId", null);
+    subjectIds = (legacy ?? []).map(s => s.subjectId as string);
+  }
 
   // IDs dos admins (para incluir todos os decks criados por admins)
   const { data: adminUsers } = await db
