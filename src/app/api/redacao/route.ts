@@ -227,17 +227,26 @@ Retorne APENAS JSON válido:
     ];
   } else {
     parts = [
-      { type: "text", text: `DOCUMENTO SUBMETIDO:\nTipo: ${tipo}${tema ? `\nTema/Contexto: ${tema}` : ""}\n\nTEXTO DO ALUNO:\n"""\n${(texto ?? "").slice(0, 4000)}\n"""\n${instrucoes}` } as TextBlockParam,
+      { type: "text", text: `DOCUMENTO SUBMETIDO:\nTipo: ${tipo}${tema ? `\nTema/Contexto: ${tema}` : ""}\n\nTEXTO DO ALUNO:\n"""\n${(texto ?? "").slice(0, 6000)}\n"""\n${instrucoes}` } as TextBlockParam,
     ];
   }
 
   const messages: MessageParam[] = [{ role: "user", content: parts }];
 
   try {
-    const msg = await createWithCache({
-      model: MODELS.sonnet, maxTokens: 3000, systemPrompt: REDACAO_SYSTEM, cacheSystem: false,
-      messages,
-    });
+    let msg;
+    try {
+      msg = await createWithCache({
+        model: MODELS.haiku, maxTokens: 5000, systemPrompt: REDACAO_SYSTEM, cacheSystem: false,
+        messages,
+      });
+    } catch (haikuErr) {
+      log.warn("ai.redacao_haiku_fallback", {}, haikuErr);
+      msg = await createWithCache({
+        model: MODELS.sonnet, maxTokens: 5000, systemPrompt: REDACAO_SYSTEM, cacheSystem: false,
+        messages,
+      });
+    }
     const raw = (msg.content[0] as { type: string; text: string }).text.trim();
     const result = extractJSON<{
       ilegivel?: boolean;
@@ -256,7 +265,8 @@ Retorne APENAS JSON válido:
 
     return NextResponse.json({ ...result, criterios: CRITERIOS });
   } catch (e) {
-    log.error("ai.redacao_avaliar_error", {}, e);
-    return NextResponse.json({ error: "Erro interno" }, { status: 500 });
+    const errMsg = (e as Error)?.message ?? "desconhecido";
+    log.error("ai.redacao_avaliar_error", { errMsg }, e);
+    return NextResponse.json({ error: `Erro ao corrigir: ${errMsg}` }, { status: 500 });
   }
 }

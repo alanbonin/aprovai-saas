@@ -224,6 +224,10 @@ export function RedacaoClient() {
   const tipoSel = tipos.find(t => t.id === tipo) ?? tipos[0];
   const podeEnviar = inputMode === "texto" ? texto.trim().length > 0 : !!fotoBase64;
 
+  const MAX_CHARS = 6000;
+  const restantes = MAX_CHARS - texto.length;
+  const quaseNoLimite = restantes <= 300;
+
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
       <div className="mb-6">
@@ -316,7 +320,9 @@ export function RedacaoClient() {
                   ? `Seu ${tipoSel?.label ?? "documento"}`
                   : "Foto da redação manuscrita"}
                 {inputMode === "texto" && (
-                  <span className="ml-2 text-xs text-gray-600 font-normal">{texto.length} caracteres</span>
+                  <span className={cn("ml-2 text-xs font-normal", quaseNoLimite ? (restantes <= 0 ? "text-red-400" : "text-amber-400") : "text-gray-500")}>
+                    {restantes <= 0 ? "Limite atingido" : `${texto.length}/${MAX_CHARS} caracteres`}
+                  </span>
                 )}
               </label>
               <InputModeToggle
@@ -326,14 +332,22 @@ export function RedacaoClient() {
             </div>
 
             {inputMode === "texto" ? (
+              <>
               <textarea
                 value={texto}
-                onChange={e => setTexto(e.target.value)}
+                onChange={e => setTexto(e.target.value.slice(0, MAX_CHARS))}
                 rows={14}
                 required
                 placeholder={`Digite seu ${tipoSel?.label ?? "documento"} aqui. Inclua todas as partes obrigatórias (cabeçalho, corpo, assinatura)...`}
-                className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors resize-none font-mono leading-relaxed"
+                className={cn(
+                  "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none transition-colors resize-none font-mono leading-relaxed",
+                  restantes <= 0 ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-indigo-500"
+                )}
               />
+              {quaseNoLimite && restantes > 0 && (
+                <p className="text-xs text-amber-400 mt-1">Restam {restantes} caracteres</p>
+              )}
+              </>
             ) : (
               <div>
                 {!fotoPreview ? (
