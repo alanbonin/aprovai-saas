@@ -217,13 +217,13 @@ ${AVALIACAO_FIELDS}`,
       let msg;
       try {
         msg = await createWithCache({
-          model: MODELS.haiku, maxTokens: 1600, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          model: MODELS.haiku, maxTokens: 3000, systemPrompt: CASO_SYSTEM, cacheSystem: false,
           messages,
         });
       } catch (haikuErr) {
         log.warn("ai.caso_avaliar_haiku_fallback", {}, haikuErr);
         msg = await createWithCache({
-          model: MODELS.sonnet, maxTokens: 1600, systemPrompt: CASO_SYSTEM, cacheSystem: false,
+          model: MODELS.sonnet, maxTokens: 3000, systemPrompt: CASO_SYSTEM, cacheSystem: false,
           messages,
         });
       }
