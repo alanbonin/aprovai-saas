@@ -465,7 +465,24 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
       <div className="min-h-screen bg-[#0d1117] text-white flex flex-col">
         {/* Header */}
         <div className="border-b border-white/5 px-6 py-3 flex items-center justify-between">
-          <span className="text-sm text-gray-400">Questão {current + 1}/{questions.length}</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (confirm("Deseja abandonar o simulado? O progresso será perdido.")) {
+                  setPhase("menu");
+                  setQuestions([]);
+                  setAnswers([]);
+                  setCurrent(0);
+                  setSelected(null);
+                  setResult(null);
+                }
+              }}
+              className="text-xs text-gray-600 hover:text-red-400 transition-colors flex items-center gap-1"
+            >
+              ✕ Sair
+            </button>
+            <span className="text-sm text-gray-400">Questão {current + 1}/{questions.length}</span>
+          </div>
           <div className={cn("flex items-center gap-1.5 text-sm font-mono font-bold", timeLeft < 300 ? "text-red-400" : "text-gray-300")}>
             <Clock className="w-4 h-4" />
             {fmtTime(timeLeft)}
