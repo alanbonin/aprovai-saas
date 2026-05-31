@@ -52,7 +52,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/revisao",            label: "Revisão SM-2",    icon: "🔄" },
       { href: "/agenda-revisoes",label: "Agenda SM-2",     icon: "📆" },
       { href: "/caderno-erros",  label: "Caderno de Erros",icon: "📒" },
-      { href: "/favoritos",      label: "Favoritos",       icon: "⭐" },
     ],
   },
   {
