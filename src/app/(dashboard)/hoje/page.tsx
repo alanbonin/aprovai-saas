@@ -99,8 +99,12 @@ function ActionCard({ href, icon, title, desc, badge, badgeColor = "bg-indigo-50
 const DIAS_PT = ["Domingo", "Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado"];
 const MESES_PT = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+interface Tarefa { tipo: string; desc: string; urgente?: boolean; }
+interface PlanoDia { tarefas: Tarefa[]; frase: string; geradoEm: string; }
+
 export default function HojePage() {
   const [data, setData] = useState<HojeData | null>(null);
+  const [plano, setPlano] = useState<PlanoDia | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [digest, setDigest] = useState<WeeklyDigestMini | null>(null);
@@ -110,16 +114,19 @@ export default function HojePage() {
 
   async function load(showRefreshing = false) {
     if (showRefreshing) setRefreshing(true);
-    const res = await fetch("/api/workspace/hoje");
-    if (res.ok) setData(await res.json());
+    const [resHoje, resPlano] = await Promise.all([
+      fetch("/api/workspace/hoje"),
+      fetch("/api/workspace/plano-dia"),
+    ]);
+    if (resHoje.ok) setData(await resHoje.json());
+    if (resPlano.ok) setPlano(await resPlano.json());
     setLoading(false);
     setRefreshing(false);
   }
 
   useEffect(() => {
     load();
-    // Atualiza contadores ao responder questões na mesma página
-    const onProgress = () => load();
+    const onProgress = () => { void fetch("/api/workspace/hoje").then(r => r.ok ? r.json() : null).then(d => { if (d) setData(d); }); };
     window.addEventListener("aprovai:progress", onProgress);
     return () => window.removeEventListener("aprovai:progress", onProgress);
     // Carrega resumo semanal em paralelo (não bloqueia)
@@ -160,6 +167,97 @@ export default function HojePage() {
 
   const d = data;
   const totalPendente = d.questoesVencidas + d.flashcardsVencidos;
+
+  // Mapa de configuração por tipo de tarefa
+  const TAREFA_CONFIG: Record<string, {
+    href: string;
+    icon: (done: boolean) => React.ReactNode;
+    title: string;
+    getDone: () => boolean;
+    getDesc: (t: Tarefa) => string;
+    getBadge?: () => string | number | undefined;
+  }> = {
+    questoes: {
+      href: "/questoes",
+      icon: (done) => <Target className={cn("w-5 h-5", done ? "text-emerald-400" : "text-indigo-400")} />,
+      title: "Questões",
+      getDone: () => d.questoesHoje >= d.metaQuestoesHoje,
+      getDesc: (t) => d.questoesHoje === 0 ? t.desc : `${d.questoesHoje} respondidas — continue!`,
+      getBadge: () => d.questoesHoje >= d.metaQuestoesHoje ? undefined : `+${d.metaQuestoesHoje - d.questoesHoje}`,
+    },
+    desafio: {
+      href: "/desafio",
+      icon: (done) => <Zap className={cn("w-5 h-5", done ? "text-emerald-400" : "text-amber-400")} />,
+      title: "Desafio Diário",
+      getDone: () => d.desafioConcluido,
+      getDesc: (t) => d.desafioConcluido ? "Desafio concluído hoje!" : t.desc,
+    },
+    quiz: {
+      href: "/quiz",
+      icon: (done) => <Zap className={cn("w-5 h-5", done ? "text-emerald-400" : "text-yellow-400")} />,
+      title: "Quiz Rápido",
+      getDone: () => d.quizHoje,
+      getDesc: (t) => d.quizHoje ? "Quiz concluído hoje!" : t.desc,
+    },
+    desafio_semanal: {
+      href: "/desafio-semanal",
+      icon: (done) => <Trophy className={cn("w-5 h-5", done ? "text-emerald-400" : "text-orange-400")} />,
+      title: "Desafio Semanal",
+      getDone: () => d.desafioSemanalFeito,
+      getDesc: (t) => d.desafioSemanalFeito ? "Desafio da semana concluído!" : t.desc,
+    },
+    flashcards: {
+      href: "/flashcards",
+      icon: (done) => <Brain className={cn("w-5 h-5", done ? "text-emerald-400" : "text-violet-400")} />,
+      title: "Flashcards",
+      getDone: () => d.flashcardsRevisadosHoje,
+      getDesc: (t) => d.flashcardsRevisadosHoje ? "Flashcards revisados hoje!" : (d.flashcardsVencidos > 0 ? `${d.flashcardsVencidos} flashcards vencidos` : t.desc),
+      getBadge: () => d.flashcardsRevisadosHoje ? undefined : (d.flashcardsVencidos > 0 ? d.flashcardsVencidos : undefined),
+    },
+    revisao: {
+      href: "/revisao",
+      icon: (done) => <RotateCcw className={cn("w-5 h-5", done ? "text-emerald-400" : "text-rose-400")} />,
+      title: "Revisão SM-2",
+      getDone: () => d.revisaoFeitaHoje,
+      getDesc: (t) => d.revisaoFeitaHoje ? "Revisões feitas hoje!" : (d.questoesVencidas > 0 ? `${d.questoesVencidas} questões pendentes` : t.desc),
+      getBadge: () => d.revisaoFeitaHoje ? undefined : (d.questoesVencidas > 0 ? d.questoesVencidas : undefined),
+    },
+    pdf: {
+      href: "/biblioteca",
+      icon: (done) => <BookOpen className={cn("w-5 h-5", done ? "text-emerald-400" : "text-emerald-400")} />,
+      title: "Leitura de PDFs",
+      getDone: () => d.pdfMinutosHoje >= d.metaLeituraPdfHoje,
+      getDesc: () => d.pdfMinutosHoje > 0 ? `${d.pdfMinutosHoje}/${d.metaLeituraPdfHoje} min lidos hoje` : `Meta: ${d.metaLeituraPdfHoje} min na Biblioteca`,
+    },
+    redacao: {
+      href: "/redacao",
+      icon: (done) => <BookOpen className={cn("w-5 h-5", done ? "text-emerald-400" : "text-indigo-400")} />,
+      title: "Redação",
+      getDone: () => d.redacaoSemana,
+      getDesc: (t) => d.redacaoSemana ? "Redação feita esta semana!" : t.desc,
+    },
+    caso: {
+      href: "/caso",
+      icon: (done) => <Brain className={cn("w-5 h-5", done ? "text-emerald-400" : "text-rose-400")} />,
+      title: "Estudo de Caso",
+      getDone: () => d.casoSemana,
+      getDesc: (t) => d.casoSemana ? "Caso feito esta semana!" : t.desc,
+    },
+    simulado: {
+      href: "/simulado",
+      icon: (done) => <Target className={cn("w-5 h-5", done ? "text-emerald-400" : "text-indigo-400")} />,
+      title: "Simulado",
+      getDone: () => d.simuladoHoje,
+      getDesc: (t) => d.simuladoHoje ? "Simulado feito hoje!" : t.desc,
+    },
+    modo_exame: {
+      href: "/simulado/exame",
+      icon: () => <Clock className="w-5 h-5 text-red-400" />,
+      title: "Modo Exame",
+      getDone: () => false,
+      getDesc: (t) => t.desc,
+    },
+  };
 
   return (
     <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
@@ -255,36 +353,24 @@ export default function HojePage() {
         )}
       </div>
 
-      {/* Ações prioritárias */}
+      {/* Ações do dia — geradas pela IA */}
       <div className="space-y-2 mb-6">
-        <p className="text-xs text-gray-600 font-medium uppercase tracking-wider mb-3">
-          Ações de hoje
-        </p>
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-xs text-gray-600 font-medium uppercase tracking-wider">
+            Ações de hoje
+          </p>
+          {plano && (
+            <p className="text-xs text-indigo-400 italic">✨ {plano.frase}</p>
+          )}
+        </div>
 
-        <ActionCard
-          href="/questoes"
-          icon={<Target className={cn("w-5 h-5", d.questoesHoje >= d.metaQuestoesHoje ? "text-emerald-400" : "text-indigo-400")} />}
-          title="Questões"
-          desc={d.questoesHoje === 0 ? "Comece respondendo questões agora" : `${d.questoesHoje} respondida${d.questoesHoje !== 1 ? "s" : ""} — continue!`}
-          badge={d.questoesHoje >= d.metaQuestoesHoje ? undefined : `+${d.metaQuestoesHoje - d.questoesHoje}`}
-          badgeColor="bg-indigo-600"
-          done={d.questoesHoje >= d.metaQuestoesHoje}
-        />
-
-        <ActionCard
-          href="/desafio"
-          icon={<Zap className={cn("w-5 h-5", d.desafioConcluido ? "text-emerald-400" : "text-amber-400")} />}
-          title="Desafio Diário"
-          desc={d.desafioConcluido ? "Desafio de hoje concluído!" : "10 questões cronometradas — XP bônus"}
-          done={d.desafioConcluido}
-        />
-
-        {d.questoesVencidas > 0 && (
+        {/* Revisão urgente sempre aparece se pendente, independente do plano */}
+        {d.questoesVencidas > 0 && !(plano?.tarefas ?? []).some(t => t.tipo === "revisao") && (
           <ActionCard
             href="/revisao"
             icon={<RotateCcw className={cn("w-5 h-5", d.revisaoFeitaHoje ? "text-emerald-400" : "text-rose-400")} />}
             title="Revisão SM-2"
-            desc={d.revisaoFeitaHoje ? "Revisões feitas hoje!" : "Questões com revisão espaçada pendente"}
+            desc={d.revisaoFeitaHoje ? "Revisões feitas hoje!" : `${d.questoesVencidas} questões pendentes — urgente!`}
             badge={d.revisaoFeitaHoje ? undefined : d.questoesVencidas}
             badgeColor="bg-rose-600"
             urgent={!d.revisaoFeitaHoje}
@@ -292,83 +378,33 @@ export default function HojePage() {
           />
         )}
 
-        {d.flashcardsVencidos > 0 && (
-          <ActionCard
-            href="/flashcards"
-            icon={<Brain className="w-5 h-5 text-violet-400" />}
-            title="Flashcards para revisar"
-            desc="Flashcards com repetição espaçada vencida"
-            badge={d.flashcardsVencidos}
-            badgeColor="bg-violet-600"
-            urgent={d.flashcardsVencidos > 5}
-          />
+        {/* Cards do plano IA */}
+        {(plano?.tarefas ?? []).map((tarefa) => {
+          const cfg = TAREFA_CONFIG[tarefa.tipo];
+          if (!cfg) return null;
+          const done = cfg.getDone();
+          return (
+            <ActionCard
+              key={tarefa.tipo}
+              href={cfg.href}
+              icon={cfg.icon(done)}
+              title={cfg.title}
+              desc={cfg.getDesc(tarefa)}
+              badge={cfg.getBadge?.()}
+              badgeColor={tarefa.urgente ? "bg-rose-600" : "bg-indigo-600"}
+              urgent={tarefa.urgente && !done}
+              done={done}
+            />
+          );
+        })}
+
+        {/* Fallback enquanto o plano carrega */}
+        {!plano && (
+          <>
+            <ActionCard href="/questoes" icon={<Target className="w-5 h-5 text-indigo-400" />} title="Questões" desc="Carregando plano do dia..." />
+            <ActionCard href="/desafio" icon={<Zap className="w-5 h-5 text-amber-400" />} title="Desafio Diário" desc="10 questões cronometradas — XP bônus" />
+          </>
         )}
-
-        <ActionCard
-          href="/biblioteca"
-          icon={<BookOpen className={cn("w-5 h-5", d.pdfMinutosHoje >= d.metaLeituraPdfHoje ? "text-emerald-400" : "text-emerald-400")} />}
-          title="Leitura de PDFs"
-          desc={d.pdfMinutosHoje > 0
-            ? `${d.pdfMinutosHoje}/${d.metaLeituraPdfHoje} min lidos hoje`
-            : `Meta: ${d.metaLeituraPdfHoje} min na Biblioteca de materiais`}
-          done={d.pdfMinutosHoje >= d.metaLeituraPdfHoje}
-        />
-
-        <ActionCard
-          href="/agenda-revisoes"
-          icon={<RotateCcw className="w-5 h-5 text-blue-400" />}
-          title="Agenda de Revisões"
-          desc="Veja todas as revisões programadas"
-        />
-
-        <ActionCard
-          href="/quiz"
-          icon={<Zap className={cn("w-5 h-5", d.quizHoje ? "text-emerald-400" : "text-yellow-400")} />}
-          title="Quiz Rápido"
-          desc={d.quizHoje ? "Quiz concluído hoje!" : "Questões relâmpago com XP"}
-          done={d.quizHoje}
-        />
-
-        <ActionCard
-          href="/desafio-semanal"
-          icon={<Trophy className={cn("w-5 h-5", d.desafioSemanalFeito ? "text-emerald-400" : "text-orange-400")} />}
-          title="Desafio Semanal"
-          desc={d.desafioSemanalFeito ? "Desafio da semana concluído!" : "10 questões difíceis — XP extra"}
-          done={d.desafioSemanalFeito}
-        />
-
-        <ActionCard
-          href="/redacao"
-          icon={<BookOpen className={cn("w-5 h-5", d.redacaoSemana ? "text-emerald-400" : "text-indigo-400")} />}
-          title="Redação"
-          desc={d.redacaoSemana ? "Redação feita esta semana!" : "Pratique redação e receba correção com IA"}
-          done={d.redacaoSemana}
-        />
-
-        <ActionCard
-          href="/caso"
-          icon={<Brain className={cn("w-5 h-5", d.casoSemana ? "text-emerald-400" : "text-rose-400")} />}
-          title="Estudo de Caso"
-          desc={d.casoSemana ? "Caso feito esta semana!" : "Resolva um caso prático com correção IA"}
-          done={d.casoSemana}
-        />
-
-        {(d.simuladoHoje || !d.simuladoHoje) && (
-          <ActionCard
-            href="/simulado"
-            icon={<Target className={cn("w-5 h-5", d.simuladoHoje ? "text-emerald-400" : "text-indigo-400")} />}
-            title="Simulado"
-            desc={d.simuladoHoje ? "Simulado feito hoje!" : "Teste seus conhecimentos com tempo cronometrado"}
-            done={d.simuladoHoje}
-          />
-        )}
-
-        <ActionCard
-          href="/simulado/exame"
-          icon={<Clock className={cn("w-5 h-5", "text-red-400")} />}
-          title="Modo Exame"
-          desc="Simulação oficial sem gabarito durante a prova"
-        />
       </div>
 
       {/* Matéria prioritária */}
