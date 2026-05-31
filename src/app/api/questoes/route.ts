@@ -41,10 +41,10 @@ export async function GET(req: Request) {
   if (onlyErros && dbUser) {
     const { data: wrongProgress } = await db
       .from("Progress").select("questionId")
-      .eq("userId", dbUser.id).eq("correct", false);
+      .eq("userId", dbUser.id).eq("correct", false).limit(5000);
     const { data: rightProgress } = await db
       .from("Progress").select("questionId")
-      .eq("userId", dbUser.id).eq("correct", true);
+      .eq("userId", dbUser.id).eq("correct", true).limit(5000);
 
     const rightIds = new Set((rightProgress ?? []).map(p => p.questionId as number));
     erroIds = (wrongProgress ?? [])
@@ -55,7 +55,7 @@ export async function GET(req: Request) {
 
   // ── Query principal — sempre do banco, NUNCA gera na hora ──────────────────
   // Busca um pool maior e randomiza no servidor para variedade
-  const poolSize = Math.min(200, limit * 5);
+  const poolSize = Math.min(2000, limit * 50);
 
   let query = db.from("Question")
     .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
