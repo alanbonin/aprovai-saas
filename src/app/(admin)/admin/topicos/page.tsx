@@ -3,10 +3,32 @@ import { TopicosAdmin } from "./topicos-client";
 
 export const dynamic = "force-dynamic";
 
+// Busca todos os tópicos paginando (Supabase limita 1000 linhas por query)
+async function fetchAllTopics() {
+  const PAGE = 1000;
+  let all: Record<string, unknown>[] = [];
+  let from = 0;
+  let totalCount = 0;
+  while (true) {
+    const { data, count, error } = await db
+      .from("Topic")
+      .select("*", { count: "exact" })
+      .order("subjectId")
+      .order("ordem")
+      .range(from, from + PAGE - 1);
+    if (error || !data) break;
+    if (from === 0) totalCount = count ?? 0;
+    all = all.concat(data);
+    if (all.length >= totalCount || data.length < PAGE) break;
+    from += PAGE;
+  }
+  return { data: all, count: totalCount };
+}
+
 export default async function TopicosAdminPage() {
   const [{ data: subjects }, { data: topics, count }, { data: questoesCounts }] = await Promise.all([
     db.from("Subject").select("id, name, slug, categoria").order("categoria").order("name"),
-    db.from("Topic").select("*", { count: "exact" }).order("subjectId").order("ordem").range(0, 9999),
+    fetchAllTopics(),
     db.rpc("get_question_counts_by_topic"),
   ]);
 
