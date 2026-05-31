@@ -3,10 +3,13 @@ import { TopicosAdmin } from "./topicos-client";
 
 export const dynamic = "force-dynamic";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type TopicRow = any;
+
 // Busca todos os tópicos paginando (Supabase limita 1000 linhas por query)
 async function fetchAllTopics() {
   const PAGE = 1000;
-  let all: Record<string, unknown>[] = [];
+  let all: TopicRow[] = [];
   let from = 0;
   let totalCount = 0;
   while (true) {
@@ -18,7 +21,7 @@ async function fetchAllTopics() {
       .range(from, from + PAGE - 1);
     if (error || !data) break;
     if (from === 0) totalCount = count ?? 0;
-    all = all.concat(data);
+    all = all.concat(data as TopicRow[]);
     if (all.length >= totalCount || data.length < PAGE) break;
     from += PAGE;
   }
