@@ -25,6 +25,28 @@ import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROGRESS_FILE = join(__dirname, ".gerar-materiais-progress.json");
 
+// ── Carrega .env manualmente (node --env-file falha com chaves longas) ────────
+function loadEnvFile(filePath) {
+  if (!existsSync(filePath)) return;
+  try {
+    const lines = readFileSync(filePath, "utf-8").split("\n");
+    for (const line of lines) {
+      const t = line.trim();
+      if (!t || t.startsWith("#")) continue;
+      const eqIdx = t.indexOf("=");
+      if (eqIdx < 0) continue;
+      const key = t.slice(0, eqIdx).trim();
+      let val = t.slice(eqIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (!process.env[key]) process.env[key] = val;
+    }
+  } catch { /* ignora */ }
+}
+loadEnvFile(join(__dirname, "../.env"));
+loadEnvFile(join(__dirname, "../.env.local"));
+
 // ── Args ─────────────────────────────────────────────────────────────────────
 const args = process.argv.slice(2);
 const DRY   = args.includes("--dry");

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getMateriasPlanoHoje } from "@/lib/plano-hoje";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/questoes/do-dia
@@ -35,12 +37,27 @@ export async function GET() {
   // Índice baseado no dia do ano em BRT (corrige bug UTC)
   const dayOfYear = dayOfYearBRT();
 
+  // Matérias do plano IA de hoje
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
+
   // Busca matérias do aluno
   const { data: studentSubjects } = await db
     .from("StudentSubject")
-    .select("subjectId")
+    .select("subjectId, Subject(name)")
     .eq("userId", dbUser.id);
-  const subjectIds = (studentSubjects ?? []).map(s => s.subjectId);
+
+  let subjectIds: string[];
+  if (materiasHoje && materiasHoje.length > 0) {
+    const nomesPlano = materiasHoje.map(n => n.toLowerCase());
+    const filtrados = (studentSubjects ?? []).filter(s => {
+      const nome = ((s.Subject as { name?: string } | null)?.name ?? "").toLowerCase();
+      return nomesPlano.some(p => nome.includes(p.slice(0, 6)) || p.includes(nome.slice(0, 6)));
+    });
+    subjectIds = filtrados.length > 0 ? filtrados.map(s => s.subjectId as string) : (studentSubjects ?? []).map(s => s.subjectId as string);
+  } else {
+    subjectIds = (studentSubjects ?? []).map(s => s.subjectId as string);
+  }
 
   // Conta questões (das matérias do aluno se disponíveis, senão todas)
   let countQuery = db.from("Question").select("id", { count: "exact", head: true }).eq("aprovado", true);

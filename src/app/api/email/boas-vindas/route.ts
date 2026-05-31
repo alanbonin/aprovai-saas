@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { sendEmail } from "@/lib/mailer";
 import { log } from "@/lib/logger";
+import { getEmailTemplate, renderTemplate } from "@/lib/email-templates";
 
 // ── Email de boas-vindas enviado após registro do usuário ─────────────────────
 // Chamado internamente por /api/auth/register após criar o User no banco.
@@ -83,10 +84,15 @@ export async function POST(req: Request) {
   // Envia e-mail de boas-vindas
   let emailOk = false;
   try {
+    const template = await getEmailTemplate("boas-vindas");
+    const { assunto, html: htmlRendered } = renderTemplate(template, {
+      nome: name.split(" ")[0] ?? name,
+      app_url: appUrl,
+    });
     const { error } = await sendEmail({
       to: email,
-      subject: "🎓 Bem-vindo ao Aprovai360! Seu trial de 7 dias começou",
-      html: buildBoasVindasHtml({ name, appUrl }),
+      subject: assunto,
+      html: htmlRendered,
     });
     if (error) throw error;
     emailOk = true;

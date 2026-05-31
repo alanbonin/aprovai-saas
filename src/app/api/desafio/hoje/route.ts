@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getMateriasPlanoHoje } from "@/lib/plano-hoje";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/desafio/hoje
@@ -47,12 +49,32 @@ export async function GET() {
     if (record?.date === todayKey) completedToday = record;
   } catch { /* ignore */ }
 
+  // Matérias do plano IA de hoje (se existir) — prioriza sobre matérias do aluno
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
+
   // Get student subjects for filtering
   const { data: studentSubs } = await db
     .from("StudentSubject")
-    .select("subjectId")
+    .select("subjectId, Subject(name)")
     .eq("userId", dbUser.id);
-  const subjectIds = (studentSubs ?? []).map(s => s.subjectId as string);
+
+  let subjectIds: string[];
+
+  if (materiasHoje && materiasHoje.length > 0) {
+    // Filtra pelas matérias do plano de hoje
+    const nomesPlano = materiasHoje.map(n => n.toLowerCase());
+    const filtrados = (studentSubs ?? []).filter(s => {
+      const nome = ((s.Subject as { name?: string } | null)?.name ?? "").toLowerCase();
+      return nomesPlano.some(p => nome.includes(p.slice(0, 6)) || p.includes(nome.slice(0, 6)));
+    });
+    // Se encontrou matérias do plano, usa elas; senão cai para todas do aluno
+    subjectIds = filtrados.length > 0
+      ? filtrados.map(s => s.subjectId as string)
+      : (studentSubs ?? []).map(s => s.subjectId as string);
+  } else {
+    subjectIds = (studentSubs ?? []).map(s => s.subjectId as string);
+  }
 
   // Count available questions
   let countQuery = db.from("Question").select("id", { count: "exact", head: true }).eq("aprovado", true);

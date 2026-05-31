@@ -22,17 +22,30 @@ export async function POST(req: Request) {
     cargo?: string | null;
     orgao?: string | null;
     dataProva?: string | null;
-    horasEstudo?: number | null;   // em horas/dia
+    horasEstudo?: number | null;
     categoria?: string | null;
     modalidade?: string | null;
+    novoPerfil?: boolean; // true = sempre criar perfil novo
   };
 
-  // Verifica se já tem um perfil padrão
+  // Busca perfis existentes
   const { data: existingProfiles } = await db
     .from("StudentProfile")
     .select("id")
-    .eq("userId", dbUser.id)
-    .limit(1);
+    .eq("userId", dbUser.id);
+
+  const isNovoPerfil = !!body.novoPerfil;
+
+  // Verifica limite de perfis quando criar novo
+  if (isNovoPerfil) {
+    const { maxProfilesForSubscription } = await import("@/lib/get-active-profile");
+    const maxProfiles = maxProfilesForSubscription(
+      (dbUser as { subscription?: Parameters<typeof maxProfilesForSubscription>[0] }).subscription ?? null
+    );
+    if ((existingProfiles?.length ?? 0) >= maxProfiles) {
+      return NextResponse.json({ error: `Limite de ${maxProfiles} perfil(is) atingido para o seu plano.` }, { status: 403 });
+    }
+  }
 
   const profileData = {
     userId: dbUser.id,
@@ -41,18 +54,19 @@ export async function POST(req: Request) {
     orgao: body.orgao || null,
     dataProva: body.dataProva || null,
     horasEstudo: body.horasEstudo ?? null,
-    isDefault: true,
+    isDefault: !isNovoPerfil, // novo perfil não substitui o padrão
     onboardingDone: true,
     modalidade: body.modalidade ?? "CONCURSO_PUBLICO",
     updatedAt: new Date().toISOString(),
   };
 
-  if (existingProfiles && existingProfiles.length > 0) {
-    // Atualiza o perfil existente
+  if (!isNovoPerfil && existingProfiles && existingProfiles.length > 0) {
+    // Atualiza o perfil padrão existente
     const { error } = await db
       .from("StudentProfile")
       .update(profileData)
-      .eq("userId", dbUser.id);
+      .eq("userId", dbUser.id)
+      .eq("isDefault", true);
 
     if (error) {
       log.error("db.onboarding_update_profile", { table: "StudentProfile" }, error);

@@ -29,6 +29,7 @@ export default async function PlanosPage({ searchParams }: Props) {
     <PlanosClient
       plans={plans ?? []}
       currentPlanId={dbUser.subscription?.planId ?? null}
+      subscriptionEndDate={dbUser.subscription?.endDate ?? null}
       trialExpired={trialExpired}
       paymentError={paymentError}
     />

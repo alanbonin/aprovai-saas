@@ -30,8 +30,20 @@ export interface XPResult {
  * @param userId  - ID do User no banco
  * @param xpDelta - XP a adicionar (pode ser 0)
  */
+/** Retorna YYYY-MM-DD no horário de Brasília (America/Sao_Paulo) */
+function todayBRT(): string {
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(new Date());
+}
+
+/** Retorna YYYY-MM-DD do dia anterior no horário de Brasília */
+function yesterdayBRT(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "America/Sao_Paulo" }).format(d);
+}
+
 export async function updateXP(userId: string, xpDelta: number): Promise<XPResult> {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = todayBRT(); // YYYY-MM-DD em BRT (sem bug de UTC)
 
   // Busca perfil atual
   const { data: profile } = await db
@@ -46,9 +58,7 @@ export async function updateXP(userId: string, xpDelta: number): Promise<XPResul
 
   // Calcula novo streak
   let newStreak = currentStreak;
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().slice(0, 10);
+  const yesterdayStr = yesterdayBRT();
 
   if (lastStudy === today) {
     // Já estudou hoje — streak não muda

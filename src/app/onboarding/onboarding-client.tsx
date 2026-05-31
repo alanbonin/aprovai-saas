@@ -99,8 +99,8 @@ const GEN_STEPS_OAB = [
 ];
 
 // ── Component principal ────────────────────────────────────────────────────────
-export function OnboardingClient({ userId, userName }: Props) {
-  const [step, setStep] = useState<Step>("nome");
+export function OnboardingClient({ userId, userName, novoPerfil }: Props & { novoPerfil?: boolean }) {
+  const [step, setStep] = useState<Step>(novoPerfil ? "modalidade" : "nome");
   const [state, setState] = useState<WizardState>({
     nome: userName.split(" ")[0] ?? "",
     modalidade: null,
@@ -171,6 +171,7 @@ export function OnboardingClient({ userId, userName }: Props) {
           dataProva: state.dataProva,
           horasEstudo: state.horasEstudo ? Math.round(state.horasEstudo / 60) : null,
           categoria: getCategoriaByModalidade(),
+          novoPerfil: novoPerfil ?? false,
         }),
       });
       if (!res.ok) {

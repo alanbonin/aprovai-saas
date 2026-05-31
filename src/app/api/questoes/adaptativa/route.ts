@@ -47,10 +47,30 @@ export async function GET(req: Request) {
     });
   }
 
-  // 2. Busca matérias do aluno (para priorizar)
-  const { data: studentSubjects } = await db.from("StudentSubject")
-    .select("subjectId").eq("userId", dbUser.id);
-  const mySubjectIds = new Set((studentSubjects ?? []).map(s => s.subjectId));
+  // 2. Busca matérias do aluno (para priorizar), filtrando pelo plano de hoje se existir
+  const { getMateriasPlanoHoje } = await import("@/lib/plano-hoje");
+  const { getActiveProfile } = await import("@/lib/get-active-profile");
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
+
+  const { data: studentSubjectsRaw } = await db.from("StudentSubject")
+    .select("subjectId, Subject(name)").eq("userId", dbUser.id);
+
+  let mySubjectIds: Set<string>;
+  if (!subjectId && materiasHoje && materiasHoje.length > 0) {
+    const nomesPlano = materiasHoje.map(n => n.toLowerCase());
+    const filtrados = (studentSubjectsRaw ?? []).filter(s => {
+      const nome = ((s.Subject as { name?: string } | null)?.name ?? "").toLowerCase();
+      return nomesPlano.some(p => nome.includes(p.slice(0, 6)) || p.includes(nome.slice(0, 6)));
+    });
+    mySubjectIds = new Set(
+      filtrados.length > 0
+        ? filtrados.map(s => s.subjectId as string)
+        : (studentSubjectsRaw ?? []).map(s => s.subjectId as string)
+    );
+  } else {
+    mySubjectIds = new Set((studentSubjectsRaw ?? []).map(s => s.subjectId as string));
+  }
 
   // 3. Busca questões disponíveis
   let questoesQuery = db.from("Question")

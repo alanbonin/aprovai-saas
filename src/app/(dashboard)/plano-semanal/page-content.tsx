@@ -243,9 +243,9 @@ export function PlanoSemanalInner() {
         return;
       }
 
-      // Sem plano ou semana antiga → auto-gerar
+      // Sem plano da semana atual → mostra tela para gerar (não gera automaticamente)
       setLoading(false);
-      await generate();
+      setCronograma(null);
     } catch {
       setLoading(false);
       setError("Erro ao carregar plano. Tente novamente.");
@@ -404,6 +404,26 @@ export function PlanoSemanalInner() {
         <div className="text-center py-16">
           <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
           <p className="text-gray-400 text-sm">Carregando seu plano...</p>
+        </div>
+      )}
+
+      {/* Sem plano desta semana */}
+      {!cronograma && !generating && !loading && (
+        <div className="text-center py-16">
+          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-5">
+            <CalendarDays className="w-8 h-8 text-indigo-400" />
+          </div>
+          <h2 className="text-xl font-bold mb-2">Nenhum plano para esta semana</h2>
+          <p className="text-gray-500 text-sm mb-6 max-w-sm mx-auto">
+            A IA vai analisar seu perfil, matérias, histórico de questões e gerar um plano personalizado para os próximos 7 dias.
+          </p>
+          <button
+            onClick={generate}
+            className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-xl transition-colors flex items-center gap-2 mx-auto"
+          >
+            <span>✨</span> Gerar plano da semana
+          </button>
+          <p className="text-gray-600 text-xs mt-4">O plano será renovado automaticamente a cada 7 dias</p>
         </div>
       )}
 

@@ -163,6 +163,21 @@ export function FavoritosInner() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-4xl mx-auto">
+      {/* Aviso de limite de favoritos */}
+      {favIds.length >= 900 && (
+        <div className={cn(
+          "mb-4 rounded-xl border px-4 py-3 flex items-center gap-3 text-sm",
+          favIds.length >= 1000
+            ? "bg-red-500/10 border-red-500/30 text-red-400"
+            : "bg-amber-500/10 border-amber-500/30 text-amber-400"
+        )}>
+          <Star className="w-4 h-4 flex-shrink-0" />
+          {favIds.length >= 1000
+            ? "Limite de 1.000 favoritos atingido. Remova alguns antes de adicionar novos."
+            : `Atenção: você tem ${favIds.length}/1.000 favoritos. Limite próximo.`}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

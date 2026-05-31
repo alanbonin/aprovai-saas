@@ -27,7 +27,7 @@ import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROGRESS_FILE = join(__dirname, ".classificar-progress.json");
-const BATCH_SIZE = 50;        // questões por chamada de IA
+const BATCH_SIZE = 25;        // questões por chamada de IA
 const DB_BATCH_SIZE = 200;    // updates por request Supabase
 const CONCURRENCY = 3;        // matérias processadas em paralelo
 const MAX_RETRIES = 3;
@@ -112,7 +112,7 @@ async function classificarLote(topicos, questoes) {
     try {
       const completion = await openai.chat.completions.create({
         model: "gpt-4o-mini",
-        max_tokens: 4096,
+        max_tokens: 8192,
         temperature: 0,
         messages: [
           {

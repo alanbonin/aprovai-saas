@@ -3,7 +3,10 @@ import { getUserWithPlan, db } from "@/lib/db";
 import { redirect } from "next/navigation";
 import { OnboardingClient } from "./onboarding-client";
 
-export default async function OnboardingPage() {
+export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ novo_perfil?: string }> }) {
+  const params = await searchParams;
+  const novoPerfil = params.novo_perfil === "1";
+
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?redirect=/onboarding");
@@ -37,6 +40,7 @@ export default async function OnboardingPage() {
       userName={dbUser.name ?? user.email?.split("@")[0] ?? ""}
       agents={allAgents ?? []}
       maxConcursos={maxConcursos}
+      novoPerfil={novoPerfil}
     />
   );
 }
