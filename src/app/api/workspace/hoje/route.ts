@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/workspace/hoje
@@ -23,6 +24,9 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const now = new Date();
   const todayStr = now.toISOString().slice(0, 10);
   const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
@@ -38,27 +42,22 @@ export async function GET() {
       .select("streak, lastStudyDate, xp, horasEstudo")
       .eq("userId", dbUser.id)
       .single(),
-    // Questões respondidas hoje
-    db.from("Progress")
-      .select("correct", { count: "exact" })
-      .eq("userId", dbUser.id)
-      .gte("createdAt", todayStart),
-    // Questões vencidas para revisão (SM-2)
-    db.from("Progress")
-      .select("questionId, nextReview")
-      .eq("userId", dbUser.id)
-      .lte("nextReview", now.toISOString())
-      .not("nextReview", "is", null),
-    // Flashcard sets do aluno
-    db.from("FlashcardSet")
-      .select("id, cards, subjectId")
-      .eq("userId", dbUser.id),
-    // Metas semanais
-    db.from("Note")
-      .select("content")
-      .eq("userId", dbUser.id)
-      .eq("subjectId", "__METAS_SEMANAIS__")
-      .single(),
+    // Questões respondidas hoje (por perfil)
+    profileId
+      ? db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", todayStart)
+      : db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart),
+    // Questões vencidas para revisão SM-2 (por perfil)
+    profileId
+      ? db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).eq("profileId", profileId).lte("nextReview", now.toISOString()).not("nextReview", "is", null)
+      : db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).lte("nextReview", now.toISOString()).not("nextReview", "is", null),
+    // Flashcard sets do perfil
+    profileId
+      ? db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id).eq("profileId", profileId)
+      : db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id),
+    // Metas semanais do perfil
+    profileId
+      ? db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").eq("profileId", profileId).maybeSingle()
+      : db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").maybeSingle(),
   ]);
 
   const profile = profileRes.data;

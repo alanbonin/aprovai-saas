@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 const PREFIX          = "__METAS_SEMANAIS__";
 const POMODORO_PREFIX = "__POMODORO_SESSION__";
@@ -14,18 +15,22 @@ interface MetasSemana {
   redacaoMeta: number;       // redações/semana
 }
 
-async function getMetas(userId: string): Promise<MetasSemana> {
+async function getMetas(userId: string, profileId: string | null): Promise<MetasSemana> {
   const defaults: MetasSemana = { questoesMeta: 50, flashcardsMeta: 30, simuladosMeta: 1, horasEstudoMeta: 10, casosMeta: 2, redacaoMeta: 1 };
-  const { data } = await db.from("Note").select("content").eq("userId", userId).eq("subjectId", PREFIX).single();
+  let q = db.from("Note").select("content").eq("userId", userId).eq("subjectId", PREFIX);
+  if (profileId) q = q.eq("profileId", profileId);
+  const { data } = await q.maybeSingle();
   try { return data?.content ? { ...defaults, ...JSON.parse(data.content) } : defaults; }
   catch { return defaults; }
 }
 
-async function saveMetas(userId: string, metas: MetasSemana) {
+async function saveMetas(userId: string, profileId: string | null, metas: MetasSemana) {
   const content = JSON.stringify(metas);
-  const { data: ex } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).single();
+  let q = db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX);
+  if (profileId) q = q.eq("profileId", profileId);
+  const { data: ex } = await q.maybeSingle();
   if (ex?.id) await db.from("Note").update({ content }).eq("id", ex.id);
-  else await db.from("Note").insert({ userId, subjectId: PREFIX, content });
+  else await db.from("Note").insert({ id: crypto.randomUUID(), userId, profileId: profileId ?? undefined, subjectId: PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
 }
 
 function getWeekBounds() {
@@ -46,16 +51,19 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const metas = await getMetas(dbUser.id);
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  const metas = await getMetas(dbUser.id, profileId);
   const { start, end } = getWeekBounds();
   const startIso = start.toISOString();
   const endIso = end.toISOString();
 
-  // Questões respondidas nessa semana
-  const { count: questoesCount } = await db.from("Progress")
-    .select("id", { count: "exact", head: true })
-    .eq("userId", dbUser.id)
-    .gte("createdAt", startIso).lte("createdAt", endIso) as unknown as { count: number };
+  // Questões respondidas nessa semana (por perfil ativo)
+  let progQ = db.from("Progress").select("id", { count: "exact", head: true })
+    .eq("userId", dbUser.id).gte("createdAt", startIso).lte("createdAt", endIso);
+  if (profileId) progQ = progQ.eq("profileId", profileId);
+  const { count: questoesCount } = await progQ as unknown as { count: number };
 
   // Flashcards revisados nessa semana (via FlashcardSet.updatedAt — aproximação)
   const { data: setsUpdated } = await db.from("FlashcardSet")
@@ -66,11 +74,11 @@ export async function GET() {
     return sum + (Array.isArray(s.cards) ? s.cards.length : 0);
   }, 0);
 
-  // Simulados feitos nessa semana
-  const { count: simCount } = await db.from("SimuladoHistory")
-    .select("id", { count: "exact", head: true })
-    .eq("userId", dbUser.id)
-    .gte("createdAt", startIso).lte("createdAt", endIso) as unknown as { count: number };
+  // Simulados feitos nessa semana (por perfil)
+  let simQ = db.from("SimuladoHistory").select("id", { count: "exact", head: true })
+    .eq("userId", dbUser.id).gte("createdAt", startIso).lte("createdAt", endIso);
+  if (profileId) simQ = simQ.eq("profileId", profileId);
+  const { count: simCount } = await simQ as unknown as { count: number };
 
   // Estudos de caso feitos nessa semana (via Note com prefix de caso)
   const { count: casosCount } = await db.from("Note")
@@ -124,9 +132,12 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const body = await req.json() as Partial<MetasSemana>;
-  const current = await getMetas(dbUser.id);
+  const current = await getMetas(dbUser.id, profileId);
   const updated = { ...current, ...body };
-  await saveMetas(dbUser.id, updated);
+  await saveMetas(dbUser.id, profileId, updated);
   return NextResponse.json({ metas: updated });
 }

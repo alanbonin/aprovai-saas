@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/questoes/revisao
@@ -24,14 +25,14 @@ export async function GET(req: Request) {
   const subjectId = searchParams.get("subjectId");
   const limit = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
 
-  // Pega todas as respostas erradas mais recentes por questionId
-  // (usando a última tentativa por questão)
-  const { data: progress } = await db
-    .from("Progress")
-    .select("questionId, correct, createdAt")
-    .eq("userId", dbUser.id)
-    .eq("correct", false)
-    .order("createdAt", { ascending: false });
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  // Pega erros do perfil ativo
+  let revisaoQ = db.from("Progress").select("questionId, correct, createdAt")
+    .eq("userId", dbUser.id).eq("correct", false).order("createdAt", { ascending: false });
+  if (profileId) revisaoQ = revisaoQ.eq("profileId", profileId);
+  const { data: progress } = await revisaoQ;
 
   if (!progress || progress.length === 0) {
     return NextResponse.json({ questions: [], total: 0 });

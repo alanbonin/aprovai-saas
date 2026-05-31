@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/conquistas
@@ -53,16 +54,25 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
   const [
     profileRes,
     progressRes,
     simuladoRes,
     flashcardRes,
   ] = await Promise.all([
-    db.from("StudentProfile").select("streak").eq("userId", dbUser.id).single(),
-    db.from("Progress").select("correct").eq("userId", dbUser.id),
-    db.from("SimuladoHistory").select("id").eq("userId", dbUser.id),
-    db.from("FlashcardSet").select("cards").eq("userId", dbUser.id),
+    db.from("StudentProfile").select("streak").eq("userId", dbUser.id).eq("id", profileId ?? dbUser.id).maybeSingle(),
+    profileId
+      ? db.from("Progress").select("correct").eq("userId", dbUser.id).eq("profileId", profileId)
+      : db.from("Progress").select("correct").eq("userId", dbUser.id),
+    profileId
+      ? db.from("SimuladoHistory").select("id").eq("userId", dbUser.id).eq("profileId", profileId)
+      : db.from("SimuladoHistory").select("id").eq("userId", dbUser.id),
+    profileId
+      ? db.from("FlashcardSet").select("cards").eq("userId", dbUser.id).eq("profileId", profileId)
+      : db.from("FlashcardSet").select("cards").eq("userId", dbUser.id),
   ]);
 
   const totalAnswered = (progressRes.data ?? []).length;
