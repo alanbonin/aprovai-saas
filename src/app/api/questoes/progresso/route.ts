@@ -181,12 +181,14 @@ export async function POST(req: Request) {
       reviewedAt: new Date().toISOString(),
     }).eq("id", existing.id);
   } else {
-    await db.from("Progress").insert({
+    const { error: insertErr } = await db.from("Progress").insert({
+      id: crypto.randomUUID(),
       userId: dbUser.id, profileId, questionId, correct: isCorrect,
       interval, easeFactor, nextReview,
       reviewedAt: new Date().toISOString(),
       createdAt: new Date().toISOString(),
     });
+    if (insertErr) console.error("Progress insert error:", insertErr.message);
   }
 
   // Atualiza XP e streak (fire-and-forget)
