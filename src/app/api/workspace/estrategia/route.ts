@@ -236,6 +236,10 @@ Analise o pedido com inteligência e ajuste o plano:
 - Dificuldade em tema → aumente tempo e melhore as dicas práticas desse tema
 - Mantenha total de horas próximo ao original, salvo pedido contrário
 
+ATIVIDADES PERMITIDAS NAS DICAS (use SOMENTE estas):
+Questões, Desafio Diário, Quiz Rápido, Simulado, Flashcards, Biblioteca PDF, Estudar com Mentor IA, Caderno de Erros, Desafio Semanal, Adaptativo.
+NUNCA mencione: questões comentadas, editar/criar flashcards, mapas mentais, resumos, ferramentas externas.
+
 Retorne APENAS JSON válido:
 {"cronograma":{"semana":[{"dia":"Segunda","materias":[{"nome":"...","horas":1.5,"prioridade":"alta","dica":"..."}],"totalHoras":3,"folga":false}],"resumo":"...","metaSemanal":"...","horasTotais":18,"geradoEm":""},"resumoMudancas":"Explicação em 2-3 frases do que foi ajustado e por quê"}`;
 
@@ -288,14 +292,34 @@ PERFIL DO ALUNO:
 - Horas por dia: ${horasPorDia}h
 - Dias disponíveis: ${diasDisp.join(", ")}
 
+ATIVIDADES DISPONÍVEIS NO SISTEMA (use SOMENTE estas nas dicas — nunca invente outras):
+- "Responda questões de [matéria] no menu Questões"
+- "Faça o Desafio Diário"
+- "Faça um Quiz Rápido de [matéria]"
+- "Faça um Simulado"
+- "Revise seus Flashcards de [matéria]"
+- "Leia a apostila de [matéria] na Biblioteca PDF"
+- "Estude [tópico] no menu Estudar com o Mentor IA"
+- "Revise os erros no Caderno de Erros"
+- "Faça o Desafio Semanal"
+- "Pratique no modo Adaptativo de [matéria]"
+
+PROIBIDO mencionar nas dicas:
+- "questões comentadas" (não existe)
+- "atualizar/editar flashcards" (flashcards são gerados automaticamente, não editáveis)
+- "criar flashcards" (não é função do aluno)
+- "mapas mentais" (não existe)
+- "resumos próprios" (não existe editor de texto)
+- qualquer ferramenta externa ao sistema
+
 REGRAS PEDAGÓGICAS:
 1. Distribua estrategicamente — não repita a mesma matéria no mesmo dia
 2. Matérias mais cobradas (Direito Administrativo, Constitucional, Português) têm maior carga
 3. Intercale matérias difíceis com mais fáceis no mesmo dia
-4. Reserve pelo menos 1 dia para questões e revisão
+4. Reserve pelo menos 1 dia focado em questões e revisão
 5. Se diasProva < 30: foco em revisão rápida + simulados
 6. Se diasProva < 7: apenas pontos críticos
-7. Dica PRÁTICA e específica para cada matéria de cada dia
+7. Dica PRÁTICA e específica usando APENAS as atividades do sistema acima
 
 Retorne APENAS JSON (sem texto antes ou depois), incluindo TODOS os 7 dias (Segunda a Domingo — sem pular nenhum, inclusive Sábado e Domingo que também são dias de estudo):
 {"semana":[{"dia":"Segunda","materias":[{"nome":"Direito Administrativo","horas":1.5,"prioridade":"alta","dica":"Foque nos princípios LIMPE — 10 questões do Art. 37 CF/88"}],"totalHoras":3.0,"folga":false}],"resumo":"Frase motivadora personalizada","metaSemanal":"Objetivo específico e mensurável","horasTotais":21}`;
