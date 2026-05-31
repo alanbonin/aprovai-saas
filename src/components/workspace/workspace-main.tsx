@@ -1572,6 +1572,15 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     );
   }
 
+  if (filtered.length === 0) return (
+    <div>
+      <QuestoesFiltros filterLevel={filterLevel} filterStatus={filterStatus}
+        onLevel={v => { setFilterLevel(v); resetFilters(); }}
+        onStatus={v => { setFilterStatus(v); resetFilters(); }} count={0} total={items.length} favCount={favoritos.size} />
+      <EmptyState label={filterStatus === "favoritas" ? "Nenhuma questão favoritada ainda." : `Nenhuma questão encontrada com esses filtros.`} />
+    </div>
+  );
+
   if (isFinished) {
     const pct = score.total > 0 ? Math.round(score.correct / score.total * 100) : 0;
     return (
@@ -1596,16 +1605,6 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
       </div>
     );
   }
-
-  if (filtered.length === 0) return (
-    <div>
-      {/* Filtros mesmo vazio */}
-      <QuestoesFiltros filterLevel={filterLevel} filterStatus={filterStatus}
-        onLevel={v => { setFilterLevel(v); resetFilters(); }}
-        onStatus={v => { setFilterStatus(v); resetFilters(); }} count={0} total={items.length} favCount={favoritos.size} />
-      <EmptyState label={filterStatus === "favoritas" ? "Nenhuma questão favoritada ainda." : `Nenhuma questão encontrada com esses filtros.`} />
-    </div>
-  );
 
   return (
     <div>
