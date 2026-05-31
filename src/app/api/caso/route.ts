@@ -195,7 +195,7 @@ Retorne APENAS JSON válido:
       parts.push({ type: "text", text: "\nO candidato escreveu a resposta à mão no papel. A imagem da resposta está abaixo:" } as TextBlockParam);
       parts.push(imgBlock(respostaFotoBase64, respostaFotoType ?? "image/jpeg"));
     } else {
-      parts.push({ type: "text", text: `\nRESPOSTA DO CANDIDATO:\n"""\n${(respostaTexto ?? "").slice(0, 3000)}\n"""` } as TextBlockParam);
+      parts.push({ type: "text", text: `\nRESPOSTA DO CANDIDATO:\n"""\n${(respostaTexto ?? "").slice(0, 6000)}\n"""` } as TextBlockParam);
     }
 
     // Instruções de avaliação

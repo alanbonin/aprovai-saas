@@ -287,7 +287,7 @@ function RespostaSection({
     ? respostaTexto.trim().length > 0
     : !!respostaFoto.base64;
 
-  const MAX_CHARS = 2500;
+  const MAX_CHARS = 6000;
   const restantes = MAX_CHARS - respostaTexto.length;
   const quaseNolimite = restantes <= 200;
 
