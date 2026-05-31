@@ -41,6 +41,7 @@ export function DesafioSemanalInner() {
   const [current, setCurrent]   = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [localAnswer, setLocalAnswer] = useState<string | null>(null);
+  const [showResult, setShowResult] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,8 +49,9 @@ export function DesafioSemanalInner() {
     if (res.ok) {
       const d: ChallengeData = await res.json();
       setData(d);
-      // Navigate to first unanswered
-      if (d.nextUnanswered !== null) setCurrent(d.nextUnanswered);
+      // Navigate to first unanswered or show result if completed
+      if (d.completed) { setShowResult(true); }
+      else if (d.nextUnanswered !== null) setCurrent(d.nextUnanswered);
       else setCurrent(0);
     }
     setLoading(false);
@@ -93,9 +95,22 @@ export function DesafioSemanalInner() {
 
   function next() {
     if (!data) return;
-    const next = data.questions.findIndex((q, i) => i > current && q.userAnswer === null);
-    if (next !== -1) { setCurrent(next); setLocalAnswer(null); }
-    else { setCurrent(c => Math.min(c + 1, data.questions.length - 1)); setLocalAnswer(null); }
+    // Procura próxima questão sem resposta
+    const nextUnanswered = data.questions.findIndex((q, i) => i > current && q.userAnswer === null);
+    if (nextUnanswered !== -1) {
+      setCurrent(nextUnanswered);
+      setLocalAnswer(null);
+      return;
+    }
+    // Não tem próxima sem resposta — vai para a próxima numericamente se não for a última
+    if (current < data.questions.length - 1) {
+      setCurrent(c => c + 1);
+      setLocalAnswer(null);
+      return;
+    }
+    // É a última questão — vai para tela de resultado
+    setShowResult(true);
+    setLocalAnswer(null);
   }
 
   if (loading) {
@@ -117,7 +132,7 @@ export function DesafioSemanalInner() {
   const sel = localAnswer ?? q?.userAnswer;
 
   // Result view
-  if (d.completed && !answered) {
+  if (showResult || (d.completed && !answered)) {
     const correct = d.questions.filter(q => q.userAnswer === q.answer).length;
     return (
       <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
