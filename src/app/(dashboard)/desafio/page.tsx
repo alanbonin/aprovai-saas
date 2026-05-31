@@ -161,7 +161,9 @@ export default function DesafioPage() {
 
   async function handleQuality(qual: string) {
     setQuality(qual);
-    // Save SM-2 progress
+    // Agenda avanço ANTES do await — evita duplo-avanço se fetch demorar e
+    // usuário clicar em "Próxima" enquanto espera
+    setTimeout(next, 300);
     const q = data!.questions[current];
     const isCorrect = selected === q.answer;
     await fetch("/api/questoes/progresso", {
@@ -169,21 +171,21 @@ export default function DesafioPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: qual }),
     }).catch(() => {});
-    setTimeout(next, 250);
   }
 
   function next() {
     if (!data || navigatingRef.current) return;
     navigatingRef.current = true;
-    setTimeout(() => { navigatingRef.current = false; }, 600);
     if (current >= data.questions.length - 1) {
       clearInterval(timerRef.current!);
       setDone(true);
+      navigatingRef.current = false;
     } else {
       setCurrent(c => c + 1);
       setSelected(null);
       setQuality(null);
-      navigatingRef.current = false;
+      // Mantém o bloqueio por 400ms para evitar duplo-avanço por cliques rápidos
+      setTimeout(() => { navigatingRef.current = false; }, 400);
     }
   }
 
