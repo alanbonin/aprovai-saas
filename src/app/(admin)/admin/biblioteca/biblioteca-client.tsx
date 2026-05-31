@@ -1,238 +1,270 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Upload, Trash2, FileText, Loader2, Plus, X, CheckCircle } from "lucide-react";
+import { useState, useCallback, useEffect } from "react";
+import { Trash2, FileText, Pencil, Search, X, Loader2, BookOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Doc {
   id: string; title: string; description?: string;
-  subjectId?: string; fileSize: number; pageCount?: number;
-  planLevel: string; createdAt: string;
+  subjectId?: string; topicId?: string; storagePath: string;
+  fileSize: number; pageCount?: number; planLevel: string;
+  createdAt: string; updatedAt: string;
+  Subject?: { name: string; categoria: string } | null;
 }
-interface Subject { id: string; name: string; categoria: string }
+
+const PLAN_LEVELS = ["trial", "focado", "aprovacao", "elite"];
+const PLAN_LABELS: Record<string, string> = {
+  trial: "Todos (Trial)", focado: "Focado+", aprovacao: "Aprovação+", elite: "Elite",
+};
 
 function formatSize(bytes: number) {
+  if (!bytes) return "—";
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-const PLAN_LEVELS = [
-  { value: "trial",       label: "Trial (todos)" },
-  { value: "focado",      label: "Focado+" },
-  { value: "aprovacao",   label: "Aprovação+" },
-  { value: "elite",       label: "Elite / Prova Marcada" },
-];
+function formatDate(iso: string) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }).format(new Date(iso));
+}
 
-export function BibliotecaAdmin({ docs: initialDocs, subjects }: { docs: Doc[]; subjects: Subject[] }) {
-  const [docs, setDocs]           = useState<Doc[]>(initialDocs);
-  const [showForm, setShowForm]   = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [success, setSuccess]     = useState(false);
-  const [deleting, setDeleting]   = useState<string | null>(null);
-  const [file, setFile]           = useState<File | null>(null);
-  const [form, setForm]           = useState({
-    title: "", description: "", subjectId: "", topicId: "", planLevel: "trial",
+export function BibliotecaAdminClient() {
+  const [docs, setDocs] = useState<Doc[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterCategoria, setFilterCategoria] = useState("");
+  const [filterPlan, setFilterPlan] = useState("");
+  const [editDoc, setEditDoc] = useState<Doc | null>(null);
+  const [editForm, setEditForm] = useState({ title: "", description: "", planLevel: "trial" });
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ msg: string; type: "ok" | "err" } | null>(null);
+
+  const showToast = (msg: string, type: "ok" | "err") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/biblioteca");
+      const d = await res.json();
+      setDocs(d.docs ?? []);
+      setTotal(d.total ?? 0);
+    } catch { showToast("Erro ao carregar", "err"); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const categorias = [...new Set(docs.map(d => d.Subject?.categoria).filter(Boolean))] as string[];
+
+  const filtered = docs.filter(d => {
+    const matchSearch = !search || d.title.toLowerCase().includes(search.toLowerCase()) ||
+      d.Subject?.name?.toLowerCase().includes(search.toLowerCase());
+    const matchCat = !filterCategoria || d.Subject?.categoria === filterCategoria;
+    const matchPlan = !filterPlan || d.planLevel === filterPlan;
+    return matchSearch && matchCat && matchPlan;
   });
-  const fileRef = useRef<HTMLInputElement>(null);
 
-  async function handleUpload() {
-    if (!file || !form.title) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append("file", file);
-    fd.append("title", form.title);
-    fd.append("description", form.description);
-    fd.append("subjectId", form.subjectId);
-    fd.append("topicId", form.topicId);
-    fd.append("planLevel", form.planLevel);
-
-    const r = await fetch("/api/biblioteca/upload", { method: "POST", body: fd });
-    const data = await r.json();
-    setUploading(false);
-
-    if (!r.ok) { alert(data.error ?? "Erro no upload"); return; }
-
-    setSuccess(true);
-    setTimeout(() => setSuccess(false), 3000);
-    setFile(null);
-    setForm({ title: "", description: "", subjectId: "", topicId: "", planLevel: "trial" });
-    setShowForm(false);
-
-    // Recarrega lista
-    fetch("/api/biblioteca").then(r => r.json()).then(d => setDocs(Array.isArray(d) ? d : []));
+  function openEdit(doc: Doc) {
+    setEditDoc(doc);
+    setEditForm({ title: doc.title, description: doc.description ?? "", planLevel: doc.planLevel });
   }
 
-  async function handleDelete(id: string, title: string) {
-    if (!confirm(`Deletar "${title}"? Esta ação não pode ser desfeita.`)) return;
-    setDeleting(id);
-    await fetch(`/api/biblioteca/upload?id=${id}`, { method: "DELETE" });
-    setDocs(d => d.filter(doc => doc.id !== id));
-    setDeleting(null);
+  async function handleSave() {
+    if (!editDoc) return;
+    setSaving(true);
+    try {
+      const res = await fetch("/api/admin/biblioteca", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editDoc.id, ...editForm }),
+      });
+      if (res.ok) {
+        setDocs(prev => prev.map(d => d.id === editDoc.id ? { ...d, ...editForm } : d));
+        setEditDoc(null);
+        showToast("Salvo com sucesso", "ok");
+      } else showToast("Erro ao salvar", "err");
+    } finally { setSaving(false); }
   }
 
-  const grouped = subjects.reduce<Record<string, Subject[]>>((acc, s) => {
-    const cat = s.categoria ?? "Outros";
-    if (!acc[cat]) acc[cat] = [];
-    acc[cat].push(s);
-    return acc;
-  }, {});
+  async function handleDelete(doc: Doc) {
+    if (!confirm(`Excluir "${doc.title}"? O arquivo será removido do storage.`)) return;
+    setDeleting(doc.id);
+    try {
+      const res = await fetch("/api/admin/biblioteca", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: doc.id }),
+      });
+      if (res.ok) {
+        setDocs(prev => prev.filter(d => d.id !== doc.id));
+        setTotal(t => t - 1);
+        showToast("Excluído", "ok");
+      } else showToast("Erro ao excluir", "err");
+    } finally { setDeleting(null); }
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Botão novo */}
-      <div className="flex justify-end">
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          Novo PDF
-        </button>
-      </div>
-
-      {/* Formulário de upload */}
-      {showForm && (
-        <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-white">Upload de PDF</h2>
-            <button onClick={() => setShowForm(false)}><X className="w-4 h-4 text-gray-400" /></button>
-          </div>
-
-          {/* Drop zone */}
-          <div
-            onClick={() => fileRef.current?.click()}
-            className={cn(
-              "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors",
-              file ? "border-indigo-500 bg-indigo-500/10" : "border-white/20 hover:border-white/40"
-            )}
-          >
-            <input
-              ref={fileRef}
-              type="file"
-              accept="application/pdf"
-              className="hidden"
-              onChange={e => {
-                const f = e.target.files?.[0];
-                if (f) {
-                  setFile(f);
-                  if (!form.title) setForm(fm => ({ ...fm, title: f.name.replace(/\.pdf$/i, "") }));
-                }
-              }}
-            />
-            {file ? (
-              <div>
-                <FileText className="w-8 h-8 text-indigo-400 mx-auto mb-2" />
-                <p className="text-sm text-white font-medium">{file.name}</p>
-                <p className="text-xs text-gray-500 mt-1">{formatSize(file.size)}</p>
-              </div>
-            ) : (
-              <div>
-                <Upload className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                <p className="text-sm text-gray-400">Clique para selecionar um PDF</p>
-                <p className="text-xs text-gray-600 mt-1">Máximo 50MB</p>
-              </div>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Título *</label>
-              <input
-                value={form.title}
-                onChange={e => setForm(f => ({ ...f, title: e.target.value }))}
-                placeholder="Nome do documento"
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1.5 block">Plano mínimo</label>
-              <select
-                value={form.planLevel}
-                onChange={e => setForm(f => ({ ...f, planLevel: e.target.value }))}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-              >
-                {PLAN_LEVELS.map(p => <option key={p.value} value={p.value} className="bg-gray-900">{p.label}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">Descrição</label>
-            <textarea
-              value={form.description}
-              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-              rows={2}
-              placeholder="Breve descrição do conteúdo..."
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-500 mb-1.5 block">Matéria</label>
-            <select
-              value={form.subjectId}
-              onChange={e => setForm(f => ({ ...f, subjectId: e.target.value }))}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-            >
-              <option value="" className="bg-gray-900">Sem matéria</option>
-              {Object.entries(grouped).map(([cat, subs]) => (
-                <optgroup key={cat} label={cat}>
-                  {subs.map(s => <option key={s.id} value={s.id} className="bg-gray-900">{s.name}</option>)}
-                </optgroup>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex gap-3 justify-end">
-            <button
-              onClick={() => setShowForm(false)}
-              className="px-4 py-2 text-sm text-gray-400 hover:text-white transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleUpload}
-              disabled={!file || !form.title || uploading}
-              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
-            >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : success ? <CheckCircle className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-              {uploading ? "Enviando..." : success ? "Enviado!" : "Enviar PDF"}
-            </button>
-          </div>
+    <div className="p-6 max-w-7xl mx-auto">
+      {toast && (
+        <div className={cn("fixed top-4 right-4 z-50 px-4 py-3 rounded-xl text-sm font-medium shadow-xl",
+          toast.type === "ok" ? "bg-emerald-600 text-white" : "bg-red-600 text-white")}>
+          {toast.msg}
         </div>
       )}
 
-      {/* Lista de documentos */}
-      <div className="space-y-2">
-        {docs.length === 0 ? (
-          <div className="text-center py-20 text-gray-500">
-            <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
-            <p className="text-sm">Nenhum PDF cadastrado ainda</p>
-          </div>
-        ) : docs.map(doc => (
-          <div key={doc.id} className="flex items-center gap-4 p-4 bg-white/[0.03] border border-white/10 rounded-xl">
-            <div className="w-10 h-12 bg-red-500/20 rounded flex items-center justify-center flex-shrink-0">
-              <FileText className="w-5 h-5 text-red-400" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{doc.title}</p>
-              {doc.description && <p className="text-xs text-gray-500 truncate mt-0.5">{doc.description}</p>}
-              <div className="flex items-center gap-3 mt-1">
-                <span className="text-[10px] text-gray-600">{formatSize(doc.fileSize)}</span>
-                <span className="text-[10px] bg-indigo-500/20 text-indigo-400 px-2 py-0.5 rounded-full">{doc.planLevel}</span>
-                <span className="text-[10px] text-gray-600">{new Date(doc.createdAt).toLocaleDateString("pt-BR")}</span>
-              </div>
-            </div>
-            <button
-              onClick={() => handleDelete(doc.id, doc.title)}
-              disabled={deleting === doc.id}
-              className="p-2 text-gray-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {deleting === doc.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-            </button>
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-indigo-400" /> Biblioteca PDF
+          </h1>
+          <p className="text-slate-400 text-sm mt-1">{total} documentos · {filtered.length} exibidos</p>
+        </div>
+        <button onClick={load} className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-sm">Atualizar</button>
+      </div>
+
+      {/* Stats por plano */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {PLAN_LEVELS.map(level => (
+          <div key={level} className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-500/50 transition-colors"
+            onClick={() => setFilterPlan(filterPlan === level ? "" : level)}>
+            <p className={cn("text-2xl font-black", filterPlan === level ? "text-indigo-400" : "text-white")}>
+              {docs.filter(d => d.planLevel === level).length}
+            </p>
+            <p className="text-xs text-slate-500 mt-1">{PLAN_LABELS[level]}</p>
           </div>
         ))}
       </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Buscar por título ou matéria..."
+            className="w-full bg-slate-800 border border-slate-700 rounded-lg pl-9 pr-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500" />
+          {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2"><X className="w-3.5 h-3.5 text-slate-500" /></button>}
+        </div>
+        <select value={filterCategoria} onChange={e => setFilterCategoria(e.target.value)}
+          className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500">
+          <option value="">Todas as categorias</option>
+          {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+        {(search || filterCategoria || filterPlan) && (
+          <button onClick={() => { setSearch(""); setFilterCategoria(""); setFilterPlan(""); }}
+            className="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 rounded-lg text-sm flex items-center gap-1">
+            <X className="w-3.5 h-3.5" /> Limpar filtros
+          </button>
+        )}
+      </div>
+
+      {/* Tabela */}
+      {loading ? (
+        <div className="flex items-center justify-center h-40 gap-3 text-slate-500">
+          <Loader2 className="w-5 h-5 animate-spin" /> Carregando...
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-16 text-slate-500">
+          <FileText className="w-12 h-12 mx-auto mb-3 opacity-30" />
+          <p>Nenhum documento encontrado</p>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-slate-700 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-slate-800/80 text-slate-400 text-xs uppercase tracking-wider">
+                <th className="px-4 py-3 text-left">Documento</th>
+                <th className="px-4 py-3 text-left">Matéria / Categoria</th>
+                <th className="px-4 py-3 text-left">Acesso</th>
+                <th className="px-4 py-3 text-left">Tamanho</th>
+                <th className="px-4 py-3 text-left">Criado</th>
+                <th className="px-4 py-3 text-right">Ações</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800">
+              {filtered.map(doc => (
+                <tr key={doc.id} className="hover:bg-slate-800/40 transition-colors">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-red-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-white font-medium truncate max-w-xs">{doc.title}</p>
+                        {doc.description && <p className="text-slate-500 text-xs truncate max-w-xs">{doc.description}</p>}
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <p className="text-slate-300 text-xs">{doc.Subject?.name ?? "—"}</p>
+                    <p className="text-slate-600 text-xs">{doc.Subject?.categoria ?? ""}</p>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium",
+                      doc.planLevel === "trial" ? "bg-teal-500/10 text-teal-400" :
+                      doc.planLevel === "elite" ? "bg-yellow-500/10 text-yellow-400" :
+                      "bg-indigo-500/10 text-indigo-400")}>
+                      {PLAN_LABELS[doc.planLevel] ?? doc.planLevel}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-400 text-xs">{formatSize(doc.fileSize)}</td>
+                  <td className="px-4 py-3 text-slate-500 text-xs">{formatDate(doc.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2 justify-end">
+                      <button onClick={() => openEdit(doc)} title="Editar"
+                        className="p-1.5 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors">
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => handleDelete(doc)} disabled={deleting === doc.id} title="Excluir"
+                        className="p-1.5 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-400 transition-colors disabled:opacity-50">
+                        {deleting === doc.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Modal Editar */}
+      {editDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-full max-w-md bg-[#0f111a] rounded-2xl border border-white/10 shadow-2xl">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/[0.08]">
+              <h3 className="font-semibold text-white">Editar Documento</h3>
+              <button onClick={() => setEditDoc(null)} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Título</label>
+                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Descrição</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
+                  rows={3} className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 resize-none" />
+              </div>
+              <div>
+                <label className="text-xs text-slate-400 mb-1.5 block">Nível de acesso</label>
+                <select value={editForm.planLevel} onChange={e => setEditForm(f => ({ ...f, planLevel: e.target.value }))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
+                  {PLAN_LEVELS.map(p => <option key={p} value={p}>{PLAN_LABELS[p]}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 px-5 pb-5">
+              <button onClick={() => setEditDoc(null)} className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-sm">Cancelar</button>
+              <button onClick={handleSave} disabled={saving}
+                className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2">
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />} Salvar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

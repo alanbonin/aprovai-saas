@@ -11,11 +11,12 @@ const PdfViewer = dynamic(
   { ssr: false, loading: () => <div className="flex items-center justify-center h-full"><Loader2 className="w-8 h-8 animate-spin text-indigo-400" /></div> }
 );
 
-interface Subject { id: string; name: string; ids?: string[] }
+interface Subject { id: string; name: string; ids?: string[]; categoria?: string }
 interface Doc {
   id: string; title: string; description?: string;
   subjectId?: string; topicId?: string;
   fileSize: number; pageCount?: number; planLevel: string; createdAt: string;
+  Subject?: { name: string } | null;
 }
 
 function formatSize(bytes: number) {
@@ -210,8 +211,11 @@ export function BibliotecaClient() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-white truncate">{doc.title}</p>
-                    {doc.description && (
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{doc.description}</p>
+                    {doc.Subject?.name && (
+                      <p className="text-[10px] text-indigo-400 mt-0.5">{doc.Subject.name}</p>
+                    )}
+                    {doc.description && !doc.Subject?.name && (
+                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{doc.description}</p>
                     )}
                     <div className="flex items-center gap-2 mt-1.5">
                       <span className="text-[10px] text-gray-600">{formatSize(doc.fileSize)}</span>

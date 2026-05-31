@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
 
   let query = db
     .from("PdfDocument")
-    .select("id, title, description, subjectId, topicId, fileSize, pageCount, planLevel, createdAt")
+    .select("id, title, description, subjectId, topicId, fileSize, pageCount, planLevel, createdAt, Subject(name)")
     .order("createdAt", { ascending: false });
 
   if (subjectIds) {

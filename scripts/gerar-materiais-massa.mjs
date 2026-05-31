@@ -17,6 +17,7 @@
  */
 
 import OpenAI from "openai";
+import PDFDocument from "pdfkit";
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync, writeFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
@@ -157,6 +158,112 @@ Retorne APENAS JSON válido sem markdown:
   return null;
 }
 
+// ── Gera buffer PDF a partir do conteúdo JSON ─────────────────────────────────
+function gerarPDFBuffer(content) {
+  return new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ margin: 50, size: "A4" });
+    const buffers = [];
+    doc.on("data", b => buffers.push(b));
+    doc.on("end", () => resolve(Buffer.concat(buffers)));
+    doc.on("error", reject);
+
+    const BLUE   = "#1e3a5f";
+    const INDIGO = "#4f46e5";
+    const GRAY   = "#4b5563";
+    const LIGHT  = "#f8fafc";
+
+    // ── Capa ──────────────────────────────────────────────────────────────
+    doc.rect(0, 0, doc.page.width, 180).fill(BLUE);
+    doc.fillColor("#ffffff").fontSize(22).font("Helvetica-Bold")
+      .text(content.titulo ?? "Apostila", 50, 60, { width: doc.page.width - 100 });
+    doc.fontSize(12).font("Helvetica")
+      .text(content.subtitulo ?? content.materia ?? "", 50, 105, { width: doc.page.width - 100 });
+    doc.fillColor(GRAY).fontSize(10)
+      .text(`AprovAI360 · Gerado por IA · ${new Date().toLocaleDateString("pt-BR")}`, 50, 150);
+    doc.moveDown(3);
+
+    // ── Introdução ────────────────────────────────────────────────────────
+    if (content.introducao) {
+      doc.fillColor(GRAY).fontSize(11).font("Helvetica")
+        .text(content.introducao, { align: "justify" });
+      doc.moveDown(1.5);
+    }
+
+    // ── Seções ────────────────────────────────────────────────────────────
+    for (const secao of (content.secoes ?? [])) {
+      if (!secao) continue;
+
+      // Título da seção
+      if (secao.titulo) {
+        doc.rect(50, doc.y, doc.page.width - 100, 24).fill(INDIGO);
+        doc.fillColor("#ffffff").fontSize(12).font("Helvetica-Bold")
+          .text(secao.titulo, 58, doc.y - 20, { width: doc.page.width - 116 });
+        doc.moveDown(1);
+      }
+
+      doc.fillColor("#111827");
+
+      switch (secao.tipo) {
+        case "teoria":
+        case "exemplificando":
+        case "destaque":
+        case "atencao":
+          doc.fontSize(10.5).font("Helvetica")
+            .text(secao.texto ?? "", { align: "justify" });
+          break;
+
+        case "lista":
+          for (const item of (secao.itens ?? [])) {
+            doc.fontSize(10.5).font("Helvetica")
+              .text(`• ${item}`, { indent: 10 });
+          }
+          break;
+
+        case "tabela":
+          if (secao.colunas && secao.linhas) {
+            const colW = (doc.page.width - 100) / secao.colunas.length;
+            const startX = 50;
+            let y = doc.y;
+
+            // Header
+            doc.rect(startX, y, doc.page.width - 100, 20).fill("#e0e7ff");
+            doc.fillColor(BLUE).fontSize(9).font("Helvetica-Bold");
+            secao.colunas.forEach((col, i) => {
+              doc.text(col, startX + i * colW + 4, y + 5, { width: colW - 8 });
+            });
+            y += 22;
+
+            // Rows
+            for (const linha of secao.linhas) {
+              if (y > doc.page.height - 100) { doc.addPage(); y = 50; }
+              doc.rect(startX, y, doc.page.width - 100, 18).stroke("#e5e7eb");
+              doc.fillColor(GRAY).fontSize(9).font("Helvetica");
+              (linha ?? []).forEach((cell, i) => {
+                doc.text(String(cell ?? ""), startX + i * colW + 4, y + 4, { width: colW - 8 });
+              });
+              y += 20;
+            }
+            doc.y = y + 4;
+          }
+          break;
+
+        case "codigo":
+          doc.rect(50, doc.y, doc.page.width - 100, 14 + (secao.codigo?.split("\n").length ?? 1) * 13).fill("#1e293b");
+          doc.fillColor("#86efac").fontSize(9).font("Courier")
+            .text(secao.codigo ?? "", 58, doc.y - (14 + (secao.codigo?.split("\n").length ?? 1) * 13) + 7, { width: doc.page.width - 116 });
+          doc.moveDown(0.5);
+          break;
+      }
+      doc.moveDown(1);
+
+      // Evita overflow de página
+      if (doc.y > doc.page.height - 80) doc.addPage();
+    }
+
+    doc.end();
+  });
+}
+
 // ── Upload + registro ─────────────────────────────────────────────────────────
 async function salvarMaterial(subjectId, subjectName, topicId, topicName, content) {
   if (DRY) {
@@ -164,68 +271,46 @@ async function salvarMaterial(subjectId, subjectName, topicId, topicName, conten
     return null;
   }
 
-  // Verifica se já existe material para esse tópico
+  // Verifica se já existe PdfDocument para esse tópico
   const { data: existing } = await db
-    .from("Material")
+    .from("PdfDocument")
     .select("id")
     .eq("subjectId", subjectId)
     .ilike("title", `%${topicName.slice(0, 30)}%`)
     .limit(1);
 
-  if (existing?.length > 0) {
-    console.log(`    ⏭️  Já existe material para "${topicName}"`);
-    return "exists";
-  }
-
-  // Gera PDF via API interna (usa o mesmo componente do admin)
-  // Como estamos em script, chamamos a rota HTTP local se o servidor estiver rodando
-  // Caso contrário, salvamos apenas os metadados (sem PDF por enquanto)
-  // e registramos para geração posterior via admin panel
+  if (existing?.length > 0) return "exists";
 
   const title = `${content.titulo}`.slice(0, 120);
-  const description = `Aula gerada por IA. ${content.secoes?.length ?? 0} seções. Tópico: ${topicName}`;
 
-  // Registra metadados no banco (sem arquivo ainda — geração de PDF via painel)
-  const { data: material, error } = await db.from("Material").insert({
+  // 1. Gera o PDF
+  const pdfBuffer = await gerarPDFBuffer(content);
+
+  // 2. Upload para Supabase Storage (bucket 'pdfs')
+  const storagePath = `${subjectId}/${crypto.randomUUID()}-${Date.now()}.pdf`;
+  const { error: uploadErr } = await db.storage
+    .from("pdfs")
+    .upload(storagePath, pdfBuffer, { contentType: "application/pdf", upsert: false });
+
+  if (uploadErr) throw new Error(`Storage upload: ${uploadErr.message}`);
+
+  // 3. Cria registro PdfDocument (aparece na Biblioteca do aluno)
+  const { error: dbErr } = await db.from("PdfDocument").insert({
     id: crypto.randomUUID(),
     title,
-    description,
-    type: "PDF",
+    description: `Apostila gerada por IA | ${subjectName} | Tópico: ${topicName}`,
     subjectId,
     topicId: topicId || null,
-    banca: null,
-    fileUrl: null, // será preenchido após geração via admin panel
-    fileSize: null,
-    isPremium: false,
-    active: false, // inativo até ter o PDF gerado
+    storagePath,
+    fileSize: pdfBuffer.length,
+    pageCount: null,
+    planLevel: "trial", // disponível para todos
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    // Armazena conteúdo para geração posterior
-    content: JSON.stringify(content),
-  }).select().single();
+  });
 
-  if (error) {
-    // Tenta sem o campo content (pode não existir na tabela)
-    const { data: mat2, error: err2 } = await db.from("Material").insert({
-      id: crypto.randomUUID(),
-      title,
-      description,
-      type: "PDF",
-      subjectId,
-      banca: null,
-      fileUrl: null,
-      fileSize: null,
-      isPremium: false,
-      active: false,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    }).select().single();
-
-    if (err2) throw new Error(`DB insert: ${err2.message}`);
-    return mat2;
-  }
-
-  return material;
+  if (dbErr) throw new Error(`DB PdfDocument: ${dbErr.message}`);
+  return { title };
 }
 
 // ── Processa uma matéria ──────────────────────────────────────────────────────
