@@ -341,6 +341,23 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     return () => window.removeEventListener("aprovai:go-mentor", onGoMentor);
   }, []);
 
+  // Escuta evento de reload de conteúdo (botão "Tentar novamente" quando questões não carregam)
+  useEffect(() => {
+    function onReload(e: Event) {
+      const detail = (e as CustomEvent<{ subjectId: string }>).detail;
+      if (!detail?.subjectId || !selectedSubject) return;
+      setContent({ materiais: [], questoes: [], flashcards: [] });
+      setLoadingContent(true);
+      fetch(`/api/workspace/conteudo?subjectId=${detail.subjectId}`)
+        .then(r => { if (!r.ok) throw new Error(`API erro ${r.status}`); return r.json(); })
+        .then(d => setContent({ materiais: d.materiais ?? [], questoes: d.questoes ?? [], flashcards: d.flashcards ?? [] }))
+        .catch(() => {})
+        .finally(() => setLoadingContent(false));
+    }
+    window.addEventListener("aprovai:reload-conteudo", onReload);
+    return () => window.removeEventListener("aprovai:reload-conteudo", onReload);
+  }, [selectedSubject]);
+
   // Escuta evento de navegação disparado pelos action cards [[IR:X]] do mentor
   useEffect(() => {
     function onNavigate(e: Event) {
@@ -404,13 +421,21 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
   useEffect(() => {
     if (!selectedSubject) return;
+    // Reseta conteúdo ao trocar de matéria para evitar mostrar dados da anterior
+    setContent({ materiais: [], questoes: [], flashcards: [] });
     setLoadingContent(true);
     fetch(`/api/workspace/conteudo?subjectId=${selectedSubject.id}`)
-      .then(r => r.json())
+      .then(r => {
+        if (!r.ok) throw new Error(`API erro ${r.status}`);
+        return r.json();
+      })
       .then(d => {
         setContent({ materiais: d.materiais ?? [], questoes: d.questoes ?? [], flashcards: d.flashcards ?? [] });
-        setLoadingContent(false);
-      });
+      })
+      .catch(() => {
+        // Em caso de erro mantém arrays vazios mas desativa o loading
+      })
+      .finally(() => setLoadingContent(false));
   }, [selectedSubject]);
 
   // Abre aba mentor quando vem do onboarding (?welcome=1)
@@ -1439,14 +1464,22 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
         Ainda não há questões cadastradas para <strong className="text-gray-300">{subjectName}</strong>.<br/>
         Enquanto isso, use o <strong className="text-indigo-400">Mentor IA</strong> para estudar o conteúdo.
       </p>
-      <button
-        onClick={() => {
-          // Dispara evento para mudar para a aba de mentor no componente pai
-          window.dispatchEvent(new CustomEvent("aprovai:go-mentor"));
-        }}
-        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
-        🎓 Estudar com o Mentor
-      </button>
+      <div className="flex gap-3">
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent("aprovai:go-mentor"));
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
+          🎓 Estudar com o Mentor
+        </button>
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent("aprovai:reload-conteudo", { detail: { subjectId } }));
+          }}
+          className="flex items-center gap-2 px-5 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-medium transition-colors">
+          🔄 Tentar novamente
+        </button>
+      </div>
     </div>
   );
 
