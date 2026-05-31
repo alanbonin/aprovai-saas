@@ -97,7 +97,7 @@ export async function POST() {
     db.from("Note").select("content")
       .eq("userId", dbUser.id).eq("subjectId", "__POMODORO_SESSION__")
       .gte("createdAt", start).lte("createdAt", end),
-    db.from("StudentProfile").select("cargo, orgao, dataProva").eq("userId", dbUser.id).single(),
+    Promise.resolve({ data: activeProfile }),
   ]);
 
   const totalQuestoes = questoesCount ?? 0;

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import type { MessageParam, ImageBlockParam, TextBlockParam } from "@anthropic-ai/sdk/resources";
 import { log } from "@/lib/logger";
@@ -12,12 +13,9 @@ const CASO_SYSTEM =
 async function getProfile(supabaseId: string) {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", supabaseId).single();
   if (!dbUser) return null;
-  const { data: profile } = await db
-    .from("StudentProfile")
-    .select("cargo, orgao")
-    .eq("userId", dbUser.id)
-    .maybeSingle();
-  return profile;
+  // Usa perfil ATIVO do usuário (não o primeiro encontrado)
+  const profile = await getActiveProfile(dbUser.id);
+  return profile ? { cargo: profile.cargo, orgao: profile.orgao } : null;
 }
 
 function imgBlock(base64: string, type: string): ImageBlockParam {

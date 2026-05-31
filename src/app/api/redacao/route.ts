@@ -12,12 +12,9 @@ const REDACAO_SYSTEM =
 async function getProfile(supabaseId: string) {
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", supabaseId).single();
   if (!dbUser) return null;
-  const { data: profile } = await db
-    .from("StudentProfile")
-    .select("cargo, orgao")
-    .eq("userId", dbUser.id)
-    .maybeSingle();
-  return profile;
+  const { getActiveProfile } = await import("@/lib/get-active-profile");
+  const profile = await getActiveProfile(dbUser.id);
+  return profile ? { cargo: profile.cargo, orgao: profile.orgao } : null;
 }
 
 function imgBlock(base64: string, type: string): ImageBlockParam {
