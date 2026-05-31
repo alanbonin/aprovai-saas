@@ -55,8 +55,8 @@ const MODALIDADE_PRESETS: Record<string, Preset[]> = {
     { label: "Treino OAB — Rápido", icon: "⚡", totalQ: 20, timeMins: 60, passThreshold: 50, minCorrect: 10, desc: "20 questões · 1h · mínimo 50%" },
   ],
   CONCURSO_PUBLICO: [
-    { label: "Simulado Padrão", icon: "🏛️", totalQ: 20, timeMins: 60, passThreshold: null, minCorrect: null, desc: "20 questões · 1h" },
-    { label: "Simulado Longo", icon: "📋", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
+    { label: "Simulado Padrão", icon: "🏛️", totalQ: 30, timeMins: 90, passThreshold: null, minCorrect: null, desc: "30 questões · 1h30" },
+    { label: "Simulado Longo", icon: "📋", totalQ: 80, timeMins: 300, passThreshold: null, minCorrect: null, desc: "80 questões · 5h" },
   ],
 };
 
@@ -160,13 +160,13 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
       .catch(() => {});
   }, []);
 
-  async function startSimulado() {
+  async function startSimuladoWith(q: number, mins: number, banca: string, level: string, subject: string) {
     setLoading(true);
     setError("");
-    const body: Record<string, unknown> = { total: totalQ };
-    if (filterBanca)   body.banca      = filterBanca;
-    if (filterLevel)   body.level      = filterLevel;
-    if (filterSubject) body.subjectIds = [filterSubject];
+    const body: Record<string, unknown> = { total: q };
+    if (banca)   body.banca      = banca;
+    if (level)   body.level      = level;
+    if (subject) body.subjectIds = [subject];
     const res = await fetch("/api/simulado/gerar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -183,8 +183,12 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     setCurrent(0);
     setSelected(null);
     setAnswers([]);
-    setTimeLeft(timeMins * 60);
+    setTimeLeft(mins * 60);
     setPhase("running");
+  }
+
+  async function startSimulado() {
+    await startSimuladoWith(totalQ, timeMins, filterBanca, filterLevel, filterSubject);
   }
 
   function handleSelect(key: string) {
@@ -687,7 +691,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     setFilterBanca("");
     setFilterLevel("");
     setFilterSubject("");
-    setPhase("config");
+    void startSimuladoWith(p.totalQ, p.timeMins, "", "", "");
   }
 
   return (
@@ -739,11 +743,14 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
                     <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs">Resultado</th>
                     <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs">Aproveitamento</th>
                     <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs">Tempo</th>
+                    <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/5">
-                  {history.map(item => {
+                  {history.map((item, idx) => {
                     const pct = item.total > 0 ? Math.round((item.correct / item.total) * 100) : 0;
+                    // Gabarito disponível apenas para o simulado mais recente da sessão atual
+                    const canViewGabarito = idx === 0 && questions.length > 0 && result !== null;
                     return (
                       <tr key={item.id} className="hover:bg-white/3">
                         <td className="px-4 py-3 text-gray-400 text-xs">
@@ -759,6 +766,16 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
                         </td>
                         <td className="px-4 py-3 text-gray-500 text-xs">
                           {Math.floor(item.timeSecs / 60)}min
+                        </td>
+                        <td className="px-4 py-3">
+                          {canViewGabarito && (
+                            <button
+                              onClick={() => { setGabaritoExpanded(null); setPhase("gabarito"); }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 text-xs hover:bg-indigo-600/30 transition-colors"
+                            >
+                              <ClipboardList className="w-3 h-3" /> Gabarito
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
