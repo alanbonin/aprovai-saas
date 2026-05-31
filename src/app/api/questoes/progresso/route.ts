@@ -159,23 +159,25 @@ export async function POST(req: Request) {
     ? correct
     : q !== "again";
 
-  // Busca progresso existente para este perfil (ou legado sem profileId)
+  // Busca progresso existente APENAS para este perfil (nunca misturar legados)
   const existingQuery = db
     .from("Progress")
     .select("id, interval, easeFactor")
     .eq("userId", dbUser.id)
     .eq("questionId", questionId);
 
-  const { data: existing } = profileId
-    ? await existingQuery.or(`profileId.eq.${profileId},profileId.is.null`).maybeSingle()
-    : await existingQuery.is("profileId", null).maybeSingle();
+  const { data: existing } = await (
+    profileId
+      ? existingQuery.eq("profileId", profileId)
+      : existingQuery.is("profileId", null)
+  ).maybeSingle();
 
   const { interval, easeFactor, nextReview } = calcNextReview(existing, q);
 
   if (existing) {
     await db.from("Progress").update({
       correct: isCorrect, interval, easeFactor,
-      nextReview, profileId,
+      nextReview,
       reviewedAt: new Date().toISOString(),
     }).eq("id", existing.id);
   } else {
