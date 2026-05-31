@@ -14,9 +14,15 @@ async function getFavs(userId: string): Promise<number[]> {
 
 async function saveFavs(userId: string, ids: number[]) {
   const content = JSON.stringify(ids);
-  const { data: ex } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).maybeSingle();
-  if (ex?.id) await db.from("Note").update({ content }).eq("id", ex.id);
-  else await db.from("Note").insert({ userId, subjectId: PREFIX, content });
+  const { data: ex, error: selErr } = await db.from("Note").select("id").eq("userId", userId).eq("subjectId", PREFIX).maybeSingle();
+  if (selErr) console.error("[saveFavs] select error:", selErr);
+  if (ex?.id) {
+    const { error } = await db.from("Note").update({ content }).eq("id", ex.id);
+    if (error) console.error("[saveFavs] update error:", error);
+  } else {
+    const { error } = await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: PREFIX, content });
+    if (error) console.error("[saveFavs] insert error:", error);
+  }
 }
 
 export async function GET() {
