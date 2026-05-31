@@ -341,22 +341,6 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     return () => window.removeEventListener("aprovai:go-mentor", onGoMentor);
   }, []);
 
-  // Escuta evento de reload de conteúdo (botão "Tentar novamente" quando questões não carregam)
-  useEffect(() => {
-    function onReload(e: Event) {
-      const detail = (e as CustomEvent<{ subjectId: string }>).detail;
-      if (!detail?.subjectId || !selectedSubject) return;
-      setContent({ materiais: [], questoes: [], flashcards: [] });
-      setLoadingContent(true);
-      fetch(`/api/workspace/conteudo?subjectId=${detail.subjectId}`)
-        .then(r => { if (!r.ok) throw new Error(`API erro ${r.status}`); return r.json(); })
-        .then(d => setContent({ materiais: d.materiais ?? [], questoes: d.questoes ?? [], flashcards: d.flashcards ?? [] }))
-        .catch(() => {})
-        .finally(() => setLoadingContent(false));
-    }
-    window.addEventListener("aprovai:reload-conteudo", onReload);
-    return () => window.removeEventListener("aprovai:reload-conteudo", onReload);
-  }, [selectedSubject]);
 
   // Escuta evento de navegação disparado pelos action cards [[IR:X]] do mentor
   useEffect(() => {
@@ -1473,9 +1457,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
           🎓 Estudar com o Mentor
         </button>
         <button
-          onClick={() => {
-            window.dispatchEvent(new CustomEvent("aprovai:reload-conteudo", { detail: { subjectId } }));
-          }}
+          onClick={() => window.location.reload()}
           className="flex items-center gap-2 px-5 py-2.5 bg-slate-700 hover:bg-slate-600 rounded-xl text-sm font-medium transition-colors">
           🔄 Tentar novamente
         </button>
