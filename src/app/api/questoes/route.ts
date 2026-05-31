@@ -30,7 +30,7 @@ export async function GET(req: Request) {
   if (onlyFavs) {
     if (dbUser) {
       const { data: note } = await db.from("Note").select("content")
-        .eq("userId", dbUser.id).eq("subjectId", "__FAV_Q__").single();
+        .eq("userId", dbUser.id).eq("subjectId", "__FAV_Q__").maybeSingle();
       favIds = note?.content ? (JSON.parse(note.content) as number[]) : [];
     }
     if (!favIds?.length) return NextResponse.json({ questions: [] });
@@ -61,8 +61,8 @@ export async function GET(req: Request) {
     .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
     .limit(poolSize);
 
-  // Apenas questões aprovadas
-  query = query.eq("aprovado", true);
+  // Apenas questões aprovadas (favoritos ignoram esse filtro)
+  if (!onlyFavs) query = query.eq("aprovado", true);
 
   if (banca)          query = query.ilike("banca", `%${banca}%`);
   if (level)          query = query.eq("level", level);
