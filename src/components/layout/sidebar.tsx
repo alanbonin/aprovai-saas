@@ -41,7 +41,6 @@ const SECTIONS_STUDENT: NavSection[] = [
     items: [
       { href: "/simulado",           label: "Clássico",    icon: "🎯" },
       { href: "/simulado/filtrado",  label: "Com Filtros", icon: "🎛️" },
-      { href: "/simulado/revisao",   label: "Revisão",     icon: "🔁" },
       { href: "/simulado/exame",     label: "Modo Exame",  icon: "⏱️" },
       { href: "/historico-simulados",label: "Histórico",   icon: "📈" },
     ],
@@ -49,7 +48,8 @@ const SECTIONS_STUDENT: NavSection[] = [
   {
     id: "revisao", title: "Revisão", color: "#10b981", defaultOpen: false,
     items: [
-      { href: "/revisao",        label: "Revisão SM-2",    icon: "🔄" },
+      { href: "/simulado/revisao",   label: "Revisão",         icon: "🔁" },
+      { href: "/revisao",            label: "Revisão SM-2",    icon: "🔄" },
       { href: "/agenda-revisoes",label: "Agenda SM-2",     icon: "📆" },
       { href: "/caderno-erros",  label: "Caderno de Erros",icon: "📒" },
       { href: "/favoritos",      label: "Favoritos",       icon: "⭐" },
