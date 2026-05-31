@@ -5,40 +5,70 @@ import { useRouter, usePathname } from "next/navigation";
 
 /**
  * AutoRefresh — monta uma única vez no layout do dashboard.
- * Chama router.refresh() em dois momentos:
- *   1. Quando a janela ganha foco (usuário volta de outra aba/app)
- *   2. Quando a rota muda (navegação entre páginas)
  *
- * Isso garante que os dados do servidor (questões respondidas, metas,
- * plano, etc.) estejam sempre atualizados sem precisar recarregar a página.
+ * Atualiza os dados do servidor em 3 situações:
+ * 1. Mudança de rota (navegação entre páginas)
+ * 2. Janela ganha foco (volta de outra aba/app)
+ * 3. Evento customizado "aprovai:progress" (disparado após salvar progresso)
  */
 export function AutoRefresh() {
   const router = useRouter();
   const pathname = usePathname();
   const lastRefreshRef = useRef<number>(0);
 
-  // Atualiza quando a janela ganha foco (volta de outra aba / app)
-  useEffect(() => {
-    const onFocus = () => {
-      const now = Date.now();
-      // Throttle: no máximo 1 refresh a cada 5 segundos
-      if (now - lastRefreshRef.current < 5000) return;
-      lastRefreshRef.current = now;
-      router.refresh();
-    };
-
-    window.addEventListener("focus", onFocus);
-    return () => window.removeEventListener("focus", onFocus);
-  }, [router]);
-
-  // Atualiza quando muda de rota (chega em uma nova página)
-  useEffect(() => {
+  function doRefresh() {
     const now = Date.now();
-    if (now - lastRefreshRef.current < 1000) return; // evita double-refresh
+    if (now - lastRefreshRef.current < 2000) return; // throttle 2s
     lastRefreshRef.current = now;
     router.refresh();
+  }
+
+  // 1. Mudança de rota
+  useEffect(() => {
+    doRefresh();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
+  // 2. Janela ganha foco
+  useEffect(() => {
+    const onFocus = () => doRefresh();
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 3. Evento após salvar progresso de questão
+  useEffect(() => {
+    const onProgress = () => {
+      setTimeout(() => doRefresh(), 500);
+    };
+    window.addEventListener("aprovai:progress", onProgress);
+
+    // Intercepta fetch para /api/questoes/progresso automaticamente
+    const origFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const result = await origFetch(...args);
+      const url = typeof args[0] === "string" ? args[0] : (args[0] as Request).url ?? "";
+      if (url.includes("/api/questoes/progresso") && result.ok) {
+        setTimeout(() => doRefresh(), 500);
+      }
+      return result;
+    };
+
+    return () => {
+      window.removeEventListener("aprovai:progress", onProgress);
+      window.fetch = origFetch;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return null;
+}
+
+/**
+ * Dispara o evento de refresh após salvar progresso.
+ * Chamar isso em qualquer componente que salva questões respondidas.
+ */
+export function triggerProgressRefresh() {
+  window.dispatchEvent(new CustomEvent("aprovai:progress"));
 }
