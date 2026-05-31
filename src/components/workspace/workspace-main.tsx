@@ -425,23 +425,38 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeNav]);
 
+  const [contentError, setContentError] = useState(false);
+
   useEffect(() => {
     if (!selectedSubject) return;
-    // Reseta conteúdo ao trocar de matéria para evitar mostrar dados da anterior
     setContent({ materiais: [], questoes: [], flashcards: [] });
+    setContentError(false);
     setLoadingContent(true);
-    fetch(`/api/workspace/conteudo?subjectId=${selectedSubject.id}`)
-      .then(r => {
-        if (!r.ok) throw new Error(`API erro ${r.status}`);
-        return r.json();
-      })
-      .then(d => {
+
+    const controller = new AbortController();
+
+    async function load(attempt = 1) {
+      try {
+        const r = await fetch(`/api/workspace/conteudo?subjectId=${selectedSubject!.id}`, { signal: controller.signal });
+        if (!r.ok) throw new Error(`status ${r.status}`);
+        const d = await r.json();
         setContent({ materiais: d.materiais ?? [], questoes: d.questoes ?? [], flashcards: d.flashcards ?? [] });
-      })
-      .catch(() => {
-        // Em caso de erro mantém arrays vazios mas desativa o loading
-      })
-      .finally(() => setLoadingContent(false));
+        setContentError(false);
+      } catch (e) {
+        if ((e as Error).name === "AbortError") return; // navegou para outra matéria
+        if (attempt < 3) {
+          await new Promise(res => setTimeout(res, 800 * attempt));
+          await load(attempt + 1);
+        } else {
+          setContentError(true);
+        }
+      } finally {
+        if (attempt === 1 || attempt >= 3) setLoadingContent(false);
+      }
+    }
+
+    void load();
+    return () => controller.abort();
   }, [selectedSubject]);
 
   // Abre aba mentor quando vem do onboarding (?welcome=1)
@@ -959,6 +974,16 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 {loadingContent ? (
                   <div className="flex items-center justify-center h-full">
                     <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : contentError ? (
+                  <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-4">
+                    <p className="text-gray-400 text-sm">Erro ao carregar as questões. Verifique sua conexão.</p>
+                    <button
+                      onClick={() => { setSelectedSubject(s => s ? { ...s } : s); }}
+                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-sm font-medium transition-colors"
+                    >
+                      Tentar novamente
+                    </button>
                   </div>
                 ) : activeTab === "questoes" ? (
                   <QuestoesAdaptativasToggle
