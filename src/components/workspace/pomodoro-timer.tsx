@@ -265,11 +265,11 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
     <div className="flex flex-col h-full overflow-y-auto bg-[#080c18]">
 
       {/* ── Mode selector ────────────────────────────────────────────────── */}
-      <div className="flex gap-2 p-4 pb-0 justify-center">
+      <div className="flex gap-1.5 p-3 pb-0 justify-center flex-wrap">
         {MODES.map(m => (
           <button key={m.id} onClick={() => switchMode(m.id)}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all",
+              "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
               modeId === m.id
                 ? "text-white shadow-lg"
                 : "text-gray-500 bg-white/[0.04] hover:text-gray-300",
@@ -278,7 +278,7 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
           >
             <span>{m.icon}</span>
             <span>{m.label}</span>
-            <span className="text-xs opacity-60">{m.minutes}min</span>
+            <span className="opacity-60">{m.minutes}min</span>
           </button>
         ))}
       </div>
