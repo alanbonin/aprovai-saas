@@ -412,8 +412,19 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
   const [stats, setStats] = useState<Stats | null>(null);
   const [unreadNotifs, setUnreadNotifs] = useState(0);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [desktopOpen, setDesktopOpen] = useState(() => {
+    try { return localStorage.getItem("sidebar-desktop-open") !== "false"; } catch { return true; }
+  });
 
-  // Fecha o menu ao navegar para outra página
+  function toggleDesktop() {
+    setDesktopOpen(v => {
+      const next = !v;
+      try { localStorage.setItem("sidebar-desktop-open", String(next)); } catch { /* ok */ }
+      return next;
+    });
+  }
+
+  // Fecha o menu ao navegar para outra página (só mobile)
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const sections = isAdmin ? SECTIONS_ADMIN : SECTIONS_STUDENT;
@@ -489,19 +500,34 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
 
   return (
     <>
+      {/* ── Botão toggle quando sidebar fechada (desktop) ─────────── */}
+      {!desktopOpen && (
+        <button
+          onClick={toggleDesktop}
+          className="hidden md:flex fixed top-4 left-3 z-50 w-8 h-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"
+          style={{ backgroundColor: "var(--bg-surface)" }}
+          title="Abrir menu"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+      )}
+
       {/* ── Sidebar — APENAS DESKTOP ─────────────────────────────── */}
     <aside
       className={cn(
-        "hidden md:flex flex-col w-56 flex-shrink-0",
-        "sticky top-0 h-screen",   // ← fixa na tela, não rola com o conteúdo
-        "border-r border-white/[0.06]"
+        "hidden md:flex flex-col flex-shrink-0",
+        "sticky top-0 h-screen",
+        "border-r border-white/[0.06]",
+        "overflow-hidden transition-all duration-300 ease-in-out",
+        desktopOpen ? "w-56" : "w-0 border-r-0"
       )}
       style={{ backgroundColor: "var(--bg-surface)" }}
     >
 
       {/* ── Logo + Briefing do Dia ──────────────────────────────── */}
       <div className="px-4 py-4 border-b border-white/[0.06] flex-shrink-0 space-y-2">
-        <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
+        <div className="flex items-center justify-between">
+        <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-1 min-w-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-icon.svg" alt="AprovAI360" className="w-9 h-9 flex-shrink-0" />
           <div className="min-w-0">
@@ -515,6 +541,15 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             </p>
           </div>
         </a>
+        {/* Botão fechar sidebar (desktop) */}
+        <button
+          onClick={toggleDesktop}
+          className="hidden md:flex w-7 h-7 items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+          title="Fechar menu"
+        >
+          <X className="w-4 h-4" />
+        </button>
+        </div>
 
         {/* Briefing do Dia — destaque fixo (só aluno) */}
         {!isAdmin && (
