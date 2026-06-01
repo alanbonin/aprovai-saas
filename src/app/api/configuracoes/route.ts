@@ -3,6 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 
 const PREFS_PREFIX = "__USER_PREFS__";
+const FISCAL_PREFIX = "__DADOS_FISCAIS__";
+
+export interface DadosFiscais {
+  cpf: string;
+  endereco: string;
+  numero: string;
+  complemento: string;
+  bairro: string;
+  cidade: string;
+  estado: string;
+  cep: string;
+}
+
+export function dadosFiscaisCompletos(d: Partial<DadosFiscais>): boolean {
+  return !!(d.cpf && d.endereco && d.numero && d.cidade && d.estado && d.cep);
+}
 
 interface Prefs {
   emailQuestaoDodia: boolean;
@@ -50,20 +66,21 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const [profile, prefs] = await Promise.all([
-    db.from("StudentProfile").select("cargo, orgao, dataProva, dificuldades").eq("userId", dbUser.id).single(),
+  const [prefs, fiscalNote] = await Promise.all([
     getPrefs(dbUser.id),
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", FISCAL_PREFIX).maybeSingle(),
   ]);
+
+  let fiscal: Partial<DadosFiscais> = {};
+  try { fiscal = fiscalNote.data?.content ? JSON.parse(fiscalNote.data.content) : {}; } catch { /* ok */ }
 
   return NextResponse.json({
     name: dbUser.name ?? "",
     email: dbUser.email ?? "",
     phone: (dbUser as unknown as { phone?: string | null }).phone ?? "",
-    cargo: profile.data?.cargo ?? "",
-    orgao: profile.data?.orgao ?? "",
-    dataProva: profile.data?.dataProva ?? null,
-    dificuldades: profile.data?.dificuldades ?? "",
     prefs,
+    fiscal,
+    fiscalCompleto: dadosFiscaisCompletos(fiscal),
   });
 }
 
@@ -82,11 +99,8 @@ export async function PATCH(req: Request) {
   const body = await req.json() as {
     name?: string;
     phone?: string;
-    cargo?: string;
-    orgao?: string;
-    dataProva?: string | null;
-    dificuldades?: string;
     prefs?: Partial<Prefs>;
+    fiscal?: Partial<DadosFiscais>;
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -103,20 +117,15 @@ export async function PATCH(req: Request) {
     updates.push(db.from("User").update(userFields).eq("id", dbUser.id));
   }
 
-  // Atualiza StudentProfile
-  const profileFields: Record<string, unknown> = {};
-  if (body.cargo !== undefined)       profileFields.cargo = body.cargo || null;
-  if (body.orgao !== undefined)       profileFields.orgao = body.orgao || null;
-  if (body.dataProva !== undefined)   profileFields.dataProva = body.dataProva || null;
-  if (body.dificuldades !== undefined) profileFields.dificuldades = body.dificuldades || null;
-
-  if (Object.keys(profileFields).length > 0) {
-    // Upsert StudentProfile
-    const { data: existing } = await db.from("StudentProfile").select("id").eq("userId", dbUser.id).single();
-    if (existing?.id) {
-      updates.push(db.from("StudentProfile").update(profileFields).eq("id", existing.id));
+  // Atualiza dados fiscais (nota fiscal)
+  if (body.fiscal) {
+    const { data: existingFiscal } = await db.from("Note").select("id").eq("userId", dbUser.id).eq("subjectId", FISCAL_PREFIX).maybeSingle();
+    const now = new Date().toISOString();
+    const content = JSON.stringify(body.fiscal);
+    if (existingFiscal?.id) {
+      updates.push(db.from("Note").update({ content, updatedAt: now }).eq("id", existingFiscal.id));
     } else {
-      updates.push(db.from("StudentProfile").insert({ userId: dbUser.id, ...profileFields }));
+      updates.push(db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: FISCAL_PREFIX, content, createdAt: now, updatedAt: now }));
     }
   }
 
