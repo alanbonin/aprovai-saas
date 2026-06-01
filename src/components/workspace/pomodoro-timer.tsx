@@ -63,23 +63,42 @@ function CountdownRing({
   );
 }
 
-export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: string }[] }) {
-  const [modeId,      setModeId]      = useState<ModeId>("work");
-  const [secondsLeft, setSecondsLeft] = useState(25 * 60);
-  const [running,     setRunning]     = useState(false);
-  const [cycles,      setCycles]      = useState(0);       // completed work sessions
-  const [label,       setLabel]       = useState("");
-  const [showLabel,   setShowLabel]   = useState(false);
-  const [weekStats,   setWeekStats]   = useState<WeekStats | null>(null);
-  const [saving,      setSaving]      = useState(false);
+const LS = {
+  get: (k: string) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* ok */ } },
+  del: (k: string) => { try { localStorage.removeItem(k); } catch { /* ok */ } },
+};
 
-  const intervalRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const startedAtRef  = useRef<string | null>(null);
-  const totalRef      = useRef(25 * 60);
+export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: string }[] }) {
+  // Restaura estado persistido do localStorage
+  const [modeId, setModeId] = useState<ModeId>(() => (LS.get("pomo:mode") as ModeId) || "work");
+  const [cycles, setCycles] = useState(() => parseInt(LS.get("pomo:cycles") ?? "0", 10));
+  const [label,       setLabel]     = useState(() => LS.get("pomo:label") ?? "");
+  const [showLabel,   setShowLabel] = useState(false);
+  const [weekStats,   setWeekStats] = useState<WeekStats | null>(null);
+  const [saving,      setSaving]    = useState(false);
 
   const currentMode = MODES.find(m => m.id === modeId)!;
+  const totalSecs = currentMode.minutes * 60;
 
-  // ── Load week stats ─────────────────────────────────────────────────────────
+  // Calcula tempo restante a partir do endAt salvo
+  const calcLeft = (): number => {
+    const endAt = parseInt(LS.get("pomo:endAt") ?? "0", 10);
+    if (!endAt) return totalSecs;
+    const left = Math.round((endAt - Date.now()) / 1000);
+    return left > 0 ? left : 0;
+  };
+
+  const [secondsLeft, setSecondsLeft] = useState(calcLeft);
+  const [running, setRunning] = useState(() => {
+    const endAt = parseInt(LS.get("pomo:endAt") ?? "0", 10);
+    return endAt > Date.now();
+  });
+
+  const intervalRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef<string | null>(LS.get("pomo:startedAt"));
+  const handledEnd   = useRef(false);
+
   const loadStats = useCallback(() => {
     fetch("/api/workspace/pomodoro")
       .then(r => r.ok ? r.json() : null)
@@ -89,45 +108,95 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
 
   useEffect(() => { loadStats(); }, [loadStats]);
 
-  // ── Change mode ─────────────────────────────────────────────────────────────
+  // ── Persiste mode e cycles ──────────────────────────────────────────────────
+  useEffect(() => { LS.set("pomo:mode", modeId); }, [modeId]);
+  useEffect(() => { LS.set("pomo:cycles", String(cycles)); }, [cycles]);
+  useEffect(() => { LS.set("pomo:label", label); }, [label]);
+
+  // ── Ao terminar — auto-transição para pausa/foco ────────────────────────────
+  const handleEnd = useCallback((finishedMode: ModeId, finishedCycles: number) => {
+    if (handledEnd.current) return;
+    handledEnd.current = true;
+
+    playBeep(880, 0.2);
+    // Notificação do sistema se permitido
+    if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      new Notification(finishedMode === "work" ? "🍅 Foco concluído! Hora de pausar." : "☕ Pausa encerrada! Bora focar.");
+    }
+
+    let nextMode: ModeId;
+    let newCycles = finishedCycles;
+    if (finishedMode === "work") {
+      newCycles = finishedCycles + 1;
+      nextMode = newCycles % 4 === 0 ? "longBreak" : "shortBreak";
+      setCycles(newCycles);
+      LS.set("pomo:cycles", String(newCycles));
+      const durMin = Math.round(MODES.find(m => m.id === "work")!.minutes);
+      // Salva sessão de foco
+      const startedAt = startedAtRef.current ?? new Date(Date.now() - durMin * 60_000).toISOString();
+      fetch("/api/workspace/pomodoro", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ startedAt, durMin, label: label || undefined }),
+      }).then(() => loadStats()).catch(() => {});
+    } else {
+      nextMode = "work";
+    }
+
+    // Auto-inicia próximo modo
+    const nextMins = MODES.find(m => m.id === nextMode)!.minutes;
+    const nextTotal = nextMins * 60;
+    const newEndAt = Date.now() + nextTotal * 1000;
+    LS.set("pomo:endAt", String(newEndAt));
+    LS.set("pomo:mode", nextMode);
+    LS.del("pomo:startedAt");
+    startedAtRef.current = new Date().toISOString();
+    LS.set("pomo:startedAt", startedAtRef.current);
+    setModeId(nextMode);
+    setSecondsLeft(nextTotal);
+    setRunning(true);
+    setTimeout(() => { handledEnd.current = false; }, 1000);
+  }, [label, loadStats]);
+
+  // ── Tick ────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (running) {
+      intervalRef.current = setInterval(() => {
+        const endAt = parseInt(LS.get("pomo:endAt") ?? "0", 10);
+        const left = endAt ? Math.max(0, Math.round((endAt - Date.now()) / 1000)) : 0;
+        setSecondsLeft(left);
+        if (left <= 0) {
+          clearInterval(intervalRef.current!);
+          setRunning(false);
+          LS.del("pomo:endAt");
+          handleEnd(modeId, cycles);
+        }
+      }, 500);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [running, modeId, cycles, handleEnd]);
+
+  // ── Pede permissão de notificação ao iniciar ────────────────────────────────
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // ── Change mode manualmente ─────────────────────────────────────────────────
   function switchMode(id: ModeId) {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
     setModeId(id);
     const mins = MODES.find(m => m.id === id)!.minutes;
     setSecondsLeft(mins * 60);
-    totalRef.current = mins * 60;
+    LS.del("pomo:endAt");
     startedAtRef.current = null;
+    LS.del("pomo:startedAt");
   }
 
-  // ── Tick ────────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => {
-        setSecondsLeft(s => {
-          if (s <= 1) {
-            // Timer done
-            clearInterval(intervalRef.current!);
-            setRunning(false);
-            playBeep(880, 0.2);
-            if (modeId === "work") {
-              const durMin = Math.round(totalRef.current / 60);
-              saveSession(durMin);
-              setCycles(c => c + 1);
-            }
-            return 0;
-          }
-          return s - 1;
-        });
-      }, 1000);
-    } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    }
-    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, modeId]);
-
-  // ── Save session ────────────────────────────────────────────────────────────
+  // ── Save session manual ─────────────────────────────────────────────────────
   async function saveSession(durMin: number) {
     setSaving(true);
     try {
@@ -136,8 +205,7 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           startedAt: startedAtRef.current ?? new Date(Date.now() - durMin * 60_000).toISOString(),
-          durMin,
-          label: label || undefined,
+          durMin, label: label || undefined,
         }),
       });
       loadStats();
@@ -147,8 +215,18 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
 
   // ── Start / Pause ───────────────────────────────────────────────────────────
   function toggleRun() {
-    if (!running && secondsLeft === totalRef.current) {
-      startedAtRef.current = new Date().toISOString();
+    if (!running) {
+      // Inicia: define endAt absoluto
+      const left = secondsLeft > 0 ? secondsLeft : currentMode.minutes * 60;
+      const newEndAt = Date.now() + left * 1000;
+      LS.set("pomo:endAt", String(newEndAt));
+      if (!startedAtRef.current) {
+        startedAtRef.current = new Date().toISOString();
+        LS.set("pomo:startedAt", startedAtRef.current);
+      }
+    } else {
+      // Pausa: remove endAt mas guarda tempo restante
+      LS.del("pomo:endAt");
     }
     setRunning(r => !r);
   }
@@ -157,25 +235,29 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
   function reset() {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
-    setSecondsLeft(totalRef.current);
+    setSecondsLeft(currentMode.minutes * 60);
+    LS.del("pomo:endAt");
     startedAtRef.current = null;
+    LS.del("pomo:startedAt");
   }
 
-  // ── Manual save (abandon mid-session) ──────────────────────────────────────
+  // ── Manual save (abandonar sessão) ─────────────────────────────────────────
   function manualSave() {
     if (modeId !== "work") return;
-    const elapsed = totalRef.current - secondsLeft;
-    if (elapsed < 60) return; // less than 1 min — don't save
+    const elapsed = currentMode.minutes * 60 - secondsLeft;
+    if (elapsed < 60) return;
     const durMin = Math.round(elapsed / 60);
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
+    LS.del("pomo:endAt");
     saveSession(durMin);
     setCycles(c => c + 1);
-    setSecondsLeft(totalRef.current);
+    setSecondsLeft(currentMode.minutes * 60);
     startedAtRef.current = null;
+    LS.del("pomo:startedAt");
   }
 
-  const progress = 1 - secondsLeft / totalRef.current;
+  const progress = 1 - secondsLeft / (currentMode.minutes * 60);
   const totalHrs = weekStats?.totalHrs ?? 0;
   const countToday = weekStats?.countToday ?? 0;
 
