@@ -5,6 +5,7 @@ import { getUserWithPlan, db } from "@/lib/db";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
+import { CATEGORIAS } from "@/lib/agents";
 
 export default async function WorkspacePage() {
   const supabase = await createClient();
@@ -46,12 +47,36 @@ export default async function WorkspacePage() {
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [{ data: allAgentsRaw }, { data: userAgentRows }] = await Promise.all([
-    db.from("Agent").select("*").eq("active", true).order("name"),
+    // Somente agentes de cargo (sem banca específica)
+    db.from("Agent").select("*").eq("active", true).is("banca", null).order("name"),
     userAgentQuery,
   ]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const allAgents: any[] = allAgentsRaw ?? [];
-  const activeAgentIds = (userAgentRows ?? []).map((ua: { agentId: string }) => ua.agentId);
+  let activeAgentIds = (userAgentRows ?? []).map((ua: { agentId: string }) => ua.agentId);
+
+  // Auto-atribui mentor baseado no cargo do perfil ativo
+  if (activeProfile) {
+    const cargo = (activeProfile as unknown as { cargo?: string }).cargo ?? "";
+    if (cargo) {
+      // Encontra a categoria que contém esse cargo
+      const categoriaMatch = CATEGORIAS.find(cat =>
+        cat.cargos.some(c => cargo.toLowerCase().includes(c.toLowerCase()) || c.toLowerCase().includes(cargo.toLowerCase()))
+      );
+      if (categoriaMatch) {
+        // Encontra o agente com essa categoria
+        const agentMatch = allAgents.find((a: { categoria?: string }) => a.categoria === categoriaMatch.id);
+        if (agentMatch && !activeAgentIds.includes(agentMatch.id)) {
+          // Auto-adiciona o mentor
+          await db.from("UserAgent").upsert(
+            { id: crypto.randomUUID(), userId: dbUser.id, agentId: agentMatch.id, profileId: activeProfile.id, createdAt: new Date().toISOString() },
+            { onConflict: "userId,agentId", ignoreDuplicates: true }
+          );
+          activeAgentIds = [...activeAgentIds, agentMatch.id];
+        }
+      }
+    }
+  }
 
   // Agentes do perfil ativo
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
