@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Plus, Edit2, X, Check, Layers, ChevronDown, ChevronRight, Trash2, Sparkles, Loader2, Bot } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Plus, Edit2, X, Check, Layers, ChevronDown, ChevronRight, Trash2, Sparkles, Loader2, Bot, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Card { id: string; front: string; back: string; }
@@ -17,6 +17,23 @@ export function FlashcardsAdmin({ sets: initial, subjects, agents }: Props) {
   const [error, setError] = useState("");
   const [newCard, setNewCard] = useState<{ front: string; back: string } | null>(null);
   const [filterSubject, setFilterSubject] = useState("");
+  const [reloading, setReloading] = useState(false);
+
+  // Recarrega decks do servidor sem refresh de página
+  const reloadSets = useCallback(async () => {
+    setReloading(true);
+    try {
+      const res = await fetch("/api/admin/flashcards");
+      if (res.ok) { const data = await res.json(); setSets(data); }
+    } finally { setReloading(false); }
+  }, []);
+
+  // Auto-atualiza quando questões são respondidas (evento global)
+  useEffect(() => {
+    const handler = () => void reloadSets();
+    window.addEventListener("aprovai:progress", handler);
+    return () => window.removeEventListener("aprovai:progress", handler);
+  }, [reloadSets]);
 
   const [showGerarModal, setShowGerarModal] = useState(false);
   const [gerarForm, setGerarForm] = useState({ subjectId: "", qty: 10, agentId: "", topico: "" });
@@ -83,15 +100,35 @@ export function FlashcardsAdmin({ sets: initial, subjects, agents }: Props) {
 
   const subjectName = (id: string) => subjects.find(s => s.id === id)?.name ?? "—";
 
+  const totalCards = sets.reduce((s, d) => s + (Array.isArray(d.cards) ? d.cards.length : 0), 0);
+
   return (
     <>
-      <div className="flex items-center gap-3 mb-6">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        {[
+          { label: "Total de decks", value: sets.length.toLocaleString("pt-BR"), color: "text-indigo-400" },
+          { label: "Total de cards", value: totalCards.toLocaleString("pt-BR"), color: "text-emerald-400" },
+          { label: "Exibindo", value: filtered.length.toLocaleString("pt-BR"), color: "text-amber-400" },
+        ].map(s => (
+          <div key={s.label} className="bg-white/3 border border-white/8 rounded-xl p-4 text-center">
+            <div className={cn("text-2xl font-bold", s.color)}>{s.value}</div>
+            <div className="text-xs text-gray-500 mt-1">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center gap-3 mb-4">
         <select value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
           className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
           <option value="">Todas as matérias</option>
           {subjects.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <span className="text-xs text-gray-600">{filtered.length} deck(s)</span>
+        <button onClick={reloadSets} disabled={reloading}
+          className="flex items-center gap-1.5 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-xs text-gray-400 transition-colors">
+          <RefreshCw className={cn("w-3.5 h-3.5", reloading && "animate-spin")} />
+          {reloading ? "Atualizando..." : "Atualizar"}
+        </button>
         <div className="ml-auto flex gap-2">
           <button onClick={() => setShowGerarModal(true)}
             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors">
