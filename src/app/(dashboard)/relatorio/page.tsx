@@ -97,7 +97,6 @@ function ProntidaoRing({ pct }: { pct: number }) {
 }
 
 // ── Main ──────────────────────────────────────────────────────────────────────
-interface BancaStat { banca: string; total: number; correct: number; accuracy: number; }
 
 interface MetasSemana {
   questoesMeta: number; flashcardsMeta: number; simuladosMeta: number; horasEstudoMeta: number;
@@ -109,7 +108,6 @@ interface MetasProgresso {
 export default function RelatorioPage() {
   const [data, setData]       = useState<RelatorioData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [bancas, setBancas]   = useState<BancaStat[]>([]);
   const [metas, setMetas]     = useState<MetasSemana | null>(null);
 
   // Evolução temporal
@@ -128,7 +126,6 @@ export default function RelatorioPage() {
 
   useEffect(() => {
     fetch("/api/relatorio").then(r => r.json()).then(d => { setData(d); setLoading(false); });
-    fetch("/api/relatorio/banca").then(r => r.json()).then(d => setBancas(d.bancas ?? [])).catch(() => {});
     fetch("/api/workspace/metas").then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setMetas(d.metas); setMetasProg(d.progresso); }
     }).catch(() => {});
@@ -484,36 +481,6 @@ export default function RelatorioPage() {
         </div>
       )}
 
-      {/* Desempenho por banca */}
-      {bancas.length > 0 && (
-        <div className="rounded-xl bg-white/5 border border-white/5 p-5">
-          <h2 className="text-sm font-semibold mb-4 text-gray-300 flex items-center gap-2">
-            🏛️ Desempenho por banca
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {bancas.slice(0, 8).map(b => (
-              <div key={b.banca} className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/5">
-                <div className={cn(
-                  "w-10 h-10 rounded-lg flex items-center justify-center text-xs font-black flex-shrink-0",
-                  b.accuracy >= 70 ? "bg-green-500/10 text-green-400" :
-                  b.accuracy >= 50 ? "bg-amber-500/10 text-amber-400" : "bg-red-500/10 text-red-400"
-                )}>
-                  {b.accuracy}%
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{b.banca}</p>
-                  <p className="text-xs text-gray-500">{b.correct}/{b.total} corretas</p>
-                </div>
-                <div className="w-16 h-1.5 rounded-full bg-white/10 flex-shrink-0">
-                  <div className={cn("h-full rounded-full",
-                    b.accuracy >= 70 ? "bg-green-500" : b.accuracy >= 50 ? "bg-amber-500" : "bg-red-500"
-                  )} style={{ width: `${b.accuracy}%` }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* Evolução temporal por matéria */}
       {evoSemanas.length >= 2 && (() => {
