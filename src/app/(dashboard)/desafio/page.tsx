@@ -77,11 +77,15 @@ export default function DesafioPage() {
       for (let i = 0; i < 3; i++) {
         try {
           if (i > 0) await new Promise(r => setTimeout(r, i * 800));
-          const r = await fetch("/api/desafio/hoje");
+          // Timeout de 8s por tentativa — evita spinner infinito em caso de API lenta
+          const ctrl = new AbortController();
+          const tid = setTimeout(() => ctrl.abort(), 8_000);
+          const r = await fetch("/api/desafio/hoje", { signal: ctrl.signal });
+          clearTimeout(tid);
           if (!r.ok) continue;
           const d = await r.json();
           if (d) { setData(d); break; }
-        } catch { /* retry */ }
+        } catch { /* retry ou timeout — tenta próxima iteração */ }
       }
       setLoading(false);
     };

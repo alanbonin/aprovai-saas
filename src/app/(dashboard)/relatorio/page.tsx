@@ -125,16 +125,27 @@ export default function RelatorioPage() {
   const [materiaSort, setMateriaSort]   = useState<"accuracy" | "total" | "name">("accuracy");
 
   useEffect(() => {
-    fetch("/api/relatorio").then(r => r.ok ? r.json() : null).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
-    fetch("/api/workspace/metas").then(r => r.ok ? r.json() : null).then(d => {
-      if (d) { setMetas(d.metas); setMetasProg(d.progresso); }
-    }).catch(() => {});
-    fetch("/api/relatorio/evolucao").then(r => r.ok ? r.json() : null).then(d => {
-      if (d) { setEvoSemanas(d.semanas ?? []); setEvoMaterias(d.materias ?? []); }
-    }).catch(() => {});
-    fetch("/api/relatorio/materias").then(r => r.ok ? r.json() : null).then(d => {
-      if (d) setMateriaStats(d.materias ?? []);
-    }).catch(() => {});
+    // AbortController com 10s de timeout — evita spinner infinito em caso de API lenta
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 10_000);
+
+    const safe = (url: string) =>
+      fetch(url, { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null);
+
+    Promise.all([
+      safe("/api/relatorio"),
+      safe("/api/workspace/metas"),
+      safe("/api/relatorio/evolucao"),
+      safe("/api/relatorio/materias"),
+    ]).then(([relData, metasData, evoData, materiasData]) => {
+      if (relData) setData(relData);
+      if (metasData) { setMetas(metasData.metas); setMetasProg(metasData.progresso); }
+      if (evoData) { setEvoSemanas(evoData.semanas ?? []); setEvoMaterias(evoData.materias ?? []); }
+      if (materiasData) setMateriaStats(materiasData.materias ?? []);
+    }).catch(() => {}).finally(() => {
+      clearTimeout(tid);
+      setLoading(false);
+    });
   }, []);
 
   async function saveMetas() {
