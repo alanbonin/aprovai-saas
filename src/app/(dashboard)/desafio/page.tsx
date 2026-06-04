@@ -77,9 +77,9 @@ export default function DesafioPage() {
       for (let i = 0; i < 3; i++) {
         try {
           if (i > 0) await new Promise(r => setTimeout(r, i * 800));
-          // Timeout de 8s por tentativa — evita spinner infinito em caso de API lenta
+          // Timeout de 20s — /api/desafio/hoje tem ~10 queries sequenciais ao banco
           const ctrl = new AbortController();
-          const tid = setTimeout(() => ctrl.abort(), 8_000);
+          const tid = setTimeout(() => ctrl.abort(), 20_000);
           const r = await fetch("/api/desafio/hoje", { signal: ctrl.signal });
           clearTimeout(tid);
           if (!r.ok) continue;

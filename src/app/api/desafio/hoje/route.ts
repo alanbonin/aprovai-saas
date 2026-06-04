@@ -23,17 +23,19 @@ export async function GET() {
 
   // Today in BRT (UTC-3)
   const now = new Date();
-  const brtOffset = 3 * 60; // 3 hours in minutes
+  const brtOffset = 3 * 60;
   const brtNow = new Date(now.getTime() - brtOffset * 60000);
   const todayKey = brtNow.toISOString().slice(0, 10); // YYYY-MM-DD
 
-  // Check if already completed today — stored in Note with prefix __DESAFIO__
-  const { data: desafioNote } = await db
-    .from("Note")
-    .select("content")
-    .eq("userId", dbUser.id)
-    .eq("subjectId", "__DESAFIO__")
-    .maybeSingle();
+  // Paraleliza: nota do desafio + perfil ativo + matérias do aluno (eram 4 queries sequenciais)
+  const [{ data: desafioNote }, activeProfile, { data: studentSubs }] = await Promise.all([
+    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__DESAFIO__").maybeSingle(),
+    getActiveProfile(dbUser.id),
+    db.from("StudentSubject").select("subjectId, Subject(name)").eq("userId", dbUser.id),
+  ]);
+
+  // Plano semanal IA (depende do profileId — roda depois do Promise.all acima)
+  const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
 
   interface DesafioRecord {
     date: string;
@@ -48,16 +50,6 @@ export async function GET() {
     const record = desafioNote?.content ? JSON.parse(desafioNote.content) as DesafioRecord : null;
     if (record?.date === todayKey) completedToday = record;
   } catch { /* ignore */ }
-
-  // Matérias do plano IA de hoje (se existir) — prioriza sobre matérias do aluno
-  const activeProfile = await getActiveProfile(dbUser.id);
-  const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
-
-  // Get student subjects for filtering
-  const { data: studentSubs } = await db
-    .from("StudentSubject")
-    .select("subjectId, Subject(name)")
-    .eq("userId", dbUser.id);
 
   let subjectIds: string[];
 
