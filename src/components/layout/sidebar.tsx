@@ -6,6 +6,16 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Sun, Moon, Menu, X } from "lucide-react";
 import { ProfileSwitcher } from "@/components/layout/profile-switcher";
+import { createClient } from "@/lib/supabase/client";
+
+let signingOut = false;
+async function handleSignOut() {
+  if (signingOut) return;
+  signingOut = true;
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  window.location.href = "/login";
+}
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
 interface NavItem { href: string; label: string; icon: string; badge?: boolean }
@@ -242,12 +252,11 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
                 ⚙️ <span>Configurações</span>
               </Link>
-              <form action="/api/auth/logout" method="POST">
-                <button type="submit"
-                  className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
-                  🚪 <span>Sair</span>
-                </button>
-              </form>
+              <button
+                onClick={handleSignOut}
+                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
+                🚪 <span>Sair</span>
+              </button>
             </div>
           </div>
         </div>
@@ -517,12 +526,10 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
           </p>
         </a>
         <div className="flex items-center gap-1">
-          <form action="/api/auth/logout" method="POST">
-            <button type="submit" title="Sair"
-              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors text-xs font-bold">
-              Sair
-            </button>
-          </form>
+          <button onClick={handleSignOut} title="Sair"
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors text-xs font-bold">
+            Sair
+          </button>
           <button
             onClick={() => setMobileOpen(v => !v)}
             className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
@@ -768,12 +775,10 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
               </div>
             )}
           </div>
-          <form action="/api/auth/logout" method="POST">
-            <button type="submit" title="Sair"
-              className="text-gray-600 hover:text-red-400 transition-colors text-xs font-bold px-1">
-              Sair
-            </button>
-          </form>
+          <button onClick={handleSignOut} title="Sair"
+            className="text-gray-600 hover:text-red-400 transition-colors text-xs font-bold px-1">
+            Sair
+          </button>
         </div>
       </div>
     </aside>

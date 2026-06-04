@@ -75,11 +75,15 @@ export function QuizInner() {
     setLoading(true);
     setError("");
     try {
+      const ctrl = new AbortController();
+      const tid = setTimeout(() => ctrl.abort(), 15_000);
       const res = await fetch("/api/simulado/gerar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ total: QUIZ_SIZE }),
+        signal: ctrl.signal,
       });
+      clearTimeout(tid);
       if (res.ok) {
         const d = await res.json();
         const qs = d.questions ?? [];

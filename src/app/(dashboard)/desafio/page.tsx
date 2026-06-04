@@ -172,18 +172,16 @@ export default function DesafioPage() {
     }
   }
 
-  async function handleQuality(qual: string) {
+  function handleQuality(qual: string) {
     setQuality(qual);
-    // Agenda avanço ANTES do await — evita duplo-avanço se fetch demorar e
-    // usuário clicar em "Próxima" enquanto espera
-    setTimeout(next, 300);
     const q = data!.questions[current];
     const isCorrect = selected === q.answer;
-    await fetch("/api/questoes/progresso", {
+    fetch("/api/questoes/progresso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: qual }),
     }).catch(() => {});
+    // Não avança automaticamente — botão "Próxima" deixa o usuário avançar no ritmo dele
   }
 
   function next() {

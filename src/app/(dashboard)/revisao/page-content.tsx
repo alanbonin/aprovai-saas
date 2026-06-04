@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { CheckCircle, XCircle, ChevronRight, RotateCcw, AlertTriangle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +35,7 @@ export function RevisaoInner() {
   const [current, setCurrent]     = useState(0);
   const [selected, setSelected]   = useState<string | null>(null);
   const [quality, setQuality]     = useState<string | null>(null);
+  const advancingRef              = useRef(false);
   const [filterSubject, setFilterSubject] = useState("");
   const [loading, setLoading]     = useState(true);
   const [done, setDone]           = useState(false);
@@ -53,14 +54,30 @@ export function RevisaoInner() {
     setDone(false);
     const params = new URLSearchParams({ limit: "20" });
     if (subjectId) params.set("subjectId", subjectId);
-    const res = await fetch(`/api/questoes/revisao?${params}`);
-    const d = await res.json();
-    setQuestions(d.questions ?? []);
-    setTotal(d.total ?? 0);
-    setCurrent(0);
-    setSelected(null);
-    setQuality(null);
-    setScore({ correct: 0, total: 0, xp: 0 });
+    let questions: Question[] = [], total = 0, success = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 800));
+        const ctrl = new AbortController();
+        const tid = setTimeout(() => ctrl.abort(), 10_000);
+        const res = await fetch(`/api/questoes/revisao?${params}`, { signal: ctrl.signal });
+        clearTimeout(tid);
+        if (!res.ok) continue;
+        const d = await res.json();
+        questions = d.questions ?? [];
+        total = d.total ?? 0;
+        success = true;
+        break;
+      } catch { /* retry ou timeout */ }
+    }
+    if (success) {
+      setQuestions(questions);
+      setTotal(total);
+      setCurrent(0);
+      setSelected(null);
+      setQuality(null);
+      setScore({ correct: 0, total: 0, xp: 0 });
+    }
     setLoading(false);
   }, []);
 
@@ -81,18 +98,20 @@ export function RevisaoInner() {
     if (isCorrect) { setXpFlash(true); setTimeout(() => setXpFlash(false), 1500); }
   }
 
-  async function handleQuality(qual: string) {
+  function handleQuality(qual: string) {
     setQuality(qual);
     const isCorrect = selected === q.answer;
-    await fetch("/api/questoes/progresso", {
+    fetch("/api/questoes/progresso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: qual }),
     }).catch(() => {});
-    setTimeout(next, 300);
+    // Não avança automaticamente — botão "Próxima" deixa o usuário avançar no ritmo dele
   }
 
   function next() {
+    if (advancingRef.current) return;
+    advancingRef.current = true;
     if (current < questions.length - 1) {
       setCurrent(c => c + 1);
       setSelected(null);
@@ -100,6 +119,7 @@ export function RevisaoInner() {
     } else {
       setDone(true);
     }
+    setTimeout(() => { advancingRef.current = false; }, 100);
   }
 
   if (loading) return (
