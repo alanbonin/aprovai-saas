@@ -155,9 +155,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // Autenticado em página de auth → vai para workspace
+  // Autenticado em página de auth → vai para /hoje
   if (user && isAuthPage) {
-    return NextResponse.redirect(new URL("/workspace", request.url));
+    return NextResponse.redirect(new URL("/hoje", request.url));
   }
 
   // ── Verifica subscription expirada → redireciona para /planos ───────────
