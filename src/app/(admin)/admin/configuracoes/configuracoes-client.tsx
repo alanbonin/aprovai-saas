@@ -9,7 +9,7 @@ interface Props {
   initialConfigs: Record<string, ConfigValue>;
 }
 
-type TabId = "gamificacao" | "trial" | "mentor" | "reativacao" | "limites" | "geral" | "crons";
+type TabId = "gamificacao" | "trial" | "mentor" | "reativacao" | "limites" | "geral" | "crons" | "limpeza";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "gamificacao", label: "Gamificação e XP", icon: "🎮" },
@@ -19,6 +19,7 @@ const TABS: { id: TabId; label: string; icon: string }[] = [
   { id: "limites",     label: "Limites",           icon: "🔒" },
   { id: "geral",       label: "Geral",             icon: "⚙️" },
   { id: "crons",       label: "Cron Jobs",         icon: "🕐" },
+  { id: "limpeza",     label: "Limpeza de Dados",  icon: "🗑️" },
 ];
 
 const CRON_LIST = [
@@ -30,6 +31,83 @@ const CRON_LIST = [
   { label: "Streak diário",        path: "/api/cron/streak",               horario: CONFIG_DEFAULTS["cron.streak"],              desc: "Reseta streaks de quem não estudou hoje" },
   { label: "Expirar assinaturas",  path: "/api/cron/expirar-assinaturas",  horario: CONFIG_DEFAULTS["cron.expirar_assinaturas"], desc: "Expira assinaturas vencidas" },
 ];
+
+/* ── Limpeza de Dados ────────────────────────────────────────────────────── */
+const OPERACOES = [
+  {
+    id: "cancelar_subs_teste",
+    label: "Cancelar assinaturas de teste",
+    desc: "Cancela assinaturas ACTIVE de planos pagos sem ID de pagamento Mercado Pago. Use antes do lançamento.",
+    cor: "amber",
+  },
+  {
+    id: "limpar_ai_uso",
+    label: "Zerar uso de IA",
+    desc: "Remove todos os registros de uso de IA (AiUsage). Os contadores voltarão a zero para todos os usuários.",
+    cor: "orange",
+  },
+  {
+    id: "limpar_reportes",
+    label: "Limpar reportes de questões",
+    desc: "Remove todos os reportes de questões pendentes. Use apenas para limpar dados de teste.",
+    cor: "red",
+  },
+];
+
+function LimpezaSection() {
+  const [loading, setLoading] = useState<string | null>(null);
+  const [results, setResults] = useState<Record<string, string>>({});
+
+  async function executar(op: string) {
+    if (!confirm(`Confirma a operação "${op}"? Esta ação não pode ser desfeita.`)) return;
+    setLoading(op);
+    try {
+      const res = await fetch("/api/admin/cleanup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ operacao: op }),
+      });
+      const d = await res.json() as { ok?: boolean; error?: string; results?: Record<string, unknown> };
+      if (!res.ok) {
+        setResults(prev => ({ ...prev, [op]: `❌ ${d.error ?? "Erro desconhecido"}` }));
+      } else {
+        setResults(prev => ({ ...prev, [op]: `✅ ${JSON.stringify(d.results)}` }));
+      }
+    } catch {
+      setResults(prev => ({ ...prev, [op]: "❌ Erro de conexão" }));
+    }
+    setLoading(null);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl bg-red-500/[0.05] border border-red-500/20 p-4 mb-2">
+        <p className="text-red-400 text-sm font-semibold">⚠️ Zona de perigo — operações irreversíveis</p>
+        <p className="text-red-400/70 text-xs mt-1">Use apenas para limpar dados de teste antes do lançamento em produção. Cada operação requer confirmação.</p>
+      </div>
+      {OPERACOES.map(op => (
+        <div key={op.id} className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-white">{op.label}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{op.desc}</p>
+              {results[op.id] && (
+                <p className="text-xs text-gray-400 mt-2 font-mono bg-white/[0.03] px-2 py-1 rounded">{results[op.id]}</p>
+              )}
+            </div>
+            <button
+              onClick={() => executar(op.id)}
+              disabled={loading === op.id}
+              className="flex-shrink-0 px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium transition-colors disabled:opacity-50"
+            >
+              {loading === op.id ? "Executando..." : "Executar"}
+            </button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /* ── Helpers ──────────────────────────────────────────────────────────────── */
 function parseList(val: unknown): string {
@@ -560,6 +638,11 @@ export function ConfiguracoesClient({ initialConfigs }: Props) {
               <p className="text-xs text-slate-400">Clique em &quot;Executar agora&quot; para disparar um cron manualmente. Os horários são configurados no vercel.json.</p>
               <CronSection />
             </>
+          )}
+
+          {/* Limpeza de Dados */}
+          {activeTab === "limpeza" && (
+            <LimpezaSection />
           )}
 
         </div>

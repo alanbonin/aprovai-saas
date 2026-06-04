@@ -89,12 +89,14 @@ export default function ConfiguracoesPage() {
 
   useEffect(() => {
     fetch("/api/configuracoes")
-      .then(r => r.json())
+      .then(r => r.ok ? r.json() : null)
       .then(d => {
-        setConfig({
-          ...d,
-          fiscal: d.fiscal ?? { cpf:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", cep:"" },
-        });
+        if (d) {
+          setConfig({
+            ...d,
+            fiscal: d.fiscal ?? { cpf:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", cep:"" },
+          });
+        }
         setLoading(false);
       })
       .catch(() => setLoading(false));

@@ -73,10 +73,19 @@ export default function DesafioPage() {
   const startTime = useRef<number>(0);
 
   useEffect(() => {
-    fetch("/api/desafio/hoje")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setData(d); setLoading(false); })
-      .catch(() => setLoading(false));
+    const load = async () => {
+      for (let i = 0; i < 3; i++) {
+        try {
+          if (i > 0) await new Promise(r => setTimeout(r, i * 800));
+          const r = await fetch("/api/desafio/hoje");
+          if (!r.ok) continue;
+          const d = await r.json();
+          if (d) { setData(d); break; }
+        } catch { /* retry */ }
+      }
+      setLoading(false);
+    };
+    void load();
   }, []);
 
   const submitChallenge = useCallback(async () => {

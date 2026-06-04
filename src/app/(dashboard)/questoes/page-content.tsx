@@ -65,7 +65,8 @@ export function QuestoesInner() {
   const [favoritos, setFavoritos]   = useState<number[]>([]);
   const [selected, setSelected]     = useState<string | null>(null);
   const [quality, setQuality]       = useState<string | null>(null);
-  const [loading, setLoading]       = useState(questions.length === 0); // não recarrega se tem questões
+  const [loading, setLoading]       = useState(questions.length === 0);
+  const [loadError, setLoadError]   = useState(false);
   const [xpFlash, setXpFlash]       = useState(0);
   const [showFilter, setShowFilter] = useState(
     searchParams.get("favoritos") === "1" || searchParams.get("erros") === "1"
@@ -116,11 +117,11 @@ export function QuestoesInner() {
   const loadQuestions = useCallback(async () => {
     setLoading(true);
     setDone(false);
+    setLoadError(false);
     const params = new URLSearchParams();
     if (filterBanca)   params.set("banca", filterBanca);
     if (filterLevel)   params.set("level", filterLevel);
     if (filterSubject) {
-      // Usa subjectIds (cross-categoria) se o subject tiver múltiplos IDs
       const sub = subjects.find(s => s.id === filterSubject);
       if (sub?.ids && sub.ids.length > 1) params.set("subjectIds", sub.ids.join(","));
       else params.set("subjectId", filterSubject);
@@ -129,9 +130,28 @@ export function QuestoesInner() {
     if (onlyFavs)      params.set("favoritos", "1");
     if (onlyErros)     params.set("erros", "1");
     params.set("limit", "20");
-    const res = await fetch(`/api/questoes?${params}`);
-    const data = await res.json();
-    setQuestions(data.questions ?? []);
+
+    // Tenta até 3 vezes com backoff (resolve timeout/falha temporária do Supabase)
+    let questions: unknown[] = [];
+    let success = false;
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        if (attempt > 0) await new Promise(r => setTimeout(r, attempt * 800));
+        const res = await fetch(`/api/questoes?${params}`);
+        if (!res.ok) continue;
+        const data = await res.json() as { questions?: unknown[] };
+        if (data.questions && data.questions.length > 0) {
+          questions = data.questions;
+          success = true;
+          break;
+        }
+        // Se retornou vazio mas sem erro, aceita (pode ser filtro sem resultado)
+        if (res.ok) { success = true; break; }
+      } catch { /* retry */ }
+    }
+
+    if (!success) { setLoadError(true); setLoading(false); return; }
+    setQuestions(questions as Parameters<typeof setQuestions>[0]);
     setCurrent(0);
     setSelected(null);
     setQuality(null);
@@ -451,23 +471,40 @@ export function QuestoesInner() {
         </div>
       )}
 
-      {/* Empty state */}
+      {/* Empty / error state */}
       {!q && !done && (
         <div className="text-center py-20">
           <BookOpen className="w-12 h-12 text-gray-700 mx-auto mb-3" />
-          <p className="text-gray-400 text-lg">Nenhuma questão encontrada</p>
-          <p className="text-gray-600 text-sm mt-1">
-            {subjects.length === 0
-              ? "Você ainda não selecionou matérias. Configure seu perfil para ver questões do seu concurso."
-              : "Tente mudar os filtros ou aguarde novas questões."}
-          </p>
-          {subjects.length === 0 && (
-            <a
-              href="/workspace/perfil"
-              className="inline-block mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
-            >
-              Configurar meu perfil →
-            </a>
+          {loadError ? (
+            <>
+              <p className="text-gray-400 text-lg">Erro ao carregar questões</p>
+              <p className="text-gray-600 text-sm mt-1">Problema temporário de conexão. Tente novamente.</p>
+              <button
+                onClick={loadQuestions}
+                className="inline-block mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors"
+              >
+                Tentar novamente
+              </button>
+            </>
+          ) : (
+            <>
+              <p className="text-gray-400 text-lg">Nenhuma questão encontrada</p>
+              <p className="text-gray-600 text-sm mt-1">
+                {subjects.length === 0
+                  ? "Você ainda não selecionou matérias. Configure seu perfil para ver questões do seu concurso."
+                  : "Tente mudar os filtros ou clique em recarregar."}
+              </p>
+              <div className="flex gap-3 justify-center mt-4">
+                {subjects.length === 0 && (
+                  <a href="/workspace/perfil" className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium transition-colors">
+                    Configurar meu perfil →
+                  </a>
+                )}
+                <button onClick={loadQuestions} className="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 text-sm font-medium transition-colors">
+                  Recarregar
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}

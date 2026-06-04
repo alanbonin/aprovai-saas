@@ -107,13 +107,13 @@ export async function GET() {
   const totalMinFallback = horasEstudo * 60;
   const fallbackQuestoesDia  = Math.round((totalMinFallback * 0.35) / 2); // ~35% do tempo, 2 min/questão
   const fallbackLeituraPdfMin = Math.round(totalMinFallback * 0.15);       // 15% para PDFs
-  let metaQuestoesHoje   = Math.max(5, fallbackQuestoesDia);
-  let metaLeituraPdfHoje = Math.max(5, fallbackLeituraPdfMin); // min/dia
+  let metaQuestoesHoje   = Math.max(30, fallbackQuestoesDia); // mínimo 30 questões/dia
+  let metaLeituraPdfHoje = Math.max(10, fallbackLeituraPdfMin);
   try {
     const metasContent = metasRes.data?.content;
     if (metasContent) {
       const metas = JSON.parse(metasContent) as { questoesMeta?: number; leituraPdfMeta?: number };
-      if (metas.questoesMeta)   metaQuestoesHoje   = Math.ceil(metas.questoesMeta / 5);
+      if (metas.questoesMeta)   metaQuestoesHoje   = Math.max(30, Math.ceil(metas.questoesMeta / 5));
       if (metas.leituraPdfMeta) metaLeituraPdfHoje = Math.ceil(metas.leituraPdfMeta / 5);
     }
   } catch { /* ignore */ }

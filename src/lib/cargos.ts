@@ -521,6 +521,11 @@ export function resolveCargoId(
     // Bonus por sigla exata
     if (siglaAlt && texto.includes(siglaAlt)) score += 3;
 
+    // Bonus especial: quando o cargo menciona TI/tecnologia, prioriza cargos da categoria TI
+    const mencionaTI = cargo.includes("tecnologia") || cargo.includes("informac") ||
+      cargo.includes(" ti ") || cargo.startsWith("ti ") || cargo.endsWith(" ti") || cargo === "ti";
+    if (mencionaTI && (c as { categoria?: string }).categoria === "tecnologia-informacao") score += 6;
+
     // Penaliza se nenhuma palavra principal bateu
     if (score === 0) continue;
 

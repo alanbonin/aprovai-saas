@@ -21,7 +21,7 @@ async function saveReadIds(userId: string, ids: string[], existingNoteId?: strin
   if (existingNoteId) {
     await db.from("Note").update({ content }).eq("id", existingNoteId);
   } else {
-    await db.from("Note").insert({ userId, subjectId: READ_PREFIX, content });
+    await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: READ_PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
   }
 }
 

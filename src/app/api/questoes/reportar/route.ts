@@ -88,13 +88,17 @@ export async function POST(req: Request) {
     .eq("subjectId", subjectId)
     .maybeSingle();
 
+  const now = new Date().toISOString();
   if (existing) {
-    await db.from("Note").update({ content: JSON.stringify(reporte) }).eq("id", existing.id);
+    await db.from("Note").update({ content: JSON.stringify(reporte), updatedAt: now }).eq("id", existing.id);
   } else {
     await db.from("Note").insert({
+      id: crypto.randomUUID(),
       userId: dbUser.id,
       subjectId,
       content: JSON.stringify(reporte),
+      createdAt: now,
+      updatedAt: now,
     });
   }
 

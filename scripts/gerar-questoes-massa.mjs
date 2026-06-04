@@ -134,7 +134,7 @@ function shuffleAndBuild(alternativas, correta) {
 // ── Prompt por tópico ─────────────────────────────────────────────────────────
 function buildPrompt({ topicName, subjectName, categoria, banca, count, recentStatements }) {
   const avoid = recentStatements.length > 0
-    ? `\n\nNÃO repita estes enunciados já gerados (evite tópicos similares):\n${recentStatements.slice(-10).map((s, i) => `${i + 1}. ${s.slice(0, 80)}...`).join("\n")}`
+    ? `\n\nNÃO repita estes enunciados já gerados (evite paráfrases e tópicos similares):\n${recentStatements.slice(-20).map((s, i) => `${i + 1}. ${s.slice(0, 100)}...`).join("\n")}`
     : "";
 
   // Banca baseada na categoria
@@ -160,15 +160,21 @@ BANCA: ${resolvedBanca}${avoid}
 REGRAS OBRIGATÓRIAS:
 1. Todas as questões devem ser ESPECIFICAMENTE sobre "${topicName}" — não misture com outros tópicos
 2. Siga rigorosamente o estilo da banca ${resolvedBanca}: estrutura, vocabulário, nível de pegadinha
-3. 5 alternativas (A-E) plausíveis — distratores tecnicamente plausíveis mas errados
-4. Distribua gabaritos A-E de forma equilibrada (não repita a mesma letra)
-5. Varie o subtópico de cada questão dentro de "${topicName}"
-6. "artigo": cite artigo/lei/súmula/decreto REAL e específico
-7. "justificativa": 1-2 frases explicando POR QUE a resposta correta está certa. NUNCA mencione letras (A, B, C, D, E) na justificativa — explique pelo CONTEÚDO. Ex: "O candidato deve celebrar..." não "A alternativa B está correta..."
-8. Nível: 60% medio, 40% dificil — NÃO gere questões fáceis. Questões médias exigem raciocínio, questões difíceis exploram exceções, pegadinhas e distinções sutis da banca
+3. TIPOS de questão — misture os dois formatos:
+   - MÚLTIPLA ESCOLHA (70% das questões): 5 alternativas A-E, distratores plausíveis. Campo "tipo": "multipla"
+   - CERTO/ERRADO (30% das questões): estilo CESPE — afirmação que o candidato julga. Campo "tipo": "certo_errado". Alternativas: ["Certo","Errado"]. Correta: "Certo" ou "Errado"
+4. Para múltipla escolha: distribua gabaritos A-E equilibradamente
+5. Para Certo/Errado: distribua equilibradamente entre Certo e Errado
+6. Varie o subtópico de cada questão dentro de "${topicName}"
+7. "artigo": cite artigo/lei/súmula/decreto REAL e específico
+8. "justificativa": 1-2 frases explicando POR QUE a resposta está certa. Nunca mencione letras na justificativa — explique pelo conteúdo.
+9. Nível: 30% medio, 70% dificil — NÃO gere questões fáceis.
 
-Retorne APENAS JSON válido, sem markdown, sem texto fora do JSON:
-{"questoes":[{"enunciado":"texto completo da questão","alternativas":["A) texto","B) texto","C) texto","D) texto","E) texto"],"correta":"B","subtopico":"subtópico específico dentro de ${topicName}","artigo":"Art. X da Lei Y ou Súmula Z","justificativa":"explicação 1-2 frases citando artigo","nivel":"medio"}]}`;
+Retorne APENAS JSON válido, sem markdown:
+{"questoes":[
+  {"tipo":"multipla","enunciado":"texto da questão","alternativas":["A) texto","B) texto","C) texto","D) texto","E) texto"],"correta":"B","subtopico":"subtópico","artigo":"Art. X da Lei Y","justificativa":"explicação","nivel":"dificil"},
+  {"tipo":"certo_errado","enunciado":"Afirmação para julgar como certa ou errada.","alternativas":["Certo","Errado"],"correta":"Certo","subtopico":"subtópico","artigo":"Art. X da Lei Y","justificativa":"explicação","nivel":"dificil"}
+]}`;
 }
 
 // ── Geração de 1 batch para 1 tópico ─────────────────────────────────────────
@@ -206,7 +212,19 @@ async function gerarBatch({ topicId, topicName, subjectId, subjectName, categori
       const questoes = (parsed.questoes ?? []).filter(q => q.enunciado && q.enunciado.trim().length > 10);
 
       const toInsert = questoes.map(q => {
-        const { optionA, optionB, optionC, optionD, optionE, answer } = shuffleAndBuild(q.alternativas, q.correta);
+        let optionA, optionB, optionC, optionD, optionE, answer;
+        if (q.tipo === "certo_errado") {
+          // Questão Certo/Errado — formato CESPE
+          optionA = "Certo";
+          optionB = "Errado";
+          optionC = null; optionD = null; optionE = null;
+          answer = q.correta === "Certo" ? "A" : "B";
+        } else {
+          // Múltipla escolha — embaralha alternativas
+          const built = shuffleAndBuild(q.alternativas, q.correta);
+          optionA = built.optionA; optionB = built.optionB; optionC = built.optionC;
+          optionD = built.optionD; optionE = built.optionE; answer = built.answer;
+        }
         const dicas = (q.dicaBanca || q.dicaQuestao)
           ? JSON.stringify({ banca: q.dicaBanca ?? null, questao: q.dicaQuestao ?? null })
           : null;
@@ -223,7 +241,7 @@ async function gerarBatch({ topicId, topicName, subjectId, subjectName, categori
           artigo: q.artigo ?? null,
           analysis: dicas,
           source: "ia",
-          aprovado: true,  // aprovação automática — sem badge visível
+          aprovado: true,
         };
       });
 
@@ -252,7 +270,12 @@ async function gerarBatch({ topicId, topicName, subjectId, subjectName, categori
 // ── Worker: gera até TARGET_PER_TOPIC para um tópico ─────────────────────────
 async function processarTopico({ topic, subject, progress, stats }) {
   const topicKey = `${topic.id}`;
-  const already = progress.done[topicKey] ?? 0;
+  // Sempre lê o count real do banco para não ultrapassar o target
+  const { count: dbCount } = await db.from("Question")
+    .select("id", { count: "exact", head: true })
+    .eq("topicId", topic.id)
+    .eq("aprovado", true);
+  const already = Math.max(progress.done[topicKey] ?? 0, dbCount ?? 0);
   const need = TARGET_PER_TOPIC - already;
 
   if (need <= 0) {
@@ -261,7 +284,14 @@ async function processarTopico({ topic, subject, progress, stats }) {
   }
 
   let totalInserted = already;
-  const recentStatements = [];
+  // Busca enunciados já existentes no banco para evitar repetição
+  const { data: existingQ } = await db.from("Question")
+    .select("statement")
+    .eq("topicId", topic.id)
+    .eq("aprovado", true)
+    .order("createdAt", { ascending: false })
+    .limit(20);
+  const recentStatements = (existingQ ?? []).map(q => q.statement).filter(Boolean);
   let retries = 0;
 
   try {

@@ -1,0 +1,150 @@
+
+🚀 AprovAI360 — Geração Massiva de Questões
+   Target: 200 questões/tópico | Batch: 10/chamada | Workers: 4
+
+📊 Estado atual:
+   Matérias:         170
+   Tópicos total:    1124
+   Tópicos pendentes:189 (precisam de mais questões)
+   Questões a gerar: 19,582
+   Chamadas API est: 1,959
+   Custo estimado:  ~$9.79 (GPT-4o-mini)
+   Tópicos já feitos:1124
+   Erros anteriores: 77
+
+🎯 Iniciando geração (4 workers paralelos)...
+
+
+📦 Batch 1/48 [1-4/189]
+
+📦 Batch 2/48 [5-8/189] | ETA: 15s
+
+📦 Batch 3/48 [9-12/189] | ETA: 12s
+
+📦 Batch 4/48 [13-16/189] | ETA: 10s
+
+📦 Batch 5/48 [17-20/189] | ETA: 9s
+
+📦 Batch 6/48 [21-24/189] | ETA: 8s
+
+📦 Batch 7/48 [25-28/189] | ETA: 7s
+
+📦 Batch 8/48 [29-32/189] | ETA: 7s
+
+📦 Batch 9/48 [33-36/189] | ETA: 6s
+
+📦 Batch 10/48 [37-40/189] | ETA: 6s
+
+📦 Batch 11/48 [41-44/189] | ETA: 6s
+
+📦 Batch 12/48 [45-48/189] | ETA: 5s
+
+📦 Batch 13/48 [49-52/189] | ETA: 5s
+
+📦 Batch 14/48 [53-56/189] | ETA: 5s
+
+📦 Batch 15/48 [57-60/189] | ETA: 5s
+
+📦 Batch 16/48 [61-64/189] | ETA: 5s
+
+📦 Batch 17/48 [65-68/189] | ETA: 4s
+
+📦 Batch 18/48 [69-72/189] | ETA: 4s
+
+📦 Batch 19/48 [73-76/189] | ETA: 4s
+
+📦 Batch 20/48 [77-80/189] | ETA: 4s
+
+📦 Batch 21/48 [81-84/189] | ETA: 4s
+
+📦 Batch 22/48 [85-88/189] | ETA: 4s
+
+📦 Batch 23/48 [89-92/189] | ETA: 3s
+
+📦 Batch 24/48 [93-96/189] | ETA: 3s
+
+📦 Batch 25/48 [97-100/189] | ETA: 3s
+
+📦 Batch 26/48 [101-104/189] | ETA: 3s
+
+📦 Batch 27/48 [105-108/189] | ETA: 3s
+
+📦 Batch 28/48 [109-112/189] | ETA: 3s
+
+📦 Batch 29/48 [113-116/189] | ETA: 3s
+
+📦 Batch 30/48 [117-120/189] | ETA: 2s
+
+📦 Batch 31/48 [121-124/189] | ETA: 2s
+
+📦 Batch 32/48 [125-128/189] | ETA: 2s
+
+📦 Batch 33/48 [129-132/189] | ETA: 2s
+
+📦 Batch 34/48 [133-136/189] | ETA: 2s
+
+📦 Batch 35/48 [137-140/189] | ETA: 2s
+  ✅ [oab] Execução e Cumprimento de Sentença         130/200 (+9)
+  ✅ [oab] Execução e Cumprimento de Sentença         139/200 (+9)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      150/200 (+9)
+  ✅ [oab] Execução e Cumprimento de Sentença         144/200 (+5)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      160/200 (+10)
+  ✅ [oab] Execução e Cumprimento de Sentença         154/200 (+10)
+  ❌ [Inquérito Civil e TAC] erro: Connection error.
+  ❌ [Execução e Cumprimento de Sentença] erro: Connection error.
+
+📦 Batch 36/48 [141-144/189] | ETA: 84s
+  ❌ [Genética e Evolução] erro: Connection error.
+  ❌ [Finanças Internacionais: câmbio e crises] erro: Connection error.
+  ❌ [LGPD no Setor Financeiro] erro: Connection error.
+  ❌ [Gestão da Inovação e Transformação Digit] erro: Connection error.
+
+📦 Batch 37/48 [145-148/189] | ETA: 373s
+  ❌ [Redes Sem Fio — Wi-Fi 802.11] erro: Connection error.
+  ❌ [Hashing e Tabelas Hash] erro: Connection error.
+  ❌ [Escoamento e Transporte por Dutos] erro: Connection error.
+  ❌ [Lei 8.666/93 e Regras de Transição] erro: Connection error.
+
+📦 Batch 38/48 [149-152/189] | ETA: 335s
+  ❌ [Lei de Responsabilidade Fiscal (LRF)] erro: Connection error.
+  ❌ [Governança e Controle Público] erro: Connection error.
+  ❌ [Câmbio e Balanço de Pagamentos] erro: Connection error.
+  ❌ [Pré-Sal: Tecnologia e Regulação] erro: Connection error.
+
+📦 Batch 39/48 [153-156/189] | ETA: 1799s
+  ❌ [Análise e Interpretação de Textos de Apo] erro: Connection error.
+  ❌ [Rastreabilidade Animal (SISBOV) e Vegeta] erro: Connection error.
+  ❌ [Propriedade Intelectual — Marcas e Paten] erro: Connection error.
+  ❌ [Questões Sociais e Direitos Humanos] erro: Connection error.
+
+📦 Batch 40/48 [157-160/189] | ETA: 1567s
+  ❌ [Aposentadoria Especial: requisitos e ati] erro: Connection error.
+  ❌ [Recursos no CPP] erro: Connection error.
+  ❌ [Guerra Fria e Mundo Contemporâneo] erro: Connection error.
+  ❌ [Processo Tributário Administrativo e Jud] erro: Connection error.
+
+📦 Batch 41/48 [161-164/189] | ETA: 2001s
+
+📦 Batch 42/48 [165-168/189] | ETA: 1685s
+
+📦 Batch 43/48 [169-172/189] | ETA: 1382s
+
+📦 Batch 44/48 [173-176/189] | ETA: 1092s
+
+📦 Batch 45/48 [177-180/189] | ETA: 816s
+
+📦 Batch 46/48 [181-184/189] | ETA: 553s
+
+📦 Batch 47/48 [185-188/189] | ETA: 300s
+  ✅ [direito] Tutelas Provisórias (Cautelar e Antecipa   200/200 (+7)
+
+📦 Batch 48/48 [189-189/189] | ETA: 59s
+
+────────────────────────────────────────────────────────────
+✅ Geração concluída em 184m 37s
+   Tópicos concluídos: 1
+   Tópicos com erro:   22
+   Questões geradas:   59
+   Total no banco:     325,147 questões
+
+⚠️  22 tópicos com erro. Execute novamente para retomar.

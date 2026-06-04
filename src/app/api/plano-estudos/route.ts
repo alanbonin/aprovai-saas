@@ -33,7 +33,7 @@ async function savePlano(userId: string, plano: PlanoSemana) {
   if (ex?.id) {
     await db.from("Note").update({ content }).eq("id", ex.id);
   } else {
-    await db.from("Note").insert({ userId, subjectId: NOTE_PREFIX, content });
+    await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: NOTE_PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
   }
 }
 

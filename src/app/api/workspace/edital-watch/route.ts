@@ -43,7 +43,7 @@ async function saveWatchlist(userId: string, list: string[]) {
   if (existing?.id) {
     await db.from("Note").update({ content }).eq("id", existing.id);
   } else {
-    await db.from("Note").insert({ userId, subjectId: NOTE_PREFIX, content });
+    await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: NOTE_PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
   }
 }
 

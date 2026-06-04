@@ -17,7 +17,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!dbUser || dbUser.role !== "ADMIN") redirect("/hoje");
 
   return (
-    <div className="flex min-h-screen bg-[#080c18]">
+    <div className="flex min-h-screen" style={{ backgroundColor: "var(--bg-base)" }}>
       <Sidebar
         isAdmin
         userName={dbUser.name ?? dbUser.email ?? "Admin"}

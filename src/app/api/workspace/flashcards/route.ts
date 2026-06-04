@@ -49,7 +49,8 @@ export async function GET() {
 
   const { data: sets } = await query
     .or(orParts.join(","))
-    .order("updatedAt", { ascending: false });
+    .order("updatedAt", { ascending: false })
+    .range(0, 4999);
 
   // Build subjectName lookup
   const uniqueSubjectIds = [...new Set((sets ?? []).map(s => s.subjectId as string).filter(Boolean))];

@@ -25,7 +25,7 @@ async function saveGrupos(userId: string, grupos: GrupoSalvo[]) {
   const { data: ex } = await db.from("Note")
     .select("id").eq("userId", userId).eq("subjectId", PREFIX).single();
   if (ex?.id) await db.from("Note").update({ content }).eq("id", ex.id);
-  else await db.from("Note").insert({ userId, subjectId: PREFIX, content });
+  else await db.from("Note").insert({ id: crypto.randomUUID(), userId, subjectId: PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
 }
 
 export async function GET() {

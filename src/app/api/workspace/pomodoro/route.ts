@@ -113,9 +113,12 @@ export async function POST(req: Request) {
   } else {
     // Cria novo Note
     const { error } = await db.from("Note").insert({
+      id: crypto.randomUUID(),
       userId: dbUser.id,
       subjectId: KEY,
       content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
     if (error) dbError = error.message;
   }

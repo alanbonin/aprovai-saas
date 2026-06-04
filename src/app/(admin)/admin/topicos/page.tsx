@@ -28,17 +28,23 @@ async function fetchAllTopics() {
   return { data: all, count: totalCount };
 }
 
+// Busca contagem de questões por tópico via RPC
+async function fetchQuestionCounts(): Promise<Record<string, number>> {
+  const { data, error } = await db.rpc("get_question_counts_by_topic");
+  if (error) console.error("fetchQuestionCounts error:", error.message);
+  const result: Record<string, number> = {};
+  for (const row of (data ?? []) as { topic_id: string; question_count: number }[]) {
+    if (row.topic_id) result[row.topic_id] = Number(row.question_count);
+  }
+  return result;
+}
+
 export default async function TopicosAdminPage() {
-  const [{ data: subjects }, { data: topics, count }, { data: questoesCounts }] = await Promise.all([
+  const [{ data: subjects }, { data: topics, count }] = await Promise.all([
     db.from("Subject").select("id, name, slug, categoria").order("categoria").order("name"),
     fetchAllTopics(),
-    db.rpc("get_question_counts_by_topic"),
   ]);
-
-  const qPorTopico: Record<string, number> = {};
-  for (const row of (questoesCounts ?? []) as { topic_id: string; question_count: number }[]) {
-    if (row.topic_id) qPorTopico[row.topic_id] = Number(row.question_count);
-  }
+  const qPorTopico = await fetchQuestionCounts();
 
   // Soma questões por matéria a partir dos tópicos vinculados
   const qPorMateria: Record<string, number> = {};

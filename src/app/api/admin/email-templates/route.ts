@@ -95,9 +95,12 @@ export async function POST(req: Request) {
     await db.from("Note").update({ content, updatedAt: new Date().toISOString() }).eq("id", existing.id);
   } else {
     await db.from("Note").insert({
+      id: crypto.randomUUID(),
       userId: admin.id,
       subjectId: key,
       content,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     });
   }
 

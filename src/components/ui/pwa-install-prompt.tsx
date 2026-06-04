@@ -67,7 +67,7 @@ export function PWAInstallPrompt() {
     <div
       role="dialog"
       aria-label="Instalar AprovAI360"
-      className="fixed bottom-20 left-4 right-4 z-50 md:left-auto md:right-6 md:w-80 animate-in slide-in-from-bottom-4 fade-in duration-300"
+      className="fixed bottom-4 left-4 right-4 z-[300] md:left-auto md:right-6 md:w-80 animate-in slide-in-from-bottom-4 fade-in duration-300"
     >
       <div
         className="rounded-2xl border border-white/10 shadow-2xl p-4"
@@ -88,9 +88,7 @@ export function PWAInstallPrompt() {
               Instalar AprovAI360
             </p>
             <p className="text-xs text-gray-500 mt-0.5 leading-snug">
-              {isIOS
-                ? 'Toque em "Compartilhar" e depois "Adicionar à Tela de Início" para instalar.'
-                : "Acesse mais rápido e estude offline. Sem ocupar espaço no app store."}
+              {isIOS ? "Adicione à tela de início em 2 toques:" : "Acesse mais rápido e estude offline."}
             </p>
           </div>
 
@@ -102,6 +100,23 @@ export function PWAInstallPrompt() {
             <X className="w-3.5 h-3.5" />
           </button>
         </div>
+
+        {/* iOS: steps visuais claros */}
+        {isIOS && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-white/[0.05]">
+              <span className="w-6 h-6 rounded-full bg-[#0ab5bd]/20 text-[#0ab5bd] text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
+              <p className="text-xs text-gray-300">Toque no ícone <strong className="text-white">Compartilhar ⬆️</strong> no Safari</p>
+            </div>
+            <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-white/[0.05]">
+              <span className="w-6 h-6 rounded-full bg-[#0ab5bd]/20 text-[#0ab5bd] text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>
+              <p className="text-xs text-gray-300">Role e toque em <strong className="text-white">Adicionar à Tela de Início ➕</strong></p>
+            </div>
+            <button onClick={dismiss} className="w-full mt-1 py-1.5 rounded-lg text-xs text-gray-600 hover:text-gray-400 transition-colors text-center">
+              Entendido, fechar
+            </button>
+          </div>
+        )}
 
         {!isIOS && (
           <div className="flex gap-2 mt-3">

@@ -28,7 +28,7 @@ export default async function AlunosAdminPage({
 
   const [{ data: users, count: totalCount }, { data: plans }, { data: partners }] = await Promise.all([
     userQuery,
-    db.from("Plan").select("id, name, slug").eq("active", true).order("price"),
+    db.from("Plan").select("id, name, slug, price").eq("active", true).order("price"),
     db.from("Partner").select("id, name, slug").eq("active", true).order("name"),
   ]);
 
@@ -39,7 +39,7 @@ export default async function AlunosAdminPage({
   const { data: subs } = userIds.length
     ? await db
         .from("Subscription")
-        .select("userId, planId, createdAt")
+        .select("userId, planId, mpPaymentId, endDate, createdAt")
         .in("userId", userIds)
         .eq("status", "ACTIVE")
         .order("createdAt", { ascending: false })
@@ -47,8 +47,16 @@ export default async function AlunosAdminPage({
 
   const planMap = Object.fromEntries((plans ?? []).map((p: { id: string; name: string }) => [p.id, p.name]));
   const subMap: Record<string, string> = {};
-  for (const s of (subs ?? []) as { userId: string; planId: string }[]) {
-    if (!subMap[s.userId]) subMap[s.userId] = s.planId;
+  const isentoMap: Record<string, boolean> = {};
+  const endDateMap: Record<string, string> = {};
+
+  for (const s of (subs ?? []) as { userId: string; planId: string; mpPaymentId: string | null; endDate: string | null }[]) {
+    if (!subMap[s.userId]) {
+      subMap[s.userId] = s.planId;
+      const mp = s.mpPaymentId ?? "";
+      isentoMap[s.userId] = mp.startsWith("CORTESIA:") || mp === "ISENTO";
+      endDateMap[s.userId] = s.endDate ?? "";
+    }
   }
 
   const partnerMap = Object.fromEntries(
@@ -58,10 +66,12 @@ export default async function AlunosAdminPage({
   return (
     <AlunosClient
       users={(users ?? []) as { id: string; name: string; email: string; role: string; createdAt: string; origin: string; partnerId: string | null; groupTag: string | null }[]}
-      plans={(plans ?? []) as { id: string; name: string; slug: string }[]}
+      plans={(plans ?? []) as { id: string; name: string; slug: string; price: number }[]}
       partners={(partners ?? []) as { id: string; name: string; slug: string }[]}
       planMap={planMap}
       subMap={subMap}
+      isentoMap={isentoMap}
+      endDateMap={endDateMap}
       partnerMap={partnerMap}
       page={page}
       totalPages={totalPages}

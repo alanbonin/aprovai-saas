@@ -24,6 +24,13 @@ export async function GET() {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
+  // Busca nome e categoria das matérias
+  const { data: subjects } = await db.from("Subject").select("id, name, categoria");
+  const subjectMeta: Record<string, { name: string; categoria: string }> = {};
+  for (const s of subjects ?? []) {
+    subjectMeta[s.id as string] = { name: s.name as string, categoria: s.categoria as string ?? "—" };
+  }
+
   // Contagem de questões por matéria
   const { data: questoes } = await db
     .from("Question")
@@ -57,6 +64,8 @@ export async function GET() {
 
   // Monta resultado
   const stats: Record<string, {
+    name: string;
+    categoria: string;
     totalQuestoes: number;
     totalRespostas: number;
     totalAcertos: number;
@@ -74,6 +83,8 @@ export async function GET() {
     const totalRespostas = s?.total ?? 0;
     const totalAcertos   = s?.correct ?? 0;
     stats[id] = {
+      name: subjectMeta[id]?.name ?? id,
+      categoria: subjectMeta[id]?.categoria ?? "—",
       totalQuestoes: questoesPorMateria[id] ?? 0,
       totalRespostas,
       totalAcertos,

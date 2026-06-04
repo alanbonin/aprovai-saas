@@ -148,8 +148,8 @@ export async function PATCH(req: Request) {
 
   // ── Editar dados do usuário ────────────────────────────────────────────
   if (body.action === "editUser") {
-    const { userId, name, email, newPassword } = body as {
-      userId: string; name?: string; email?: string; newPassword?: string;
+    const { userId, name, email, newPassword, groupTag } = body as {
+      userId: string; name?: string; email?: string; newPassword?: string; groupTag?: string;
     };
     if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
 
@@ -160,6 +160,7 @@ export async function PATCH(req: Request) {
     const dbUpdates: Record<string, unknown> = { updatedAt: now };
     if (name?.trim()) dbUpdates.name = name.trim();
     if (email?.trim()) dbUpdates.email = email.trim().toLowerCase();
+    if (groupTag !== undefined) dbUpdates.groupTag = groupTag || null;
 
     if (Object.keys(dbUpdates).length > 1) {
       const { error: dbErr } = await db.from("User").update(dbUpdates).eq("id", userId);
@@ -206,7 +207,35 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true, errors });
   }
 
-  const { userId, planId } = body;
+  // ── Toggle isenção ────────────────────────────────────────────────────────
+  if (body.action === "toggleIsento") {
+    const { userId: uid, isento } = body as { userId: string; isento: boolean };
+    if (!uid) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
+    const now = new Date().toISOString();
+
+    if (isento) {
+      // Isentar: marca como ISENTO e dá prazo longo (10 anos)
+      const endDate = new Date();
+      endDate.setFullYear(endDate.getFullYear() + 10);
+      const { data: sub } = await db.from("Subscription").select("id").eq("userId", uid).maybeSingle();
+      if (sub) {
+        await db.from("Subscription").update({ mpPaymentId: "ISENTO", endDate: endDate.toISOString(), updatedAt: now }).eq("userId", uid);
+      }
+    } else {
+      // Cobrar: remove isenção, mantém plano mas endDate em 30 dias (precisa pagar)
+      const endDate = new Date();
+      endDate.setDate(endDate.getDate() + 30);
+      await db.from("Subscription").update({ mpPaymentId: null, endDate: endDate.toISOString(), updatedAt: now }).eq("userId", uid);
+    }
+    return NextResponse.json({ ok: true, isento });
+  }
+
+  const { userId, planId, durationDays, tipo } = body as {
+    userId: string;
+    planId?: string;
+    durationDays?: number;
+    tipo?: string;
+  };
   if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });
 
   // Subscription tem userId @unique — sempre há no máximo 1 linha por usuário.
@@ -224,9 +253,12 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: `Plano não encontrado: ${planId}` }, { status: 400 });
     }
 
+    const days = Math.min(36500, Math.max(1, durationDays ?? 365));
     const endDate = new Date();
-    endDate.setFullYear(endDate.getFullYear() + 1);
+    endDate.setDate(endDate.getDate() + days);
     const now = new Date().toISOString();
+    // Marca como cortesia para distinguir de assinaturas pagas
+    const mpPaymentId = `CORTESIA:${tipo ?? "cortesia"}`;
 
     if (existing) {
       // Atualiza a assinatura existente
@@ -236,6 +268,7 @@ export async function PATCH(req: Request) {
           status: "ACTIVE",
           startDate: now,
           endDate: endDate.toISOString(),
+          mpPaymentId,
           updatedAt: now,
         })
         .eq("userId", userId);
@@ -253,6 +286,7 @@ export async function PATCH(req: Request) {
         status: "ACTIVE",
         startDate: now,
         endDate: endDate.toISOString(),
+        mpPaymentId,
         createdAt: now,
         updatedAt: now,
       });

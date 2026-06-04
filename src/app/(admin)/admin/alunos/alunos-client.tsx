@@ -1,13 +1,13 @@
 "use client";
-import { useState, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import {
   UserPlus, Crown, Trash2, ChevronDown, X, AlertCircle, CheckCircle2,
   Search, BarChart2, Loader2, Target, Layers, ClipboardList, Flame, Zap,
   Pencil, Check, Square, CheckSquare, ShieldAlert, KeyRound,
-  Globe, Users, HandshakeIcon, Gift, Star, Shield, Tag, Download,
-  Building2, Megaphone, Clock, TrendingUp,
+  Globe, Users, HandshakeIcon, Gift, Shield, Tag, Download,
+  Building2, TrendingUp,
 } from "lucide-react";
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
@@ -15,7 +15,7 @@ interface User {
   id: string; name: string; email: string; role: string; createdAt: string;
   origin: string; partnerId: string | null; groupTag: string | null;
 }
-interface Plan { id: string; name: string; slug: string; }
+interface Plan { id: string; name: string; slug: string; price?: number; }
 interface Partner { id: string; name: string; slug: string; }
 interface Props {
   users: User[];
@@ -23,6 +23,8 @@ interface Props {
   partners: Partner[];
   planMap: Record<string, string>;
   subMap: Record<string, string>;
+  isentoMap: Record<string, boolean>;
+  endDateMap: Record<string, string>;
   partnerMap: Record<string, string>;
   page: number;
   totalPages: number;
@@ -31,25 +33,17 @@ interface Props {
 }
 
 // ── Tabs de grupo ─────────────────────────────────────────────────────────────
-type TabKey = "todos" | "platform" | "admin" | "partner" | "free" | "premium" | "admins" | "especiais";
+type TabKey = "todos" | "platform" | "admin" | "admins" | "corporativo" | "especiais" | "isentos" | "inativos";
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode; color: string }[] = [
-  { key: "todos",    label: "Todos",         icon: <Globe className="w-3.5 h-3.5" />,        color: "text-gray-300" },
-  { key: "platform", label: "Plataforma",    icon: <TrendingUp className="w-3.5 h-3.5" />,   color: "text-indigo-400" },
-  { key: "admin",    label: "Diretos",       icon: <Users className="w-3.5 h-3.5" />,         color: "text-blue-400" },
-  { key: "partner",  label: "Parceria",      icon: <HandshakeIcon className="w-3.5 h-3.5" />, color: "text-emerald-400" },
-  { key: "free",     label: "Gratuitos",     icon: <Gift className="w-3.5 h-3.5" />,          color: "text-teal-400" },
-  { key: "premium",  label: "Premium",       icon: <Crown className="w-3.5 h-3.5" />,         color: "text-amber-400" },
-  { key: "admins",   label: "Admins",        icon: <Shield className="w-3.5 h-3.5" />,        color: "text-red-400" },
-  { key: "especiais",label: "Beta/Especiais",icon: <Tag className="w-3.5 h-3.5" />,           color: "text-purple-400" },
-];
-
-// ── Grupos sugeridos (UI informativa) ─────────────────────────────────────────
-const GRUPOS_SUGERIDOS = [
-  { icon: <Building2 className="w-3.5 h-3.5" />, label: "Corporativo", desc: "Empresa pagou pelos acessos", tag: "corporativo" },
-  { icon: <Megaphone className="w-3.5 h-3.5" />, label: "Influencer",  desc: "Embaixador com acesso especial", tag: "influencer" },
-  { icon: <Clock className="w-3.5 h-3.5" />,     label: "Trial expirado", desc: "Subscription status EXPIRED", tag: null },
-  { icon: <Star className="w-3.5 h-3.5" />,       label: "Inativo",    desc: "Nunca fez login após cadastro", tag: null },
+  { key: "todos",       label: "Todos",       icon: <Globe className="w-3.5 h-3.5" />,        color: "text-gray-300" },
+  { key: "platform",    label: "Plataforma",  icon: <TrendingUp className="w-3.5 h-3.5" />,   color: "text-indigo-400" },
+  { key: "admin",       label: "Direto",      icon: <Users className="w-3.5 h-3.5" />,         color: "text-blue-400" },
+  { key: "admins",      label: "Admins",      icon: <Shield className="w-3.5 h-3.5" />,        color: "text-red-400" },
+  { key: "corporativo", label: "Corporativo", icon: <Building2 className="w-3.5 h-3.5" />,     color: "text-emerald-400" },
+  { key: "especiais",   label: "Especiais",   icon: <Tag className="w-3.5 h-3.5" />,           color: "text-purple-400" },
+  { key: "isentos",     label: "Isentos",     icon: <Gift className="w-3.5 h-3.5" />,          color: "text-amber-400" },
+  { key: "inativos",    label: "Inativos",    icon: <ClipboardList className="w-3.5 h-3.5" />, color: "text-gray-500" },
 ];
 
 // ── Badge origem ──────────────────────────────────────────────────────────────
@@ -105,10 +99,11 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 const INPUT = "w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors";
 
 // ── Componente principal ──────────────────────────────────────────────────────
-export function AlunosClient({ users: initialUsers, plans, partners, planMap, subMap: initialSubMap, partnerMap, page, totalPages, total, search: initialSearch }: Props) {
+export function AlunosClient({ users: initialUsers, plans, partners, planMap, subMap: initialSubMap, isentoMap: propsIsentoMap, endDateMap: _endDateMap, partnerMap, page, totalPages, total, search: initialSearch }: Props) {
   const router = useRouter();
   const [users, setUsers] = useState(initialUsers);
   const [subMap, setSubMap] = useState(initialSubMap);
+  const [isentoMap, setIsentoMap] = useState(propsIsentoMap);
   const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(false);
 
@@ -135,6 +130,8 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
   // Modais
   const [showCreate, setShowCreate] = useState(false);
   const [planModal, setPlanModal] = useState<User | null>(null);
+  const [cortesiaDias, setCortesiaDias] = useState(365);
+  const [cortesiaTipo, setCortesiaTipo] = useState("cortesia");
   const [deleteModal, setDeleteModal] = useState<User | null>(null);
   const [editModal, setEditModal] = useState<User | null>(null);
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
@@ -143,7 +140,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
   const [form, setForm] = useState({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "" });
 
   // Form editar usuário
-  const [editForm, setEditForm] = useState({ name: "", email: "", newPassword: "" });
+  const [editForm, setEditForm] = useState({ name: "", email: "", newPassword: "", groupTag: "" });
 
   // Stats drawer
   interface StudentStats {
@@ -168,32 +165,29 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     const total = users.length;
     const platform = users.filter(u => u.origin === "platform").length;
     const adminDirect = users.filter(u => u.origin === "admin").length;
-    const partner = users.filter(u => u.origin === "partner").length;
-    const premium = users.filter(u => !!subMap[u.id]).length;
-    const free = users.filter(u => !subMap[u.id] && u.role !== "ADMIN").length;
     const admins = users.filter(u => u.role === "ADMIN").length;
-    const especiais = users.filter(u => !!u.groupTag).length;
-    return { total, platform, adminDirect, partner, premium, free, admins, especiais };
-  }, [users, subMap]);
+    const corporativo = users.filter(u => u.groupTag?.startsWith("corp:")).length;
+    const especiais = users.filter(u => !!u.groupTag && !u.groupTag.startsWith("corp:")).length;
+    const isentos = users.filter(u => isentoMap[u.id]).length;
+    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+    const inativos = users.filter(u => u.role !== "ADMIN" && !subMap[u.id] && u.createdAt < sevenDaysAgo).length;
+    return { total, platform, adminDirect, admins, corporativo, especiais, isentos, inativos };
+  }, [users, isentoMap]);
 
   // ── Filtro por tab ───────────────────────────────────────────────────────────
   const tabFiltered = useMemo(() => {
     let base = users;
     switch (activeTab) {
-      case "platform":  base = users.filter(u => u.origin === "platform"); break;
-      case "admin":     base = users.filter(u => u.origin === "admin"); break;
-      case "partner":   base = users.filter(u => u.origin === "partner"); break;
-      case "free":      base = users.filter(u => !subMap[u.id] && u.role !== "ADMIN"); break;
-      case "premium":   base = users.filter(u => !!subMap[u.id]); break;
-      case "admins":    base = users.filter(u => u.role === "ADMIN"); break;
-      case "especiais": base = users.filter(u => !!u.groupTag); break;
-    }
-    // Sub-filtro por parceiro (só no tab de parceria)
-    if (activeTab === "partner" && partnerFilter) {
-      base = base.filter(u => u.partnerId === partnerFilter);
+      case "platform":    base = users.filter(u => u.origin === "platform"); break;
+      case "admin":       base = users.filter(u => u.origin === "admin"); break;
+      case "admins":      base = users.filter(u => u.role === "ADMIN"); break;
+      case "corporativo": base = users.filter(u => !!u.groupTag?.startsWith("corp:")); break;
+      case "especiais":   base = users.filter(u => !!u.groupTag && !u.groupTag.startsWith("corp:")); break;
+      case "isentos":     base = users.filter(u => isentoMap[u.id]); break;
+      case "inativos": { const ago = new Date(Date.now() - 7 * 86400000).toISOString(); base = users.filter(u => u.role !== "ADMIN" && !subMap[u.id] && u.createdAt < ago); break; }
     }
     return base;
-  }, [users, subMap, activeTab, partnerFilter]);
+  }, [users, isentoMap, activeTab]);
 
   const filtered = useMemo(() =>
     tabFiltered.filter(u =>
@@ -205,8 +199,8 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
   const tabCount = useMemo(() => {
     const map: Record<TabKey, number> = {
       todos: stats.total, platform: stats.platform, admin: stats.adminDirect,
-      partner: stats.partner, free: stats.free, premium: stats.premium,
-      admins: stats.admins, especiais: stats.especiais,
+      admins: stats.admins, corporativo: stats.corporativo,
+      especiais: stats.especiais, isentos: stats.isentos, inativos: stats.inativos,
     };
     return map;
   }, [stats]);
@@ -234,7 +228,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     const rows = filtered.map(u => ({
       nome: u.name, email: u.email,
       parceiro: u.partnerId ? (partnerMap[u.partnerId] ?? u.partnerId) : "",
-      plano: subMap[u.id] ? (planMap[subMap[u.id]] ?? "") : "Gratuito",
+      plano: subMap[u.id] ? (planMap[subMap[u.id]] ?? "") : "Sem plano",
       cadastro: new Date(u.createdAt).toLocaleDateString("pt-BR"),
       tag: u.groupTag ?? "",
     }));
@@ -283,7 +277,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
   // ── Editar usuário ───────────────────────────────────────────────────────────
   function openEdit(u: User) {
     setEditModal(u);
-    setEditForm({ name: u.name, email: u.email, newPassword: "" });
+    setEditForm({ name: u.name, email: u.email, newPassword: "", groupTag: u.groupTag ?? "" });
   }
 
   async function handleEdit(e: React.FormEvent) {
@@ -300,32 +294,52 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
           name: editForm.name || undefined,
           email: editForm.email || undefined,
           newPassword: editForm.newPassword || undefined,
+          groupTag: editForm.groupTag,
         }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error ?? "Erro ao editar", false); return; }
       setUsers(prev => prev.map(u => u.id === editModal.id
-        ? { ...u, name: editForm.name || u.name, email: editForm.email || u.email }
+        ? { ...u, name: editForm.name || u.name, email: editForm.email || u.email, groupTag: editForm.groupTag || null }
         : u));
       setEditModal(null);
       showToast("Dados atualizados!");
     } finally { setLoading(false); }
   }
 
-  // ── Mudar plano ──────────────────────────────────────────────────────────────
+  // ── Mudar plano / cortesia ───────────────────────────────────────────────────
   async function handleChangePlan(userId: string, planId: string) {
     setLoading(true);
     try {
       const res = await fetch("/api/admin/alunos", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId, planId }),
+        body: JSON.stringify({
+          userId, planId,
+          ...(planId ? { durationDays: cortesiaDias, tipo: cortesiaTipo } : {}),
+        }),
       });
       const data = await res.json();
       if (!res.ok) { showToast(data.error ?? "Erro", false); return; }
       setSubMap(m => ({ ...m, [userId]: planId }));
       setPlanModal(null);
-      showToast(planId ? `Plano: ${planMap[planId]}` : "Plano removido");
+      showToast(planId ? `✓ ${planMap[planId]} — ${cortesiaTipo} por ${cortesiaDias === 36500 ? "tempo ilimitado" : cortesiaDias + " dias"}` : "Acesso removido");
+    } finally { setLoading(false); }
+  }
+
+  // ── Toggle isenção ───────────────────────────────────────────────────────────
+  async function handleToggleIsento(userId: string, currentIsento: boolean) {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/alunos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggleIsento", userId, isento: !currentIsento }),
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error ?? "Erro", false); return; }
+      setIsentoMap(m => ({ ...m, [userId]: !currentIsento }));
+      showToast(!currentIsento ? "✓ Usuário isentado — não contará em receita" : "✓ Usuário voltará a ser cobrado em 30 dias");
     } finally { setLoading(false); }
   }
 
@@ -366,6 +380,116 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     } finally { setLoading(false); }
   }
 
+  // ── Render linha de usuário ──────────────────────────────────────────────────
+  function renderUserRow(u: User) {
+    const currentPlanId = subMap[u.id];
+    const currentPlanName = currentPlanId ? planMap[currentPlanId] : null;
+    const isChecked = selected.has(u.id);
+    const isAdmin = u.role === "ADMIN";
+    const partnerName = u.partnerId ? (partnerMap[u.partnerId] ?? null) : null;
+    return (
+      <tr key={u.id} className={cn("hover:bg-white/[0.02] transition-colors", isChecked && "bg-indigo-500/5")}>
+        <td className="px-4 py-3">
+          {!isAdmin && (
+            <button onClick={() => toggleOne(u.id)} className="text-gray-500 hover:text-white transition-colors">
+              {isChecked
+                ? <CheckSquare className="w-4 h-4 text-indigo-400" />
+                : <Square className="w-4 h-4" />}
+            </button>
+          )}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center text-xs font-bold text-indigo-400 flex-shrink-0">
+              {(u.name || "?").charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="font-medium text-white truncate">{u.name}</p>
+              <p className="text-gray-500 text-xs truncate">{u.email}</p>
+            </div>
+          </div>
+        </td>
+        <td className="px-4 py-3">
+          <OriginBadge origin={u.origin} />
+        </td>
+        <td className="px-4 py-3">
+          {currentPlanName
+            ? <span className="flex items-center gap-1 text-amber-400 text-xs font-medium"><Crown className="w-3 h-3" /> {currentPlanName}
+                {isentoMap[u.id] && (
+                  <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 ml-1">
+                    <Gift className="w-2.5 h-2.5" /> isento
+                  </span>
+                )}
+              </span>
+            : <span className="flex items-center gap-1 text-gray-600 text-xs">Sem plano</span>}
+        </td>
+        <td className="px-4 py-3">
+          {u.groupTag
+            ? <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                <Tag className="w-2.5 h-2.5" /> {u.groupTag}
+              </span>
+            : <span className="text-gray-700 text-xs">—</span>}
+        </td>
+        <td className="px-4 py-3">
+          <span className={cn("text-xs px-2 py-0.5 rounded-full",
+            isAdmin ? "bg-red-500/20 text-red-400" : "bg-white/5 text-gray-500")}>
+            {isAdmin ? "Admin" : "Usuário"}
+          </span>
+        </td>
+        <td className="px-4 py-3 text-gray-500 text-xs">
+          {new Date(u.createdAt).toLocaleDateString("pt-BR")}
+        </td>
+        <td className="px-4 py-3">
+          <div className="flex items-center gap-1.5">
+            {/* Stats */}
+            <button onClick={() => openStats(u)}
+              className="p-1.5 rounded-lg text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Ver métricas">
+              <BarChart2 className="w-3.5 h-3.5" />
+            </button>
+            {/* Editar */}
+            {!isAdmin && (
+              <button onClick={() => openEdit(u)}
+                className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Editar usuário">
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Toggle isenção */}
+            {!!subMap[u.id] && !isAdmin && (
+              <button
+                onClick={() => handleToggleIsento(u.id, isentoMap[u.id] ?? false)}
+                title={isentoMap[u.id] ? "Remover isenção (cobrar)" : "Isentar (não cobrar)"}
+                className={cn(
+                  "p-1.5 rounded-lg text-xs transition-colors",
+                  isentoMap[u.id]
+                    ? "text-amber-400 hover:text-red-400 hover:bg-red-500/10"
+                    : "text-gray-600 hover:text-amber-400 hover:bg-amber-500/10"
+                )}
+              >
+                <Gift className="w-3.5 h-3.5" />
+              </button>
+            )}
+            {/* Plano */}
+            <button onClick={() => setPlanModal(u)}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs hover:bg-indigo-500/20 transition-colors">
+              <Crown className="w-3 h-3" />
+              {currentPlanName ? "Mudar plano" : "Atribuir plano"}
+              <ChevronDown className="w-3 h-3" />
+            </button>
+            {/* Excluir */}
+            {!isAdmin && (
+              <button onClick={() => setDeleteModal(u)}
+                className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Remover usuário">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+        </td>
+      </tr>
+    );
+  }
+
+  const filteredUsers = filtered;
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="p-6 text-white min-h-screen">
@@ -391,9 +515,21 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             className="flex items-center gap-2 px-4 py-2.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm font-medium transition-colors text-gray-300">
             <Zap className="w-4 h-4 text-amber-400" /> Exportar CSV
           </a>
-          <button onClick={() => setShowCreate(true)}
+          <button onClick={() => {
+            const presets: Partial<typeof form> = { name: "", email: "", password: "", origin: "admin", partnerId: "", groupTag: "" };
+            if (activeTab === "corporativo") presets.groupTag = "corp:";
+            if (activeTab === "especiais") presets.groupTag = "influencer";
+            if (activeTab === "platform") presets.origin = "platform";
+            if (activeTab === "admin") presets.origin = "admin";
+            setForm(f => ({ ...f, ...presets }));
+            setShowCreate(true);
+          }}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
-            <UserPlus className="w-4 h-4" /> Criar Usuário
+            <UserPlus className="w-4 h-4" />
+            {activeTab === "corporativo" ? "Criar Corp." :
+             activeTab === "especiais" ? "Criar Especial" :
+             activeTab === "isentos" ? "Criar Isento" :
+             "Criar Usuário"}
           </button>
         </div>
       </div>
@@ -428,21 +564,6 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
         })}
       </div>
 
-      {/* ── Grupos sugeridos (informativo) ─────────────────────────────────── */}
-      <div className="mb-5 rounded-xl border border-white/5 bg-black/20 px-4 py-3">
-        <p className="text-[11px] text-gray-500 font-semibold uppercase tracking-wider mb-2.5">Grupos a implementar</p>
-        <div className="flex flex-wrap gap-2">
-          {GRUPOS_SUGERIDOS.map(g => (
-            <div key={g.label}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.03] border border-white/8 text-xs text-gray-500 cursor-default">
-              <span className="text-gray-600">{g.icon}</span>
-              <span className="font-medium text-gray-400">{g.label}</span>
-              <span className="text-gray-600 text-[10px]">— {g.desc}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {/* ── Barra de busca + filtro parceiro ───────────────────────────────── */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
@@ -456,26 +577,6 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             Buscar
           </button>
         </form>
-
-        {/* Sub-filtro por parceiro */}
-        {activeTab === "partner" && partners.length > 0 && (
-          <div className="flex items-center gap-2">
-            <select
-              value={partnerFilter}
-              onChange={e => setPartnerFilter(e.target.value)}
-              className="bg-white/5 border border-emerald-500/30 rounded-lg px-3 py-2 text-sm text-emerald-300 focus:outline-none focus:border-emerald-500"
-            >
-              <option value="">Todos os parceiros</option>
-              {partners.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <button
-              onClick={exportPartnerCSV}
-              className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded-lg text-sm text-emerald-400 hover:bg-emerald-500/20 transition-colors"
-            >
-              <Download className="w-3.5 h-3.5" /> Relatório CSV
-            </button>
-          </div>
-        )}
 
         {/* Barra de seleção múltipla */}
         {someSelected && (
@@ -495,9 +596,65 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
         )}
       </div>
 
+      {/* Cards mobile */}
+      <div className="sm:hidden space-y-2 mb-4">
+        {filteredUsers.length === 0 && (
+          <p className="text-center text-gray-600 text-sm py-8">Nenhum usuário encontrado</p>
+        )}
+        {filteredUsers.map(u => {
+          const currentPlanId = subMap[u.id];
+          const currentPlanName = currentPlanId ? planMap[currentPlanId] : null;
+          const isAdmin = u.role === "ADMIN";
+          return (
+            <div key={u.id}
+              className="rounded-xl border border-white/[0.06] p-3 bg-white/[0.02] flex items-center gap-3"
+              onClick={() => openStats(u)}
+            >
+              <div className="w-10 h-10 rounded-full bg-indigo-600/20 flex items-center justify-center text-sm font-bold text-indigo-400 flex-shrink-0">
+                {(u.name || "?").charAt(0).toUpperCase()}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-white text-sm truncate">{u.name}</p>
+                <p className="text-gray-500 text-xs truncate">{u.email}</p>
+                <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+                  <OriginBadge origin={u.origin} />
+                  {currentPlanName && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                      <Crown className="w-2.5 h-2.5" /> {currentPlanName}
+                    </span>
+                  )}
+                  {isentoMap[u.id] && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                      <Gift className="w-2.5 h-2.5" /> isento
+                    </span>
+                  )}
+                  {u.groupTag && (
+                    <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
+                      <Tag className="w-2.5 h-2.5" /> {u.groupTag}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5 flex-shrink-0">
+                {!isAdmin && (
+                  <button onClick={e => { e.stopPropagation(); openEdit(u); }}
+                    className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                <button onClick={e => { e.stopPropagation(); setPlanModal(u); }}
+                  className="p-1.5 rounded-lg text-gray-600 hover:text-amber-400 hover:bg-amber-500/10 transition-colors">
+                  <Crown className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
       {/* ── Tabela ─────────────────────────────────────────────────────────── */}
-      <div className="rounded-xl border border-white/5 overflow-hidden">
-        <table className="w-full text-sm">
+      <div className="hidden sm:block rounded-xl border border-white/5 overflow-x-auto">
+        <table className="w-full min-w-[750px] text-sm">
           <thead>
             <tr className="border-b border-white/5 bg-white/[0.02]">
               <th className="px-4 py-3 w-8">
@@ -512,9 +669,6 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Usuário</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Origem</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Plano</th>
-              {activeTab === "partner" && (
-                <th className="text-left px-4 py-3 text-gray-500 font-medium">Parceiro</th>
-              )}
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Tag</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Função</th>
               <th className="text-left px-4 py-3 text-gray-500 font-medium">Cadastro</th>
@@ -522,100 +676,35 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {filtered.map(u => {
-              const currentPlanId = subMap[u.id];
-              const currentPlanName = currentPlanId ? planMap[currentPlanId] : null;
-              const isChecked = selected.has(u.id);
-              const isAdmin = u.role === "ADMIN";
-              const partnerName = u.partnerId ? (partnerMap[u.partnerId] ?? null) : null;
-              return (
-                <tr key={u.id} className={cn("hover:bg-white/[0.02] transition-colors", isChecked && "bg-indigo-500/5")}>
-                  <td className="px-4 py-3">
-                    {!isAdmin && (
-                      <button onClick={() => toggleOne(u.id)} className="text-gray-500 hover:text-white transition-colors">
-                        {isChecked
-                          ? <CheckSquare className="w-4 h-4 text-indigo-400" />
-                          : <Square className="w-4 h-4" />}
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-8 h-8 rounded-full bg-indigo-600/20 flex items-center justify-center text-xs font-bold text-indigo-400 flex-shrink-0">
-                        {(u.name || "?").charAt(0).toUpperCase()}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-white truncate">{u.name}</p>
-                        <p className="text-gray-500 text-xs truncate">{u.email}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <OriginBadge origin={u.origin} />
-                  </td>
-                  <td className="px-4 py-3">
-                    {currentPlanName
-                      ? <span className="flex items-center gap-1 text-amber-400 text-xs font-medium"><Crown className="w-3 h-3" /> {currentPlanName}</span>
-                      : <span className="flex items-center gap-1 text-teal-500/70 text-xs"><Gift className="w-3 h-3" /> Gratuito</span>}
-                  </td>
-                  {activeTab === "partner" && (
-                    <td className="px-4 py-3">
-                      {partnerName
-                        ? <span className="text-xs text-emerald-400 font-medium">{partnerName}</span>
-                        : <span className="text-xs text-gray-600">—</span>}
-                    </td>
-                  )}
-                  <td className="px-4 py-3">
-                    {u.groupTag
-                      ? <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20">
-                          <Tag className="w-2.5 h-2.5" /> {u.groupTag}
+            {activeTab === "corporativo" ? (
+              (() => {
+                const companies: Record<string, typeof filteredUsers> = {};
+                for (const u of filteredUsers) {
+                  const company = u.groupTag?.startsWith("corp:")
+                    ? u.groupTag.slice(5)
+                    : "Sem empresa";
+                  if (!companies[company]) companies[company] = [];
+                  companies[company].push(u);
+                }
+                return Object.entries(companies).sort(([a], [b]) => a.localeCompare(b, "pt-BR")).map(([company, companyUsers]) => (
+                  <React.Fragment key={company}>
+                    <tr>
+                      <td colSpan={99} className="px-4 py-2 bg-emerald-500/[0.05] border-y border-emerald-500/20">
+                        <span className="flex items-center gap-2 text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                          <Building2 className="w-3.5 h-3.5" /> {company}
+                          <span className="font-normal text-emerald-400/60 normal-case tracking-normal">({companyUsers.length} usuário{companyUsers.length !== 1 ? "s" : ""})</span>
                         </span>
-                      : <span className="text-gray-700 text-xs">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className={cn("text-xs px-2 py-0.5 rounded-full",
-                      isAdmin ? "bg-red-500/20 text-red-400" : "bg-white/5 text-gray-500")}>
-                      {isAdmin ? "Admin" : "Usuário"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">
-                    {new Date(u.createdAt).toLocaleDateString("pt-BR")}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-1.5">
-                      {/* Stats */}
-                      <button onClick={() => openStats(u)}
-                        className="p-1.5 rounded-lg text-gray-600 hover:text-blue-400 hover:bg-blue-500/10 transition-colors" title="Ver métricas">
-                        <BarChart2 className="w-3.5 h-3.5" />
-                      </button>
-                      {/* Editar */}
-                      {!isAdmin && (
-                        <button onClick={() => openEdit(u)}
-                          className="p-1.5 rounded-lg text-gray-600 hover:text-indigo-400 hover:bg-indigo-500/10 transition-colors" title="Editar usuário">
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      {/* Plano */}
-                      <button onClick={() => setPlanModal(u)}
-                        className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs hover:bg-indigo-500/20 transition-colors">
-                        <Crown className="w-3 h-3" />
-                        {currentPlanName ? "Mudar plano" : "Atribuir plano"}
-                        <ChevronDown className="w-3 h-3" />
-                      </button>
-                      {/* Excluir */}
-                      {!isAdmin && (
-                        <button onClick={() => setDeleteModal(u)}
-                          className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-500/10 transition-colors" title="Remover usuário">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {filtered.length === 0 && (
-              <tr><td colSpan={activeTab === "partner" ? 9 : 8} className="px-4 py-10 text-center text-gray-600">Nenhum usuário encontrado</td></tr>
+                      </td>
+                    </tr>
+                    {companyUsers.map(u => renderUserRow(u))}
+                  </React.Fragment>
+                ));
+              })()
+            ) : (
+              filteredUsers.map(u => renderUserRow(u))
+            )}
+            {filteredUsers.length === 0 && (
+              <tr><td colSpan={8} className="px-4 py-10 text-center text-gray-600">Nenhum usuário encontrado</td></tr>
             )}
           </tbody>
         </table>
@@ -657,6 +746,12 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
       {showCreate && (
         <Modal title="Criar novo usuário" onClose={() => setShowCreate(false)} wide>
           <form onSubmit={handleCreate} className="space-y-4">
+            {activeTab !== "todos" && activeTab !== "admins" && (
+              <div className="rounded-lg bg-indigo-500/[0.08] border border-indigo-500/20 px-3 py-2 text-xs text-indigo-300 flex items-center gap-2 mb-2">
+                <span className="font-semibold">Aba ativa: {TABS.find(t => t.key === activeTab)?.label}</span>
+                — os campos foram pré-preenchidos para esta categoria.
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <Field label="Nome completo">
                 <input type="text" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
@@ -693,7 +788,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
               <Field label="Plano (opcional)">
                 <select value={form.planId} onChange={e => setForm(f => ({ ...f, planId: e.target.value }))}
                   className={INPUT}>
-                  <option value="">Sem plano (Gratuito)</option>
+                  <option value="">Sem plano (acesso restrito)</option>
                   {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </Field>
@@ -758,6 +853,15 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
               </div>
             </div>
 
+            <div>
+              <label className="block text-xs text-gray-400 mb-1.5">Tag de Grupo</label>
+              <input type="text" value={editForm.groupTag}
+                onChange={e => setEditForm(f => ({ ...f, groupTag: e.target.value }))}
+                placeholder="corporativo, influencer, beta..."
+                className={INPUT} />
+              <p className="text-[10px] text-gray-600 mt-1">Deixe em branco para remover o grupo</p>
+            </div>
+
             <p className="text-xs text-gray-600">Deixe campos em branco para manter os valores atuais.</p>
 
             <div className="flex gap-3 pt-1">
@@ -774,23 +878,66 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
 
       {/* ── Modal: Atribuir Plano ───────────────────────────────────────────── */}
       {planModal && (
-        <Modal title={`Plano — ${planModal.name}`} onClose={() => setPlanModal(null)}>
+        <Modal title={`Acesso — ${planModal.name}`} onClose={() => setPlanModal(null)} wide>
           <p className="text-xs text-gray-500 mb-4">{planModal.email}</p>
+
+          {isentoMap[planModal.id] && (
+            <div className="rounded-lg bg-amber-500/[0.08] border border-amber-500/20 px-3 py-2 mb-4 text-xs text-amber-400 flex items-center gap-2">
+              <Gift className="w-3.5 h-3.5 flex-shrink-0" />
+              Este usuário está isento — o plano não conta como receita paga.
+            </div>
+          )}
+
+          {/* Configuração de cortesia */}
+          <div className="rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 p-3 mb-4 space-y-3">
+            <p className="text-xs font-semibold text-indigo-300">⚙️ Configuração do acesso cortesia</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Tipo / Motivo</label>
+                <select value={cortesiaTipo} onChange={e => setCortesiaTipo(e.target.value)}
+                  className="w-full px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-indigo-500">
+                  <option value="cortesia">🎁 Cortesia</option>
+                  <option value="brinde">🎀 Brinde</option>
+                  <option value="parceria">🤝 Parceria</option>
+                  <option value="influencer">📣 Influencer</option>
+                  <option value="beta">🧪 Beta-tester</option>
+                  <option value="colaborador">⭐ Colaborador</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[10px] text-gray-500 mb-1">Duração</label>
+                <select value={cortesiaDias} onChange={e => setCortesiaDias(Number(e.target.value))}
+                  className="w-full px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-indigo-500">
+                  <option value={30}>30 dias</option>
+                  <option value={90}>90 dias</option>
+                  <option value={180}>6 meses</option>
+                  <option value={365}>1 ano</option>
+                  <option value={36500}>Permanente</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-2">
             <button onClick={() => handleChangePlan(planModal.id, "")} disabled={loading}
               className={cn("w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors",
-                !subMap[planModal.id] ? "border-indigo-500/50 bg-indigo-500/10 text-indigo-300" : "border-white/10 hover:border-white/20 text-gray-400")}>
-              <p className="font-medium">Gratuito</p>
-              <p className="text-xs text-gray-600 mt-0.5">Sem plano ativo</p>
+                !subMap[planModal.id] ? "border-red-500/40 bg-red-500/10 text-red-300" : "border-white/10 hover:border-white/20 text-gray-400")}>
+              <p className="font-medium">🚫 Sem acesso</p>
+              <p className="text-xs text-gray-600 mt-0.5">Remove qualquer plano ativo</p>
             </button>
-            {plans.map(p => (
+            {plans.filter(p => p.slug !== "trial").map(p => (
               <button key={p.id} onClick={() => handleChangePlan(planModal.id, p.id)} disabled={loading}
                 className={cn("w-full text-left px-4 py-3 rounded-xl border text-sm transition-colors",
                   subMap[planModal.id] === p.id ? "border-amber-500/50 bg-amber-500/10 text-amber-300" : "border-white/10 hover:border-white/20 text-gray-400")}>
                 <div className="flex items-center gap-2">
                   <Crown className={cn("w-3.5 h-3.5", subMap[planModal.id] === p.id ? "text-amber-400" : "text-gray-600")} />
-                  <p className="font-medium">{p.name}</p>
-                  {subMap[planModal.id] === p.id && <span className="ml-auto text-xs text-amber-400">Atual</span>}
+                  <div className="flex-1">
+                    <p className="font-medium">{p.name}</p>
+                    <p className="text-[10px] text-gray-600 mt-0.5">
+                      {(p.price ?? 0) > 0 ? `R$ ${p.price} — ` : ""}será dado como {cortesiaTipo} por {cortesiaDias === 36500 ? "tempo ilimitado" : `${cortesiaDias} dias`}
+                    </p>
+                  </div>
+                  {subMap[planModal.id] === p.id && <span className="text-xs text-amber-400 flex-shrink-0">Atual</span>}
                 </div>
               </button>
             ))}

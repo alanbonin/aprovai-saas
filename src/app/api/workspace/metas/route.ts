@@ -16,7 +16,7 @@ interface MetasSemana {
 }
 
 async function getMetas(userId: string, profileId: string | null): Promise<MetasSemana> {
-  const defaults: MetasSemana = { questoesMeta: 50, flashcardsMeta: 30, simuladosMeta: 1, horasEstudoMeta: 10, casosMeta: 2, redacaoMeta: 1 };
+  const defaults: MetasSemana = { questoesMeta: 150, flashcardsMeta: 50, simuladosMeta: 2, horasEstudoMeta: 10, casosMeta: 3, redacaoMeta: 2 };
   let q = db.from("Note").select("content").eq("userId", userId).eq("subjectId", PREFIX);
   if (profileId) q = q.eq("profileId", profileId);
   const { data } = await q.maybeSingle();

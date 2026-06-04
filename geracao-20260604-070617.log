@@ -1,0 +1,128 @@
+
+🚀 AprovAI360 — Geração Massiva de Questões
+   Target: 200 questões/tópico | Batch: 10/chamada | Workers: 4
+
+📊 Estado atual:
+   Matérias:         170
+   Tópicos total:    1124
+   Tópicos pendentes:188 (precisam de mais questões)
+   Questões a gerar: 19,523
+   Chamadas API est: 1,953
+   Custo estimado:  ~$9.77 (GPT-4o-mini)
+   Tópicos já feitos:1124
+   Erros anteriores: 96
+
+🎯 Iniciando geração (4 workers paralelos)...
+
+
+📦 Batch 1/47 [1-4/188]
+
+📦 Batch 2/47 [5-8/188] | ETA: 9s
+
+📦 Batch 3/47 [9-12/188] | ETA: 7s
+
+📦 Batch 4/47 [13-16/188] | ETA: 6s
+
+📦 Batch 5/47 [17-20/188] | ETA: 6s
+
+📦 Batch 6/47 [21-24/188] | ETA: 5s
+
+📦 Batch 7/47 [25-28/188] | ETA: 5s
+
+📦 Batch 8/47 [29-32/188] | ETA: 5s
+
+📦 Batch 9/47 [33-36/188] | ETA: 4s
+
+📦 Batch 10/47 [37-40/188] | ETA: 4s
+
+📦 Batch 11/47 [41-44/188] | ETA: 4s
+
+📦 Batch 12/47 [45-48/188] | ETA: 4s
+
+📦 Batch 13/47 [49-52/188] | ETA: 4s
+
+📦 Batch 14/47 [53-56/188] | ETA: 4s
+
+📦 Batch 15/47 [57-60/188] | ETA: 4s
+
+📦 Batch 16/47 [61-64/188] | ETA: 4s
+
+📦 Batch 17/47 [65-68/188] | ETA: 3s
+
+📦 Batch 18/47 [69-72/188] | ETA: 3s
+
+📦 Batch 19/47 [73-76/188] | ETA: 3s
+
+📦 Batch 20/47 [77-80/188] | ETA: 3s
+
+📦 Batch 21/47 [81-84/188] | ETA: 3s
+
+📦 Batch 22/47 [85-88/188] | ETA: 3s
+
+📦 Batch 23/47 [89-92/188] | ETA: 3s
+
+📦 Batch 24/47 [93-96/188] | ETA: 3s
+
+📦 Batch 25/47 [97-100/188] | ETA: 3s
+
+📦 Batch 26/47 [101-104/188] | ETA: 2s
+
+📦 Batch 27/47 [105-108/188] | ETA: 2s
+
+📦 Batch 28/47 [109-112/188] | ETA: 2s
+
+📦 Batch 29/47 [113-116/188] | ETA: 2s
+
+📦 Batch 30/47 [117-120/188] | ETA: 2s
+
+📦 Batch 31/47 [121-124/188] | ETA: 2s
+
+📦 Batch 32/47 [125-128/188] | ETA: 2s
+
+📦 Batch 33/47 [129-132/188] | ETA: 2s
+
+📦 Batch 34/47 [133-136/188] | ETA: 2s
+
+📦 Batch 35/47 [137-140/188] | ETA: 1s
+  ✅ [oab] Execução e Cumprimento de Sentença         164/200 (+10)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      169/200 (+9)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      178/200 (+9)
+  ✅ [oab] Execução e Cumprimento de Sentença         169/200 (+5)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      188/200 (+10)
+  ✅ [oab] Execução e Cumprimento de Sentença         178/200 (+9)
+  ✅ [oab] Execução e Cumprimento de Sentença         188/200 (+10)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      198/200 (+10)
+  ✅ [ministerio-publico] Inquérito Civil e TAC                      200/200 (+2)
+  ✅ [oab] Execução e Cumprimento de Sentença         198/200 (+10)
+  ✅ [oab] Execução e Cumprimento de Sentença         200/200 (+2)
+
+📦 Batch 36/47 [141-144/188] | ETA: 54s
+
+📦 Batch 37/47 [145-148/188] | ETA: 48s
+
+📦 Batch 38/47 [149-152/188] | ETA: 43s
+
+📦 Batch 39/47 [153-156/188] | ETA: 38s
+
+📦 Batch 40/47 [157-160/188] | ETA: 33s
+
+📦 Batch 41/47 [161-164/188] | ETA: 28s
+
+📦 Batch 42/47 [165-168/188] | ETA: 23s
+
+📦 Batch 43/47 [169-172/188] | ETA: 19s
+
+📦 Batch 44/47 [173-176/188] | ETA: 15s
+
+📦 Batch 45/47 [177-180/188] | ETA: 11s
+
+📦 Batch 46/47 [181-184/188] | ETA: 7s
+
+📦 Batch 47/47 [185-188/188] | ETA: 4s
+
+────────────────────────────────────────────────────────────
+✅ Geração concluída em 2m 42s
+   Tópicos concluídos: 2
+   Tópicos com erro:   0
+   Questões geradas:   86
+   Total no banco:     undefined questões

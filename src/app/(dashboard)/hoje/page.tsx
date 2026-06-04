@@ -114,21 +114,23 @@ export default function HojePage() {
 
   async function load(showRefreshing = false) {
     if (showRefreshing) setRefreshing(true);
-    const [resHoje, resPlano] = await Promise.all([
-      fetch("/api/workspace/hoje"),
-      fetch("/api/workspace/plano-dia"),
-    ]);
-    if (resHoje.ok) setData(await resHoje.json());
-    if (resPlano.ok) setPlano(await resPlano.json());
-    setLoading(false);
-    setRefreshing(false);
+    try {
+      const [resHoje, resPlano] = await Promise.all([
+        fetch("/api/workspace/hoje"),
+        fetch("/api/workspace/plano-dia"),
+      ]);
+      if (resHoje.ok) setData(await resHoje.json());
+      if (resPlano.ok) setPlano(await resPlano.json());
+    } catch {
+      // data permanece null — componente renderiza o estado de erro com botão retry
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }
 
   useEffect(() => {
     load();
-    const onProgress = () => { void fetch("/api/workspace/hoje").then(r => r.ok ? r.json() : null).then(d => { if (d) setData(d); }); };
-    window.addEventListener("aprovai:progress", onProgress);
-    return () => window.removeEventListener("aprovai:progress", onProgress);
     // Carrega resumo semanal em paralelo (não bloqueia)
     fetch("/api/relatorio/semanal")
       .then(r => r.ok ? r.json() : null)
@@ -139,6 +141,10 @@ export default function HojePage() {
         }
       })
       .catch(() => {});
+
+    const onProgress = () => { void fetch("/api/workspace/hoje").then(r => r.ok ? r.json() : null).then(d => { if (d) setData(d); }); };
+    window.addEventListener("aprovai:progress", onProgress);
+    return () => window.removeEventListener("aprovai:progress", onProgress);
   }, []);
 
   if (loading) {

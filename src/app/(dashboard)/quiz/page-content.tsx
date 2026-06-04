@@ -74,29 +74,33 @@ export function QuizInner() {
   async function startQuiz() {
     setLoading(true);
     setError("");
-    const res = await fetch("/api/simulado/gerar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ total: QUIZ_SIZE }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      const qs = d.questions ?? [];
-      if (qs.length === 0) {
-        setError("Nenhuma questão disponível. Configure suas matérias em Perfil.");
-        setLoading(false);
-        return;
+    try {
+      const res = await fetch("/api/simulado/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ total: QUIZ_SIZE }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        const qs = d.questions ?? [];
+        if (qs.length === 0) {
+          setError("Nenhuma questão disponível. Configure suas matérias em Perfil.");
+          setLoading(false);
+          return;
+        }
+        setQuestions(qs.slice(0, QUIZ_SIZE));
+        setResults([]);
+        setCurrent(0);
+        setSelected(null);
+        setTimeUsed(0);
+        setPhase("running");
+        startTimer();
+      } else {
+        const d = await res.json().catch(() => ({}));
+        setError((d as { error?: string }).error ?? "Erro ao iniciar quiz");
       }
-      setQuestions(qs.slice(0, QUIZ_SIZE));
-      setResults([]);
-      setCurrent(0);
-      setSelected(null);
-      setTimeUsed(0);
-      setPhase("running");
-      startTimer();
-    } else {
-      const d = await res.json();
-      setError(d.error ?? "Erro ao iniciar quiz");
+    } catch {
+      setError("Erro de conexão. Verifique sua internet e tente novamente.");
     }
     setLoading(false);
   }

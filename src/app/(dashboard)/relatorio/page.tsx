@@ -125,7 +125,7 @@ export default function RelatorioPage() {
   const [materiaSort, setMateriaSort]   = useState<"accuracy" | "total" | "name">("accuracy");
 
   useEffect(() => {
-    fetch("/api/relatorio").then(r => r.json()).then(d => { setData(d); setLoading(false); });
+    fetch("/api/relatorio").then(r => r.ok ? r.json() : null).then(d => { setData(d); setLoading(false); }).catch(() => setLoading(false));
     fetch("/api/workspace/metas").then(r => r.ok ? r.json() : null).then(d => {
       if (d) { setMetas(d.metas); setMetasProg(d.progresso); }
     }).catch(() => {});
@@ -153,7 +153,14 @@ export default function RelatorioPage() {
       <div className="w-7 h-7 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
     </div>
   );
-  if (!data) return null;
+  if (!data) return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+      <p className="text-gray-400 text-sm">Não foi possível carregar seu relatório.</p>
+      <button onClick={() => window.location.reload()} className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm transition-colors">
+        Tentar novamente
+      </button>
+    </div>
+  );
 
   const weeks: HeatmapDay[][] = [];
   for (let i = 0; i < data.heatmap.length; i += 7) weeks.push(data.heatmap.slice(i, i + 7));

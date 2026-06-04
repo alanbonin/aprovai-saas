@@ -19,14 +19,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (dbUser.role === "ADMIN") redirect("/admin");
 
   // Verifica onboarding — alunos sem perfil completo vão para /onboarding
-  // Usa limit(1) para suportar múltiplos perfis (maybeSingle() falha com N>1 linhas)
-  const { data: profileRows } = await db
-    .from("StudentProfile")
-    .select("id")
-    .eq("userId", dbUser.id)
-    .eq("onboardingDone", true)
-    .limit(1);
-  if (!profileRows || profileRows.length === 0) redirect("/onboarding");
+  let profileRows: { id: string }[] | null = null;
+  try {
+    const res = await db
+      .from("StudentProfile")
+      .select("id")
+      .eq("userId", dbUser.id)
+      .eq("onboardingDone", true)
+      .limit(1);
+    profileRows = res.data;
+  } catch { /* timeout ou falha de DB — não redireciona, permite acesso */ }
+  if (profileRows !== null && profileRows.length === 0) redirect("/onboarding");
 
   // Busca créditos de IA da semana — total vem do plano real
   const sub = dbUser.subscription;
@@ -70,7 +73,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
         isPremium={isPremium}
         trialDaysLeft={trialDaysLeft}
       />
-      <div className="flex-1 min-w-0 flex flex-col">
+      {/* pt-12 no mobile reserva espaço para o header fixo do sidebar (lg:hidden, h-12) */}
+      <div className="flex-1 min-w-0 flex flex-col pt-12 lg:pt-0">
       {modoManutencao && (
         <div className="bg-red-500/20 border-b border-red-500/40 px-4 py-2 text-center text-sm text-red-300 font-medium">
           🔧 Sistema em manutenção. Algumas funcionalidades podem estar indisponíveis.
@@ -82,7 +86,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       )}
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
-      <main className="flex-1 min-w-0 overflow-auto pb-16 md:pb-0" style={{ backgroundColor: "var(--bg-base)" }}>
+      <main className="flex-1 min-w-0 overflow-auto pb-4" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
       <AutoRefresh />

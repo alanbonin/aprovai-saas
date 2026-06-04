@@ -44,9 +44,10 @@ export async function POST(req: Request) {
   if (!title?.trim()) return NextResponse.json({ error: "Título obrigatório" }, { status: 400 });
 
   const content = JSON.stringify({ title: title.trim(), message: message?.trim() ?? "" });
+  const now = new Date().toISOString();
   const { data, error } = await db
     .from("Note")
-    .insert({ userId: admin.id, subjectId: ADMIN_PREFIX, content })
+    .insert({ id: crypto.randomUUID(), userId: admin.id, subjectId: ADMIN_PREFIX, content, createdAt: now, updatedAt: now })
     .select()
     .single();
 

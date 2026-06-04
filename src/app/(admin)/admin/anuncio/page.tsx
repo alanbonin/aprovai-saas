@@ -77,8 +77,9 @@ export default function AdminAnuncioPage() {
     }
 
     // Optionally send push notification
+    let pushMsg = "";
     if (sendPush) {
-      await fetch("/api/admin/push", {
+      const pushRes = await fetch("/api/admin/push", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -87,9 +88,16 @@ export default function AdminAnuncioPage() {
           url: "/notificacoes",
         }),
       });
+      if (pushRes.ok) {
+        const pushData = await pushRes.json() as { sent?: number; failed?: number; total?: number };
+        pushMsg = ` Push: ${pushData.sent ?? 0}/${pushData.total ?? 0} enviados.`;
+      } else {
+        const pushErr = await pushRes.json().catch(() => ({})) as { error?: string };
+        pushMsg = ` Push falhou: ${pushErr.error ?? "erro desconhecido"}.`;
+      }
     }
 
-    showToast(true, sendPush ? "Anúncio publicado e push enviado!" : "Anúncio publicado com sucesso!");
+    showToast(true, sendPush ? `Anúncio publicado!${pushMsg}` : "Anúncio publicado com sucesso!");
     setTitle("");
     setMessage("");
     setType("announcement");

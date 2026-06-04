@@ -105,7 +105,7 @@ export async function POST(req: Request) {
     const leituraPdfMeta  = leituraPdfMin * 5;                // min/semana
 
     const metasContent = JSON.stringify({
-      questoesMeta:   Math.max(questoesMeta, 10),   // mínimo 10/semana
+      questoesMeta:   Math.max(questoesMeta, 150),  // mínimo 150/semana (30/dia)
       flashcardsMeta: Math.max(flashcardsMeta, 10),
       simuladosMeta:  body.horasEstudo >= 2 ? 1 : 1,
       horasEstudoMeta,
@@ -118,7 +118,7 @@ export async function POST(req: Request) {
     if (existingMeta?.id) {
       await db.from("Note").update({ content: metasContent }).eq("id", existingMeta.id);
     } else {
-      await db.from("Note").insert({ userId: dbUser.id, subjectId: PREFIX_METAS, content: metasContent });
+      await db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: PREFIX_METAS, content: metasContent, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
     }
     log.info("onboarding.metas_saved", { userId: dbUser.id, questoesDia, questoesMeta });
   }

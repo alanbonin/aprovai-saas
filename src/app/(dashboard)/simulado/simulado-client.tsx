@@ -163,28 +163,33 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
   async function startSimuladoWith(q: number, mins: number, banca: string, level: string, subject: string) {
     setLoading(true);
     setError("");
-    const body: Record<string, unknown> = { total: q };
-    if (banca)   body.banca      = banca;
-    if (level)   body.level      = level;
-    if (subject) body.subjectIds = [subject];
-    const res = await fetch("/api/simulado/gerar", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    setLoading(false);
-    if (res.status === 403) { showUpgrade("Simulados"); return; }
-    const data = await res.json();
-    if (!res.ok) {
-      setError(data.error ?? "Erro ao gerar simulado");
-      return;
+    try {
+      const body: Record<string, unknown> = { total: q };
+      if (banca)   body.banca      = banca;
+      if (level)   body.level      = level;
+      if (subject) body.subjectIds = [subject];
+      const res = await fetch("/api/simulado/gerar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (res.status === 403) { showUpgrade("Simulados"); return; }
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error ?? "Erro ao gerar simulado");
+        return;
+      }
+      setQuestions(data.questions);
+      setCurrent(0);
+      setSelected(null);
+      setAnswers([]);
+      setTimeLeft(mins * 60);
+      setPhase("running");
+    } catch {
+      setError("Erro de conexão. Verifique sua internet e tente novamente.");
+    } finally {
+      setLoading(false);
     }
-    setQuestions(data.questions);
-    setCurrent(0);
-    setSelected(null);
-    setAnswers([]);
-    setTimeLeft(mins * 60);
-    setPhase("running");
   }
 
   async function startSimulado() {
@@ -752,8 +757,8 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
             <h2 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
               <BookOpen className="w-4 h-4" /> Histórico
             </h2>
-            <div className="rounded-xl border border-white/5 overflow-hidden">
-              <table className="w-full text-sm">
+            <div className="rounded-xl border border-white/5 overflow-x-auto">
+              <table className="w-full text-sm min-w-[500px]">
                 <thead className="bg-white/5">
                   <tr>
                     <th className="px-4 py-3 text-left text-gray-500 font-medium text-xs">Data</th>

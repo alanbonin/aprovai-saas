@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { Plus, Edit2, ToggleLeft, ToggleRight, X, Check } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Edit2, ToggleLeft, ToggleRight, X, Check, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface Agent {
@@ -29,6 +29,20 @@ export function AgentesAdmin({ agents: initial, categorias, usageTotalMap = {}, 
   const [editing, setEditing] = useState<Partial<Agent> | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [filterCat, setFilterCat] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "active" | "inactive">("all");
+  const [filterPremium, setFilterPremium] = useState<"all" | "premium" | "free">("all");
+
+  const filtered = useMemo(() => agents.filter(a => {
+    if (search && !a.name.toLowerCase().includes(search.toLowerCase()) && !a.description.toLowerCase().includes(search.toLowerCase())) return false;
+    if (filterCat !== "all" && a.categoria !== filterCat) return false;
+    if (filterStatus === "active" && !a.active) return false;
+    if (filterStatus === "inactive" && a.active) return false;
+    if (filterPremium === "premium" && !a.isPremium) return false;
+    if (filterPremium === "free" && a.isPremium) return false;
+    return true;
+  }), [agents, search, filterCat, filterStatus, filterPremium]);
 
   async function save() {
     if (!editing?.name?.trim()) return;
@@ -73,10 +87,12 @@ export function AgentesAdmin({ agents: initial, categorias, usageTotalMap = {}, 
 
   return (
     <>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h1 className="text-2xl font-bold">Agentes</h1>
-          <p className="text-gray-500 text-sm mt-1">{agents.filter(a => a.active).length} ativos de {agents.length} total</p>
+          <h1 className="text-2xl font-bold">Agentes IA</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            {agents.filter(a => a.active).length} ativos · {agents.length} total · exibindo {filtered.length}
+          </p>
         </div>
         <button
           onClick={() => setEditing({ ...empty })}
@@ -85,6 +101,41 @@ export function AgentesAdmin({ agents: initial, categorias, usageTotalMap = {}, 
           <Plus className="w-4 h-4" />
           Novo agente
         </button>
+      </div>
+
+      {/* Filtros */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        <div className="relative flex-1 min-w-48">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-500" />
+          <input
+            value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por nome ou descrição..."
+            className="w-full pl-8 pr-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-200 placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+          />
+        </div>
+        <select value={filterCat} onChange={e => setFilterCat(e.target.value)}
+          className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+          <option value="all">Todas categorias</option>
+          {categorias.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as "all"|"active"|"inactive")}
+          className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+          <option value="all">Ativos + Inativos</option>
+          <option value="active">Somente ativos</option>
+          <option value="inactive">Somente inativos</option>
+        </select>
+        <select value={filterPremium} onChange={e => setFilterPremium(e.target.value as "all"|"premium"|"free")}
+          className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+          <option value="all">Premium + Free</option>
+          <option value="premium">Somente premium</option>
+          <option value="free">Somente free</option>
+        </select>
+        {(search || filterCat !== "all" || filterStatus !== "all" || filterPremium !== "all") && (
+          <button onClick={() => { setSearch(""); setFilterCat("all"); setFilterStatus("all"); setFilterPremium("all"); }}
+            className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-sm text-gray-400 hover:text-white transition-colors">
+            Limpar filtros
+          </button>
+        )}
       </div>
 
       <div className="rounded-xl border border-white/5 overflow-hidden">
@@ -100,7 +151,10 @@ export function AgentesAdmin({ agents: initial, categorias, usageTotalMap = {}, 
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {agents.map(agent => {
+            {filtered.length === 0 && (
+              <tr><td colSpan={6} className="text-center py-8 text-gray-500 text-sm">Nenhum agente encontrado com os filtros aplicados.</td></tr>
+            )}
+            {filtered.map(agent => {
               const cat = categorias.find(c => c.id === agent.categoria);
               const weekMsgs = usageWeekMap[agent.id] ?? 0;
               const totalMsgs = usageTotalMap[agent.id] ?? 0;

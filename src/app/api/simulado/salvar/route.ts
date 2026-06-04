@@ -167,9 +167,12 @@ export async function POST(req: NextRequest) {
       await db.from("Note").delete()
         .eq("userId", dbUser.id).eq("subjectId", SIMULADO_NOTIF_PREFIX);
       await db.from("Note").insert({
+        id:        crypto.randomUUID(),
         userId:    dbUser.id,
         subjectId: SIMULADO_NOTIF_PREFIX,
         content:   notifPayload,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       });
     } catch { /* silencioso — não quebra o fluxo */ }
   })();

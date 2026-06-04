@@ -139,7 +139,7 @@ export async function PATCH(req: Request) {
     if (existingNote?.id) {
       updates.push(db.from("Note").update({ content }).eq("id", existingNote.id));
     } else {
-      updates.push(db.from("Note").insert({ userId: dbUser.id, subjectId: PREFS_PREFIX, content }));
+      updates.push(db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: PREFS_PREFIX, content, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }));
     }
   }
 

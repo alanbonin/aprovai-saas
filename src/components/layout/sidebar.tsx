@@ -108,11 +108,13 @@ const SECTIONS_ADMIN: NavSection[] = [
   {
     id: "admin-conteudo", title: "Conteúdo", color: "#f59e0b", defaultOpen: true,
     items: [
-      { href: "/admin/questoes",          label: "Questões",    icon: "📝" },
-      { href: "/admin/questoes/gerar",    label: "Gerar com IA",icon: "✨" },
-      { href: "/admin/questoes/import",   label: "Import CSV",  icon: "📥" },
-      { href: "/admin/questoes/reportes", label: "Reportes",    icon: "🚩" },
-      { href: "/admin/flashcards",        label: "Flashcards",  icon: "🗂️" },
+      { href: "/admin/questoes",                    label: "Questões",        icon: "📝" },
+      { href: "/admin/questoes/gerar-massa",        label: "Gerar em Massa",  icon: "⚡" },
+      { href: "/admin/questoes/gerar",              label: "Gerar Avulso",    icon: "✨" },
+      { href: "/admin/questoes/import",             label: "Import CSV",      icon: "📥" },
+      { href: "/admin/questoes/reportes",           label: "Reportes",        icon: "🚩" },
+      { href: "/admin/flashcards",                  label: "Flashcards",      icon: "🗂️" },
+      { href: "/admin/flashcards/gerar-massa",      label: "Flashcards Massa",icon: "🃏" },
       { href: "/admin/materias",          label: "Matérias",      icon: "📚" },
       { href: "/admin/topicos",           label: "Tópicos",       icon: "🏷️" },
       { href: "/admin/biblioteca",        label: "Biblioteca PDF", icon: "📰" },
@@ -174,7 +176,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
       {/* Overlay do menu "Mais" */}
       {mobileOpen && (
         <div
-          className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
       )}
@@ -182,7 +184,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
       {/* Sheet "Mais" — desliza de baixo */}
       <div
         className={cn(
-          "fixed bottom-16 left-0 right-0 z-[160] md:hidden transition-all duration-300 ease-out",
+          "fixed bottom-16 left-0 right-0 z-[160] lg:hidden transition-all duration-300 ease-out",
           mobileOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
         )}
         style={{ maxHeight: "70vh" }}
@@ -253,7 +255,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
 
       {/* ── Barra inferior fixa ─────────────────────────────────── */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[140] md:hidden border-t border-white/10"
+        className="fixed bottom-0 left-0 right-0 z-[140] lg:hidden border-t border-white/10"
         style={{
           backgroundColor: "var(--bg-surface)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)", // suporte iPhone
@@ -500,11 +502,50 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
 
   return (
     <>
+      {/* ── Header mobile fixo (lg:hidden) ────────────────────────── */}
+      <div
+        className="lg:hidden fixed top-0 left-0 right-0 z-[90] flex items-center justify-between px-4 h-12 border-b"
+        style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}
+      >
+        <a href="/hoje" className="flex items-center gap-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="AprovAI360" className="w-7 h-7" />
+          <p className="font-bold text-sm">
+            <span style={{ color: "var(--text-primary)" }}>Aprov</span>
+            <span style={{ color: "#0ab5bd" }}>AI</span>
+            <span style={{ color: "var(--text-primary)" }}>360</span>
+          </p>
+        </a>
+        <div className="flex items-center gap-1">
+          <form action="/api/auth/logout" method="POST">
+            <button type="submit" title="Sair"
+              className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors text-xs font-bold">
+              Sair
+            </button>
+          </form>
+          <button
+            onClick={() => setMobileOpen(v => !v)}
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
+            aria-label="Menu"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* ── Overlay mobile ────────────────────────────────────────── */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
       {/* ── Botão toggle quando sidebar fechada (desktop) ─────────── */}
       {!desktopOpen && (
         <button
           onClick={toggleDesktop}
-          className="hidden md:flex fixed top-4 left-3 z-50 w-8 h-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"
+          className="hidden lg:flex fixed top-4 left-3 z-50 w-8 h-8 items-center justify-center rounded-lg border border-white/10 text-gray-400 hover:text-white transition-colors"
           style={{ backgroundColor: "var(--bg-surface)" }}
           title="Abrir menu"
         >
@@ -512,14 +553,17 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         </button>
       )}
 
-      {/* ── Sidebar — APENAS DESKTOP ─────────────────────────────── */}
+      {/* ── Sidebar — drawer mobile + sticky desktop ──────────────── */}
     <aside
       className={cn(
-        "hidden md:flex flex-col flex-shrink-0",
-        "sticky top-0 h-screen",
-        "border-r border-white/[0.06]",
-        "overflow-hidden transition-all duration-300 ease-in-out",
-        desktopOpen ? "w-56" : "w-0 border-r-0"
+        "flex flex-col flex-shrink-0 z-[100]",
+        // Mobile: drawer deslizante da esquerda
+        "fixed top-0 left-0 h-full w-72 transition-transform duration-300 ease-in-out",
+        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Desktop: sticky, largura controlada por desktopOpen
+        "lg:relative lg:translate-x-0 lg:transition-none lg:h-screen lg:sticky lg:top-0",
+        desktopOpen ? "lg:w-56" : "lg:w-0 lg:overflow-hidden lg:border-r-0",
+        "border-r border-white/[0.06]"
       )}
       style={{ backgroundColor: "var(--bg-surface)" }}
     >
@@ -544,7 +588,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         {/* Botão fechar sidebar (desktop) */}
         <button
           onClick={toggleDesktop}
-          className="hidden md:flex w-7 h-7 items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
+          className="hidden lg:flex w-7 h-7 items-center justify-center rounded-md text-gray-500 hover:text-white hover:bg-white/10 transition-colors flex-shrink-0"
           title="Fechar menu"
         >
           <X className="w-4 h-4" />
@@ -734,16 +778,6 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
       </div>
     </aside>
 
-      {/* ── Bottom Nav — APENAS MOBILE ───────────────────────────── */}
-      {!isAdmin && (
-        <MobileBottomNav
-          pathname={pathname}
-          sections={sections}
-          unreadNotifs={unreadNotifs}
-          mobileOpen={mobileOpen}
-          setMobileOpen={setMobileOpen}
-        />
-      )}
     </>
   );
 }

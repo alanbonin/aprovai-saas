@@ -122,7 +122,8 @@ function Nav() {
     <nav className={`lc-nav ${scrolled ? 'scrolled' : ''}`}>
       <div className="lc-wrap lc-nav-inner">
         <a href="/" className="lc-logo">
-          <div className="lc-logo-mark" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-icon.svg" alt="AprovAI360" className="lc-logo-mark" style={{ background: 'transparent', boxShadow: 'none', borderRadius: 0 }} />
           <div className="lc-logo-text">
             Aprov<span>AI</span>360
           </div>
@@ -207,9 +208,23 @@ function Hero() {
       {/* Conteúdo central */}
       <div className="lc-hero-body">
         <Reveal>
-          <div className="lc-hero-badge">
-            <div className="lc-hero-badge-dot" />
-            Concurso Público · OAB · ENEM
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'center', marginBottom: 8 }}>
+            {[
+              { label: 'Concurso Público', icon: '🏛️', color: '#6366f1' },
+              { label: 'OAB', icon: '⚖️', color: '#f59e0b' },
+              { label: 'ENEM', icon: '📋', color: '#8b5cf6' },
+            ].map(m => (
+              <div key={m.label} style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 999,
+                border: `1px solid ${m.color}40`,
+                background: `${m.color}15`,
+                fontSize: 12, fontWeight: 600, letterSpacing: '0.04em',
+                color: m.color,
+              }}>
+                <span>{m.icon}</span> {m.label}
+              </div>
+            ))}
           </div>
         </Reveal>
 
@@ -226,8 +241,8 @@ function Hero() {
 
         <Reveal delay={260}>
           <p className="lc-hero-desc">
-            Mentor de IA especializado na sua prova. Plano de estudos adaptativo,
-            simulados com gabarito comentado e correção de redação em 30 segundos.
+            Sem horas de PDF. Sem cursinho caro. Você responde questões,
+            a IA identifica seus gaps e entrega o conteúdo exato que vai cair na sua prova.
           </p>
         </Reveal>
 
@@ -267,10 +282,10 @@ function Hero() {
    ════════════════════════════════════════════════════════ */
 function StatsStrip() {
   const stats = [
-    { num: '10.000', suf: '+', label: 'Questões no banco de estudos' },
-    { num: '800',    suf: '+', label: 'Tópicos mapeados pela IA' },
-    { num: '30',     suf: 's', label: 'Para corrigir sua redação' },
-    { num: '7',      suf: 'd', label: 'Grátis para testar tudo' },
+    { num: '170.000', suf: '+', label: 'Questões reais de provas anteriores' },
+    { num: '1.200',   suf: '+', label: 'Tópicos mapeados por banca e edital' },
+    { num: '30',      suf: 's', label: 'Para corrigir sua redação com IA' },
+    { num: '7',       suf: 'd', label: 'Grátis — sem cartão de crédito' },
   ];
   return (
     <section className="lc-stats">

@@ -12,10 +12,11 @@ function checkCronAuth(request: NextRequest): boolean {
 }
 
 // ── Rotas públicas (sem auth) ────────────────────────────────────────────────
+// Rotas de auth: NÃO entram em PUBLIC_PATHS para que usuários autenticados
+// sejam redirecionados para /hoje em vez de verem a tela de login/cadastro.
+// Usuários não autenticados chegam aqui normalmente (isAuthPage = true → passa).
 const PUBLIC_PATHS = new Set([
   "/",
-  "/login",
-  "/cadastro",
   "/reset-senha",
   "/confirmar-email",
   "/termos",

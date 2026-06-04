@@ -10,14 +10,11 @@ interface Props {
 
 export default function RootError({ error, reset }: Props) {
   useEffect(() => {
-    // Log para Sentry quando configurado
-    if (process.env.NODE_ENV === "production") {
-      console.error("[AprovAI360 Error]", error.digest, error.message);
-    }
+    console.error("[AprovAI360 Error]", error.digest, error.message, error.stack);
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6" style={{ backgroundColor: "var(--bg-base)" }}>
       <div className="max-w-md w-full text-center">
         <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-6">
           <AlertTriangle className="w-8 h-8 text-red-400" />
@@ -25,11 +22,11 @@ export default function RootError({ error, reset }: Props) {
 
         <h1 className="text-2xl font-bold text-white mb-2">Algo deu errado</h1>
         <p className="text-gray-400 text-sm mb-1">
-          Ocorreu um erro inesperado. Nosso time já foi notificado.
+          Ocorreu um erro inesperado.
         </p>
-        {error.digest && (
-          <p className="text-gray-600 text-xs font-mono mb-6">
-            Código: {error.digest}
+        {(error.digest || error.message) && (
+          <p className="text-gray-500 text-xs font-mono mb-6 max-w-sm mx-auto break-all">
+            {error.digest ? `Cód: ${error.digest}` : error.message}
           </p>
         )}
 

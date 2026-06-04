@@ -4,6 +4,7 @@
   "outputDirectory": ".next",
   "devCommand": "npm run dev",
   "installCommand": "npm install",
+  "alias": ["aprovai360.com.br", "www.aprovai360.com.br"],
   "crons": [
     {
       "path": "/api/email/lembrete",
