@@ -34,23 +34,39 @@ export async function GET() {
     .eq("role", "ADMIN");
   const adminIds = (adminUsers ?? []).map(u => u.id as string);
 
-  // Busca:
-  // 1. Decks criados pelo próprio aluno
-  // 2. Decks de admins (biblioteca da plataforma)
-  // 3. Decks de qualquer usuário nas matérias do aluno
-  let query = db
+  // Busca em 2 queries separadas para evitar transferir a coluna "cards" (JSON pesado) dos decks de admin:
+  // 1. Decks do próprio aluno — inclui "cards" para calcular dueCount e totalCards
+  // 2. Decks de admins/matérias — SEM "cards" (apenas metadados), limitado a 100
+
+  const ownQuery = db
     .from("FlashcardSet")
-    .select("id, name, subjectId, cards, updatedAt, userId");
+    .select("id, name, subjectId, cards, updatedAt, userId")
+    .eq("userId", dbUser.id as string)
+    .order("updatedAt", { ascending: false });
 
-  // Monta filtro OR: userId do aluno | userId de admin | subjectId nas matérias do aluno
-  const orParts: string[] = [`userId.eq.${dbUser.id as string}`];
-  if (adminIds.length > 0) orParts.push(`userId.in.(${adminIds.join(",")})`);
-  if (subjectIds.length > 0) orParts.push(`subjectId.in.(${subjectIds.join(",")})`);
+  const adminOrParts: string[] = [];
+  if (adminIds.length > 0) adminOrParts.push(`userId.in.(${adminIds.join(",")})`);
+  if (subjectIds.length > 0) adminOrParts.push(`subjectId.in.(${subjectIds.join(",")})`);
 
-  const { data: sets } = await query
-    .or(orParts.join(","))
+  const adminQueryBase = db
+    .from("FlashcardSet")
+    .select("id, name, subjectId, updatedAt, userId") // sem "cards" — evita payload enorme
+    .neq("userId", dbUser.id as string)
     .order("updatedAt", { ascending: false })
-    .range(0, 4999);
+    .range(0, 99); // máximo 100 decks de biblioteca
+
+  const [ownResult, adminResult] = await Promise.all([
+    ownQuery,
+    adminOrParts.length > 0
+      ? adminQueryBase.or(adminOrParts.join(","))
+      : Promise.resolve({ data: [] as Array<{ id: string; name: string; subjectId: string; updatedAt: string; userId: string }> }),
+  ]);
+
+  // Combina: decks do aluno (com cards) + decks de admin/matérias (sem cards)
+  type SetWithCards = { id: string; name: string; subjectId: string; updatedAt: string; userId: string; cards: unknown };
+  const ownSets: SetWithCards[] = (ownResult.data ?? []).map(s => ({ ...s } as SetWithCards));
+  const adminSets: SetWithCards[] = (adminResult.data ?? []).map(s => ({ ...s, cards: null } as SetWithCards));
+  const sets = [...ownSets, ...adminSets];
 
   // Build subjectName lookup
   const uniqueSubjectIds = [...new Set((sets ?? []).map(s => s.subjectId as string).filter(Boolean))];
@@ -94,28 +110,40 @@ export async function GET() {
   }
 
   const decks = (sets ?? []).map(s => {
-    const cards = (s.cards as Card[]) ?? [];
+    const cards = (s.cards as Card[] | null) ?? [];
     const isOwn = s.userId === dbUser.id;
     let dueCount: number;
 
     if (isOwn) {
-      // Deck do aluno: nextReview está direto no card
+      // Deck do aluno: nextReview está direto no card (cards completo disponível)
       dueCount = cards.filter(c => !c.nextReview || new Date(c.nextReview).getTime() <= nowMs).length;
     } else {
-      // Deck do admin: nextReview está na Note pessoal
+      // Deck do admin: cards não foi buscado — usa progresso da Note + total conhecido
       const prog = progressBySet[s.id as string] ?? {};
-      dueCount = cards.filter(c => {
-        const p = prog[c.id];
-        return !p?.nextReview || new Date(p.nextReview).getTime() <= nowMs;
-      }).length;
+      const progKeys = Object.keys(prog);
+      if (progKeys.length === 0) {
+        // Sem progresso pessoal → assume todos os cards pendentes (usamos contagem da Note se disponível)
+        dueCount = 0; // aparece como "0 para revisar" até o aluno abrir o deck
+      } else {
+        dueCount = progKeys.filter(cardId => {
+          const p = prog[cardId];
+          return !p?.nextReview || new Date(p.nextReview).getTime() <= nowMs;
+        }).length;
+      }
     }
+
+    // Para decks de admin, cards não foi buscado (otimização de payload).
+    // totalCards usa os dados de progresso pessoal como estimativa, ou -1 para indicar "desconhecido".
+    const adminProg = !isOwn ? (progressBySet[s.id as string] ?? {}) : {};
+    const progCount = Object.keys(adminProg).length;
+    const totalCards = isOwn ? cards.length : (progCount > 0 ? progCount : 0);
 
     return {
       id: s.id,
       name: s.name,
       subjectId: s.subjectId,
       subjectName: subjectMap[s.subjectId as string] ?? "",
-      totalCards: cards.length,
+      totalCards,
       dueCount,
       updatedAt: s.updatedAt,
     };

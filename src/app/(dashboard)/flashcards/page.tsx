@@ -88,10 +88,14 @@ export default function FlashcardsPage() {
 
   const loadDecks = useCallback(async () => {
     try {
+      // Timeout de 8s para evitar spinner infinito caso a API esteja lenta (ex: cold start Vercel)
+      const ctrl = new AbortController();
+      const timeoutId = setTimeout(() => ctrl.abort(), 8_000);
       const [decksData, autoData] = await Promise.all([
-        fetch("/api/workspace/flashcards").then(r => r.ok ? r.json() : null),
-        fetch("/api/workspace/flashcards/auto-erro").then(r => r.ok ? r.json() : null),
+        fetch("/api/workspace/flashcards", { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch("/api/workspace/flashcards/auto-erro", { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
       ]);
+      clearTimeout(timeoutId);
       if (decksData) {
         const loadedDecks: Deck[] = decksData.decks ?? [];
         setDecks(loadedDecks);
