@@ -68,67 +68,52 @@ export async function GET() {
     subjectIds = (studentSubs ?? []).map(s => s.subjectId as string);
   }
 
-  // Count available questions
-  let countQuery = db.from("Question").select("id", { count: "exact", head: true }).eq("aprovado", true);
-  if (subjectIds.length > 0) countQuery = countQuery.in("subjectId", subjectIds);
-  let countResult = await countQuery;
-  // Fallback se coluna aprovado não existe ainda
-  if (countResult.error && (countResult.error as { code?: string }).code === "42703") {
-    let fallbackCQ = db.from("Question").select("id", { count: "exact", head: true });
-    if (subjectIds.length > 0) fallbackCQ = fallbackCQ.in("subjectId", subjectIds);
-    countResult = await fallbackCQ;
+  // Estratégia 2 queries em vez de 10:
+  // 1. Busca até 1000 IDs (leve) para sampling determinístico
+  // 2. Busca as 10 questões de uma vez com IN()
+  let idQuery = db.from("Question").select("id").eq("aprovado", true).order("id").limit(1000);
+  if (subjectIds.length > 0) idQuery = idQuery.in("subjectId", subjectIds);
+  let idResult = await idQuery;
+
+  // Fallback se coluna aprovado não existe
+  if (idResult.error && (idResult.error as { code?: string }).code === "42703") {
+    let fallbackIdQ = db.from("Question").select("id").order("id").limit(1000);
+    if (subjectIds.length > 0) fallbackIdQ = fallbackIdQ.in("subjectId", subjectIds);
+    idResult = await fallbackIdQ;
   }
-  const { count } = countResult;
-  const total = count ?? 0;
+
+  const allIds = (idResult.data ?? []).map(r => r.id as string);
+  const total = allIds.length;
 
   if (total < 10) {
     return NextResponse.json({ error: "Questões insuficientes", questions: [] });
   }
 
-  // Deterministic seed: dayOfYear * 31 + userId hash
+  // Sampling determinístico: seed por dia + userId
   const dayOfYear = Math.floor(
     (brtNow.getTime() - new Date(brtNow.getFullYear(), 0, 0).getTime()) / 86400000
   );
   const userHash = dbUser.id.split("").reduce((a: number, c: string) => (a * 31 + c.charCodeAt(0)) & 0xffff, 0);
   const seed = (dayOfYear * 31 + userHash) % total;
 
-  // Pick 10 questions starting from seed (wrap around)
-  const indices: number[] = [];
+  const selectedIds: string[] = [];
   for (let i = 0; i < 10; i++) {
-    indices.push((seed + i * Math.ceil(total / 10)) % total);
+    const idx = (seed + i * Math.ceil(total / 10)) % total;
+    const id = allIds[idx];
+    if (id && !selectedIds.includes(id)) selectedIds.push(id);
   }
-  const uniqueIndices = [...new Set(indices)];
-
-  const questionFetches = uniqueIndices.map(offset => {
-    let q = db.from("Question")
-      .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
-      .eq("aprovado", true)
-      .order("id")
-      .range(offset, offset);
-    if (subjectIds.length > 0) q = q.in("subjectId", subjectIds);
-    return q;
-  });
-
-  const rawResults = await Promise.all(questionFetches);
-  // Fallback se coluna aprovado não existe ainda (verifica o primeiro erro)
-  const hasAprovadoError = rawResults.some(r => r.error && (r.error as { code?: string }).code === "42703");
-  let results = rawResults;
-  if (hasAprovadoError) {
-    const fallbackFetches = uniqueIndices.map(offset => {
-      let q = db.from("Question")
-        .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
-        .order("id")
-        .range(offset, offset);
-      if (subjectIds.length > 0) q = q.in("subjectId", subjectIds);
-      return q;
-    });
-    results = await Promise.all(fallbackFetches);
+  // Garante exatamente 10 (preenche com IDs adjacentes se necessário)
+  for (let i = 0; selectedIds.length < 10 && i < total; i++) {
+    const id = allIds[(seed + i) % total];
+    if (!selectedIds.includes(id)) selectedIds.push(id);
   }
 
-  const questions = results
-    .flatMap(r => r.data ?? [])
-    .filter((q, i, arr) => arr.findIndex(x => x.id === q.id) === i) // deduplicate
-    .slice(0, 10);
+  // Uma única query para buscar as 10 questões
+  const { data: questionsData } = await db.from("Question")
+    .select("id, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, level, banca, year, subjectId")
+    .in("id", selectedIds);
+
+  const questions = (questionsData ?? []).slice(0, 10);
 
   return NextResponse.json({
     questions,
