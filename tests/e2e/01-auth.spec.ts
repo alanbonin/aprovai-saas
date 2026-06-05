@@ -38,8 +38,9 @@ test.describe("Auth", () => {
 
     // Clica no botão Sair via Playwright locator (force=true ignora visibilidade/viewport).
     // O React 18 propaga o evento corretamente via delegação no root container.
-    const sairBtn = page.locator('button[title="Sair"], button:has-text("Sair")').first();
-    await sairBtn.click({ force: true });
+    // Há dois botões "Sair" no DOM (mobile e desktop); pega o visível no viewport atual
+    const sairBtn = page.locator('button[title="Sair"]:visible').first();
+    await sairBtn.click();
 
     await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
     await page.goto("/hoje");
