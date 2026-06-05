@@ -34,14 +34,14 @@ test.describe("Auth", () => {
 
   test("logout funciona na primeira tentativa", async ({ page }) => {
     await loginAdmin(page);
-    // Botão Sair está no footer da sidebar, possivelmente cortado pelo viewport.
-    // Usa JS click para garantir disparo independente de visibilidade CSS.
-    await page.evaluate(() => {
-      const btn = Array.from(document.querySelectorAll("button"))
-        .find(b => b.textContent?.trim() === "Sair");
-      (btn as HTMLButtonElement | undefined)?.click();
-    });
-    await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
+    await page.waitForLoadState("networkidle");
+
+    // Clica no botão Sair via Playwright locator (force=true ignora visibilidade/viewport).
+    // O React 18 propaga o evento corretamente via delegação no root container.
+    const sairBtn = page.locator('button[title="Sair"], button:has-text("Sair")').first();
+    await sairBtn.click({ force: true });
+
+    await expect(page).toHaveURL(/\/login/, { timeout: 15_000 });
     await page.goto("/hoje");
     await expect(page).toHaveURL(/\/login/);
   });

@@ -15,8 +15,11 @@ async function handleSignOut() {
   // Set-Cookie para limpar os tokens; depois window.location força navegação
   // limpa sem os cookies SSR, evitando redirect-loop www→apex no middleware.
   try {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-  } catch { /* ignora erros de rede — redireciona de qualquer forma */ }
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 5_000);
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include", signal: ctrl.signal });
+    clearTimeout(tid);
+  } catch { /* ignora timeout/rede — redireciona de qualquer forma */ }
   window.location.href = "/login";
 }
 
