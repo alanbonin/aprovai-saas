@@ -45,7 +45,7 @@ test.describe("Sidebar / Navegação", () => {
   }
 
   const clickSair = (page: import("@playwright/test").Page) =>
-    page.locator('button[title="Sair"], button:has-text("Sair")').first().click({ force: true });
+    page.locator('button[title="Sair"]:visible').first().click();
 
   test("botão Sair funciona na primeira tentativa", async ({ page }) => {
     await page.goto("/hoje");

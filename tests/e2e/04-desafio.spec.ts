@@ -14,7 +14,9 @@ test.describe("Desafio Diário", () => {
   test("carrega desafio ou mostra questões insuficientes (não trava)", async ({ page }) => {
     // Pode ser: tela de início, questões insuficientes, ou já completou hoje
     const startBtn = page.locator('button:has-text("Iniciar"), button:has-text("Começar")');
-    const insuficiente = page.locator("text=/insuficient|matéria/i");
+    // Restringe ao main para não pegar links da sidebar (ex: "Matérias")
+    const insuficiente = page.locator("main, #main-content, [role='main']").locator("text=/insuficient|matéria/i").first()
+      .or(page.locator("text=/insuficientes/i"));
     const completado = page.locator("text=/já completou|concluído hoje/i");
     const spinner = page.locator('[class*="animate-spin"]');
 

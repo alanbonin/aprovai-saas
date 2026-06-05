@@ -80,7 +80,8 @@ test.describe("Admin › Painel", () => {
     await waitForSpinnerGone(page);
     await page.waitForTimeout(2_000);
     // Deve ter formulário ou botão visível
-    const form = page.locator("form, button").first();
+    // Evita pegar o primeiro botão da sidebar — busca form ou botão de ação na área principal
+    const form = page.locator('form').first().or(page.locator('main button, [role="main"] button').first());
     await expect(form).toBeVisible({ timeout: 5_000 });
   });
 
