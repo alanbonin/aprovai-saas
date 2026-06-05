@@ -3,28 +3,24 @@ import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  // Invalida a sessão no servidor Supabase
   await supabase.auth.signOut({ scope: "global" }).catch(() => {});
 
-  const redirectUrl = new URL("/login", request.url);
-  const response = NextResponse.redirect(redirectUrl);
+  // Usa x-forwarded-host (preservado pelo Vercel antes da normalização de URL)
+  // para garantir o redirect no domínio correto (www vs sem-www).
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? "www.aprovai360.com.br";
+  const proto = request.headers.get("x-forwarded-proto") ?? "https";
+  const response = NextResponse.redirect(`${proto}://${host}/login`);
 
-  // Lê os nomes dos cookies diretamente do header da requisição e os deleta
-  // explicitamente na resposta — garante que o browser limpe a sessão SSR
-  // independente de como o Next.js propaga cookies() para o NextResponse.
+  // Deleta todos os cookies Supabase sem especificar domain/secure/httpOnly —
+  // o browser faz match só pelo nome+path e limpa independente de como foram criados.
   const cookieHeader = request.headers.get("cookie") ?? "";
   cookieHeader
     .split(";")
     .map(c => c.trim().split("=")[0].trim())
-    .filter(name => name && (name.startsWith("sb-") || name.includes("supabase") || name.includes("token")))
+    .filter(Boolean)
     .forEach(name => {
-      response.cookies.set(name, "", {
-        expires: new Date(0),
-        path: "/",
-        sameSite: "lax",
-        secure: true,
-        httpOnly: true,
-      });
+      // Delete todos os cookies (sessão Supabase + qualquer cookie de auth)
+      response.cookies.set(name, "", { maxAge: 0, path: "/" });
     });
 
   return response;
