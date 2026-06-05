@@ -8,12 +8,16 @@ import { ChevronDown, Sun, Moon, Menu, X } from "lucide-react";
 import { ProfileSwitcher } from "@/components/layout/profile-switcher";
 
 let signingOut = false;
-async function handleSignOut() {
+function handleSignOut() {
   if (signingOut) return;
   signingOut = true;
-  // POST para o servidor — limpa o cookie SSR (scope: global) além da sessão client-side
-  await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
-  window.location.href = "/login";
+  // Form POST nativo — o browser segue o redirect do servidor no mesmo domínio,
+  // garantindo que os cookies SSR sejam limpos corretamente antes de ir para /login.
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = "/api/auth/logout";
+  document.body.appendChild(form);
+  form.submit();
 }
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
