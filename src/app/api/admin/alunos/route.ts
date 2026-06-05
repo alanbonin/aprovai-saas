@@ -217,9 +217,25 @@ export async function PATCH(req: Request) {
       // Isentar: marca como ISENTO e dá prazo longo (10 anos)
       const endDate = new Date();
       endDate.setFullYear(endDate.getFullYear() + 10);
-      const { data: sub } = await db.from("Subscription").select("id").eq("userId", uid).maybeSingle();
+      const { data: sub } = await db.from("Subscription").select("id, planId").eq("userId", uid).maybeSingle();
       if (sub) {
-        await db.from("Subscription").update({ mpPaymentId: "ISENTO", endDate: endDate.toISOString(), updatedAt: now }).eq("userId", uid);
+        await db.from("Subscription").update({ mpPaymentId: "ISENTO", status: "ACTIVE", endDate: endDate.toISOString(), updatedAt: now }).eq("userId", uid);
+      } else {
+        // Usuário criado sem plano — busca plano trial (ou qualquer plano ativo) para criar a assinatura isenta
+        const { data: fallbackPlan } = await db.from("Plan").select("id").eq("active", true).order("price", { ascending: true }).limit(1).maybeSingle();
+        if (fallbackPlan) {
+          await db.from("Subscription").insert({
+            id: crypto.randomUUID(),
+            userId: uid,
+            planId: fallbackPlan.id,
+            status: "ACTIVE",
+            mpPaymentId: "ISENTO",
+            startDate: now,
+            endDate: endDate.toISOString(),
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
       }
     } else {
       // Cobrar: remove isenção, mantém plano mas endDate em 30 dias (precisa pagar)

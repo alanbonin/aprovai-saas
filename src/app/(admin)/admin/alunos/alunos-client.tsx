@@ -137,7 +137,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
   const [bulkDeleteConfirm, setBulkDeleteConfirm] = useState(false);
 
   // Form criar usuário
-  const [form, setForm] = useState({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "" });
+  const [form, setForm] = useState({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "", isento: false });
 
   // Form editar usuário
   const [editForm, setEditForm] = useState({ name: "", email: "", newPassword: "", groupTag: "" });
@@ -267,10 +267,20 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
       if (data.user) {
         setUsers(prev => [data.user, ...prev]);
         if (form.planId) setSubMap(m => ({ ...m, [data.user.id]: form.planId }));
+
+        // Marcar como isento imediatamente após criar
+        if (form.isento) {
+          await fetch("/api/admin/alunos", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "toggleIsento", userId: data.user.id, isento: true }),
+          }).catch(() => {});
+          setIsentoMap(m => ({ ...m, [data.user.id]: true }));
+        }
       }
       showToast("Usuário criado com sucesso!");
       setShowCreate(false);
-      setForm({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "" });
+      setForm({ name: "", email: "", password: "", planId: "", origin: "admin", partnerId: "", groupTag: "", isento: false });
     } finally { setLoading(false); }
   }
 
@@ -521,6 +531,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             if (activeTab === "especiais") presets.groupTag = "influencer";
             if (activeTab === "platform") presets.origin = "platform";
             if (activeTab === "admin") presets.origin = "admin";
+            if (activeTab === "isentos") presets.isento = true;
             setForm(f => ({ ...f, ...presets }));
             setShowCreate(true);
           }}
@@ -797,6 +808,18 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
                   placeholder="beta, influencer, corporativo..." className={INPUT} />
               </Field>
             </div>
+            <label className="flex items-center gap-2.5 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={form.isento}
+                onChange={e => setForm(f => ({ ...f, isento: e.target.checked }))}
+                className="w-4 h-4 rounded accent-green-500"
+              />
+              <span className="text-sm text-gray-300 flex items-center gap-1.5">
+                <Gift className="w-3.5 h-3.5 text-green-400" />
+                Marcar como isento (sem cobrança — acesso permanente)
+              </span>
+            </label>
             <div className="flex gap-3 pt-2">
               <button type="button" onClick={() => setShowCreate(false)}
                 className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors">Cancelar</button>
