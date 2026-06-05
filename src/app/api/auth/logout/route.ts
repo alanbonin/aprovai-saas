@@ -1,22 +1,31 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
-  await supabase.auth.signOut({ scope: "global" });
+  // Invalida a sessão no servidor Supabase
+  await supabase.auth.signOut({ scope: "global" }).catch(() => {});
 
-  // Redireciona para /login mantendo o mesmo origin da requisição (www vs sem-www)
-  // para que os cookies deletados pelo signOut sejam aplicados no domínio correto.
-  const url = new URL("/login", request.url);
-  const response = NextResponse.redirect(url);
+  const redirectUrl = new URL("/login", request.url);
+  const response = NextResponse.redirect(redirectUrl);
 
-  // Garante exclusão explícita dos cookies de sessão Supabase no response,
+  // Lê os nomes dos cookies diretamente do header da requisição e os deleta
+  // explicitamente na resposta — garante que o browser limpe a sessão SSR
   // independente de como o Next.js propaga cookies() para o NextResponse.
-  const cookieStore = await cookies();
-  cookieStore.getAll()
-    .filter(c => c.name.startsWith("sb-"))
-    .forEach(c => response.cookies.delete(c.name));
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  cookieHeader
+    .split(";")
+    .map(c => c.trim().split("=")[0].trim())
+    .filter(name => name && (name.startsWith("sb-") || name.includes("supabase") || name.includes("token")))
+    .forEach(name => {
+      response.cookies.set(name, "", {
+        expires: new Date(0),
+        path: "/",
+        sameSite: "lax",
+        secure: true,
+        httpOnly: true,
+      });
+    });
 
   return response;
 }
