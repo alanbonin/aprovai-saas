@@ -31,10 +31,10 @@ export async function loginStudent(page: Page, email: string, password: string) 
 }
 
 export async function waitForToast(page: Page, text?: string | RegExp) {
-  // Exclui elementos com "hidden" na classe (ex: lg:hidden) para não pegar cabeçalho mobile
+  // Toast usa "fixed ... rounded-*" — sidebar e header mobile não têm rounded
   const locator = page.locator(
     '[class*="toast"],[class*="Toast"],[role="status"],[role="alert"],' +
-    '[class*="fixed"][class*="top"]:not([class*="hidden"]),[class*="fixed"][class*="bottom"]:not([class*="hidden"])'
+    '[class*="fixed"][class*="rounded"]'
   ).first();
   await expect(locator).toBeVisible({ timeout: 8_000 });
   if (text) await expect(locator).toContainText(text);
