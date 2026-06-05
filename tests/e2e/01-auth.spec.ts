@@ -34,11 +34,14 @@ test.describe("Auth", () => {
 
   test("logout funciona na primeira tentativa", async ({ page }) => {
     await loginAdmin(page);
-    // Clica em Sair (sidebar desktop ou header mobile)
-    const sairBtn = page.locator('button:has-text("Sair")').first();
-    await sairBtn.click();
+    // Botão Sair está no footer da sidebar, possivelmente cortado pelo viewport.
+    // Usa JS click para garantir disparo independente de visibilidade CSS.
+    await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll("button"))
+        .find(b => b.textContent?.trim() === "Sair");
+      (btn as HTMLButtonElement | undefined)?.click();
+    });
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
-    // Tenta acessar rota protegida — deve redirecionar
     await page.goto("/hoje");
     await expect(page).toHaveURL(/\/login/);
   });

@@ -6,14 +6,13 @@ import { useTheme } from "next-themes";
 import { cn } from "@/lib/utils";
 import { ChevronDown, Sun, Moon, Menu, X } from "lucide-react";
 import { ProfileSwitcher } from "@/components/layout/profile-switcher";
-import { createClient } from "@/lib/supabase/client";
 
 let signingOut = false;
 async function handleSignOut() {
   if (signingOut) return;
   signingOut = true;
-  const supabase = createClient();
-  await supabase.auth.signOut();
+  // POST para o servidor — limpa o cookie SSR (scope: global) além da sessão client-side
+  await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
   window.location.href = "/login";
 }
 

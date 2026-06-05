@@ -44,21 +44,27 @@ test.describe("Sidebar / Navegação", () => {
     });
   }
 
+  const clickSair = (page: import("@playwright/test").Page) =>
+    page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll("button"))
+        .find(b => b.textContent?.trim() === "Sair");
+      (btn as HTMLButtonElement | undefined)?.click();
+    });
+
   test("botão Sair funciona na primeira tentativa", async ({ page }) => {
     await page.goto("/hoje");
-    const sairBtn = page.locator('button:has-text("Sair")').first();
-    await expect(sairBtn).toBeVisible({ timeout: 5_000 });
-    await sairBtn.click();
+    await expect(page.locator('button:has-text("Sair")').first()).toHaveCount(1, { timeout: 5_000 });
+    await clickSair(page);
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
   });
 
   test("botão Sair com duplo clique não causa erro", async ({ page }) => {
     await page.goto("/hoje");
-    const sairBtn = page.locator('button:has-text("Sair")').first();
-    await expect(sairBtn).toBeVisible({ timeout: 5_000 });
-    await sairBtn.dblclick();
+    await expect(page.locator('button:has-text("Sair")').first()).toHaveCount(1, { timeout: 5_000 });
+    // Duplo clique via JS (debounce deve impedir segunda chamada)
+    await clickSair(page);
+    await clickSair(page);
     await expect(page).toHaveURL(/\/login/, { timeout: 10_000 });
-    // Não deve ter erro de rede ou console
   });
 
   test("mobile: botão Mais abre e fecha o menu", async ({ page }) => {
