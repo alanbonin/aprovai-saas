@@ -8,16 +8,16 @@ import { ChevronDown, Sun, Moon, Menu, X } from "lucide-react";
 import { ProfileSwitcher } from "@/components/layout/profile-switcher";
 
 let signingOut = false;
-function handleSignOut() {
+async function handleSignOut() {
   if (signingOut) return;
   signingOut = true;
-  // Form POST nativo — o browser segue o redirect do servidor no mesmo domínio,
-  // garantindo que os cookies SSR sejam limpos corretamente antes de ir para /login.
-  const form = document.createElement("form");
-  form.method = "POST";
-  form.action = "/api/auth/logout";
-  document.body.appendChild(form);
-  form.submit();
+  // fetch + credentials: include → servidor invalida sessão e responde com
+  // Set-Cookie para limpar os tokens; depois window.location força navegação
+  // limpa sem os cookies SSR, evitando redirect-loop www→apex no middleware.
+  try {
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+  } catch { /* ignora erros de rede — redireciona de qualquer forma */ }
+  window.location.href = "/login";
 }
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
