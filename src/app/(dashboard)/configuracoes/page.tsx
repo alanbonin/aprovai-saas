@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Lock, Download, Trash2, FileText } from "lucide-react";
+import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Lock, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -13,24 +13,11 @@ interface Prefs {
   emailReativacao: boolean;
 }
 
-interface DadosFiscais {
-  cpf: string;
-  endereco: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-}
-
 interface Config {
   name: string;
   email: string;
   phone: string;
   prefs: Prefs;
-  fiscal: DadosFiscais;
-  fiscalCompleto: boolean;
 }
 
 const NOTIF_OPTIONS: { key: keyof Prefs; label: string; desc: string }[] = [
@@ -91,12 +78,7 @@ export default function ConfiguracoesPage() {
     fetch("/api/configuracoes")
       .then(r => r.ok ? r.json() : null)
       .then(d => {
-        if (d) {
-          setConfig({
-            ...d,
-            fiscal: d.fiscal ?? { cpf:"", endereco:"", numero:"", complemento:"", bairro:"", cidade:"", estado:"", cep:"" },
-          });
-        }
+        if (d) setConfig(d);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -339,107 +321,6 @@ export default function ConfiguracoesPage() {
             </div>
           </div>
         </section>}
-
-        {/* Dados Fiscais */}
-        {tab === "perfil" &&
-          <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 bg-white/2">
-              <div className="flex items-center gap-2">
-                <FileText className="w-4 h-4 text-indigo-400" />
-                <div>
-                  <h2 className="text-sm font-semibold">Dados para Nota Fiscal</h2>
-                  <p className="text-xs text-gray-500 mt-0.5">Obrigatório para emissão de nota fiscal ao assinar um plano</p>
-                </div>
-              </div>
-              {config.fiscalCompleto
-                ? <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1"><Check className="w-3 h-3" /> Completo</span>
-                : <span className="text-xs text-amber-400 font-semibold">⚠ Incompleto</span>}
-            </div>
-            <div className="p-5 space-y-4">
-              <div>
-                <label className="text-xs text-gray-500 mb-1.5 block">CPF <span className="text-red-400">*</span></label>
-                <input
-                  value={config.fiscal.cpf}
-                  onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, cpf: e.target.value } } : c)}
-                  placeholder="000.000.000-00"
-                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                />
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="text-xs text-gray-500 mb-1.5 block">Endereço <span className="text-red-400">*</span></label>
-                  <input
-                    value={config.fiscal.endereco}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, endereco: e.target.value } } : c)}
-                    placeholder="Rua, Avenida..."
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Número <span className="text-red-400">*</span></label>
-                  <input
-                    value={config.fiscal.numero}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, numero: e.target.value } } : c)}
-                    placeholder="123"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Complemento</label>
-                  <input
-                    value={config.fiscal.complemento}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, complemento: e.target.value } } : c)}
-                    placeholder="Apto, Bloco..."
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Bairro</label>
-                  <input
-                    value={config.fiscal.bairro}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, bairro: e.target.value } } : c)}
-                    placeholder="Centro"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="sm:col-span-1">
-                  <label className="text-xs text-gray-500 mb-1.5 block">CEP <span className="text-red-400">*</span></label>
-                  <input
-                    value={config.fiscal.cep}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, cep: e.target.value } } : c)}
-                    placeholder="00000-000"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Cidade <span className="text-red-400">*</span></label>
-                  <input
-                    value={config.fiscal.cidade}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, cidade: e.target.value } } : c)}
-                    placeholder="São Paulo"
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs text-gray-500 mb-1.5 block">Estado <span className="text-red-400">*</span></label>
-                  <select
-                    value={config.fiscal.estado}
-                    onChange={e => setConfig(c => c ? { ...c, fiscal: { ...c.fiscal, estado: e.target.value } } : c)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
-                  >
-                    <option value="">UF</option>
-                    {["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf => (
-                      <option key={uf} value={uf}>{uf}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-          </section>}
 
         {/* Notificações por email */}
         {tab === "notificacoes" && <section className="rounded-2xl bg-white/[0.03] border border-white/10 overflow-hidden">

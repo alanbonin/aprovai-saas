@@ -3,22 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 
 const PREFS_PREFIX = "__USER_PREFS__";
-const FISCAL_PREFIX = "__DADOS_FISCAIS__";
-
-export interface DadosFiscais {
-  cpf: string;
-  endereco: string;
-  numero: string;
-  complemento: string;
-  bairro: string;
-  cidade: string;
-  estado: string;
-  cep: string;
-}
-
-export function dadosFiscaisCompletos(d: Partial<DadosFiscais>): boolean {
-  return !!(d.cpf && d.endereco && d.numero && d.cidade && d.estado && d.cep);
-}
 
 interface Prefs {
   emailQuestaoDodia: boolean;
@@ -66,21 +50,13 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-  const [prefs, fiscalNote] = await Promise.all([
-    getPrefs(dbUser.id),
-    db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", FISCAL_PREFIX).maybeSingle(),
-  ]);
-
-  let fiscal: Partial<DadosFiscais> = {};
-  try { fiscal = fiscalNote.data?.content ? JSON.parse(fiscalNote.data.content) : {}; } catch { /* ok */ }
+  const prefs = await getPrefs(dbUser.id);
 
   return NextResponse.json({
     name: dbUser.name ?? "",
     email: dbUser.email ?? "",
     phone: (dbUser as unknown as { phone?: string | null }).phone ?? "",
     prefs,
-    fiscal,
-    fiscalCompleto: dadosFiscaisCompletos(fiscal),
   });
 }
 
@@ -100,7 +76,6 @@ export async function PATCH(req: Request) {
     name?: string;
     phone?: string;
     prefs?: Partial<Prefs>;
-    fiscal?: Partial<DadosFiscais>;
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -115,18 +90,6 @@ export async function PATCH(req: Request) {
   }
   if (Object.keys(userFields).length > 0) {
     updates.push(db.from("User").update(userFields).eq("id", dbUser.id));
-  }
-
-  // Atualiza dados fiscais (nota fiscal)
-  if (body.fiscal) {
-    const { data: existingFiscal } = await db.from("Note").select("id").eq("userId", dbUser.id).eq("subjectId", FISCAL_PREFIX).maybeSingle();
-    const now = new Date().toISOString();
-    const content = JSON.stringify(body.fiscal);
-    if (existingFiscal?.id) {
-      updates.push(db.from("Note").update({ content, updatedAt: now }).eq("id", existingFiscal.id));
-    } else {
-      updates.push(db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: FISCAL_PREFIX, content, createdAt: now, updatedAt: now }));
-    }
   }
 
   // Atualiza prefs de notificação

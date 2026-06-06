@@ -15,18 +15,6 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
     setLoading(true);
     setCheckoutError(null);
     try {
-      // Gate: exige dados fiscais completos antes do checkout
-      const cfgRes = await fetch("/api/configuracoes");
-      if (cfgRes.ok) {
-        const cfg = await cfgRes.json() as { fiscalCompleto?: boolean };
-        if (!cfg.fiscalCompleto) {
-          setCheckoutError("Preencha seus dados para nota fiscal em Configurações → Perfil antes de assinar.");
-          setLoading(false);
-          setTimeout(() => { window.location.href = "/configuracoes"; }, 2500);
-          return;
-        }
-      }
-
       const res = await fetch("/api/pagamento/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
