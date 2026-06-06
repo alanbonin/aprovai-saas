@@ -24,7 +24,7 @@ export function PomodoroFloat() {
       {open && (
         <div
           className="fixed top-14 right-2 md:bottom-20 md:top-auto md:right-6 z-50 rounded-2xl overflow-hidden shadow-2xl border border-white/10"
-          style={{ background: "#080c18", width: "340px", maxWidth: "calc(100vw - 1rem)", maxHeight: "calc(100vh - 140px)", overflowY: "auto" }}
+          style={{ background: "#080c18", width: "340px", maxWidth: "calc(100vw - 1rem)", maxHeight: "calc(100vh - 180px)", overflowY: "auto" }}
         >
           <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 sticky top-0 z-10" style={{ background: "#080c18" }}>
             <span className="text-sm font-semibold text-white">🍅 Pomodoro</span>
