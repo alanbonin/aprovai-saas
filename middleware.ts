@@ -1,42 +1,37 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+  const { pathname, host } = request.nextUrl;
 
-  let response = NextResponse.next({
-    request: { headers: request.headers },
-  });
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "";
-
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      getAll() {
-        return request.cookies.getAll();
-      },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request: { headers: request.headers } });
-        cookiesToSet.forEach(({ name, value, options }) =>
-          response.cookies.set(name, value, options)
-        );
-      },
-    },
-  });
-
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+  // 1. Redirect www → apex
+  if (host === "www.aprovai360.com.br") {
+    const url = request.nextUrl.clone();
+    url.host = "aprovai360.com.br";
+    return NextResponse.redirect(url, { status: 301 });
   }
+
+  // 2. Proteção de /api/cron/* com CRON_SECRET
+  if (pathname.startsWith("/api/cron/") && process.env.NODE_ENV === "production") {
+    const secret = process.env.CRON_SECRET;
+    if (secret) {
+      const auth = request.headers.get("authorization");
+      if (auth !== `Bearer ${secret}`) {
+        return new NextResponse(JSON.stringify({ error: "Não autorizado" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+    }
+  }
+
+  // 3. Passthrough com X-Request-Id
+  const requestId = crypto.randomUUID();
+  const response = NextResponse.next();
+  response.headers.set("X-Request-Id", requestId);
 
   return response;
 }
 
 export const config = {
-  matcher: ["/workspace/:path*", "/admin/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/pagamento/webhook).*)"],
 };
