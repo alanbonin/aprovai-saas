@@ -68,6 +68,11 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
   endDate.setDate(endDate.getDate() + plan.intervalDays);
   const now = new Date().toISOString();
 
+  // Segunda barreira de idempotência dentro da função (protege contra race condition)
+  const { data: alreadyByPayment } = await db.from("Subscription")
+    .select("id").eq("mpPaymentId", mpPaymentId).eq("status", "ACTIVE").maybeSingle();
+  if (alreadyByPayment) return;
+
   const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).maybeSingle();
 
   if (existing) {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { configuracoesLimiter } from "@/lib/rate-limit";
 
 const PREFS_PREFIX = "__USER_PREFS__";
 
@@ -71,6 +72,9 @@ export async function PATCH(req: Request) {
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  const rl = await configuracoesLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const body = await req.json() as {
     name?: string;

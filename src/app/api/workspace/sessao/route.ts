@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { sessaoLimiter } from "@/lib/rate-limit";
 
 const PREFIX = "__SESSOES__";
 const MAX_SESSOES = 100;
@@ -77,6 +78,9 @@ export async function POST(req: Request) {
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  const rl = await sessaoLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { subjectId, duracaoMin, questoesRespondidas = 0, nota = "" } =
     await req.json() as {

@@ -60,10 +60,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: false, reason: "Conversa muito curta para salvar memória" });
     }
 
-    // Gera resumo com IA
+    // Gera resumo com IA — sanitiza conteúdo para evitar prompt injection
     const transcript = messages
       .slice(-20)
-      .map(m => `${m.role === "user" ? "Aluno" : "Mentor"}: ${m.content}`)
+      .map(m => {
+        const safeContent = String(m.content).replace(/\[\[/g, "[ [").replace(/\]\]/g, "] ]").slice(0, 500);
+        return `${m.role === "user" ? "Aluno" : "Mentor"}: ${safeContent}`;
+      })
       .join("\n");
 
     const MEMORY_SYSTEM = "Você é um assistente especializado em criar resumos concisos de sessões de estudo para concursos públicos, identificando pontos fortes, fraquezas e lacunas do aluno.";

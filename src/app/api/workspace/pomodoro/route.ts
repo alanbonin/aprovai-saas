@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { log } from "@/lib/logger";
+import { pomodoroLimiter } from "@/lib/rate-limit";
 
 const KEY = "__POMODORO__";
 
@@ -80,9 +81,12 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const rl = await pomodoroLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const body = await req.json() as Partial<PomodoroSession>;
   const durMin = typeof body.durMin === "number" && body.durMin > 0
-    ? Math.round(body.durMin * 10) / 10   // 1 casa decimal
+    ? Math.min(480, Math.round(body.durMin * 10) / 10)  // máx 8h por sessão
     : 25;
 
   const session: PomodoroSession = {

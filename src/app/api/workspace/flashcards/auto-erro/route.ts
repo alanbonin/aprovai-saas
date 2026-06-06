@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { autoErroLimiter } from "@/lib/rate-limit";
 
 const PREFIX = "__AUTO_ERRO_FC__";
 
@@ -23,6 +24,9 @@ export async function POST(req: Request) {
 
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  const rl = await autoErroLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { questionId } = await req.json() as { questionId: number };
   if (!questionId) return NextResponse.json({ error: "questionId obrigatório" }, { status: 400 });

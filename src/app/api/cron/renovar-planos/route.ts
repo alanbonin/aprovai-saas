@@ -112,10 +112,13 @@ export async function GET(req: Request) {
         const materiasStr = materias.slice(0, 15).join(", ");
         const analysisSummary = await buildAnalysisSummary(user.id, profile.id);
 
+        const safeCargo = (profile.cargo ?? "Não informado").replace(/[\n\r]/g, " ").slice(0, 100);
+        const safeBanca = (profile.banca ?? "Não informada").replace(/[\n\r]/g, " ").slice(0, 100);
+
         const prompt = `Você é um mentor de concursos públicos. Gere um plano de estudos semanal personalizado.
 
-Cargo: ${profile.cargo ?? "Não informado"}
-Banca: ${profile.banca ?? "Não informada"}
+Cargo: ${safeCargo}
+Banca: ${safeBanca}
 Data da prova: ${profile.dataProva ?? "Não informada"}
 Matérias do edital: ${materiasStr || "Gerais"}
 ${analysisSummary ? `\n${analysisSummary}` : ""}

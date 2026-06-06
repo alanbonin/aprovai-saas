@@ -129,3 +129,21 @@ export const adminDeleteLimiter = createLimiter({ max: 10, window: "1 h", prefix
 
 /** Acesso a flashcard deck — 30/min por usuário */
 export const flashcardsLimiter = createLimiter({ max: 30, window: "1 m", prefix: "flashcards" });
+
+/** Auto-erro flashcard (chama IA) — 30/hora por usuário */
+export const autoErroLimiter = createLimiter({ max: 30, window: "1 h", prefix: "auto-erro" });
+
+/** Sessão de estudo — 100/hora por usuário */
+export const sessaoLimiter = createLimiter({ max: 100, window: "1 h", prefix: "sessao" });
+
+/** Sessão pomodoro — 100/hora por usuário */
+export const pomodoroLimiter = createLimiter({ max: 100, window: "1 h", prefix: "pomodoro" });
+
+/** Aprovação de questões admin — 200/hora por admin */
+export const adminAprovarLimiter = createLimiter({ max: 200, window: "1 h", prefix: "admin-aprovar" });
+
+/** Upload admin — 50/dia por admin */
+export const adminUploadLimiter = createLimiter({ max: 50, window: "1 d", prefix: "admin-upload" });
+
+/** Configurações PATCH — 20/hora por usuário */
+export const configuracoesLimiter = createLimiter({ max: 20, window: "1 h", prefix: "configuracoes" });

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { adminAprovarLimiter } from "@/lib/rate-limit";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -16,9 +17,11 @@ async function requireAdmin() {
  * Em lote:     { ids: number[]; aprovado: boolean }
  */
 export async function PATCH(req: NextRequest) {
-  if (!await requireAdmin()) {
-    return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  }
+  const adminUser = await requireAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const rl = await adminAprovarLimiter.check(`admin:${adminUser.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const body = await req.json() as { id?: number; ids?: number[]; aprovado: boolean };
   const { id, ids, aprovado } = body;
