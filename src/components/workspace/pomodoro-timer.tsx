@@ -311,9 +311,9 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
       </div>
 
       {/* ── Timer ring ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center py-6">
+      <div className="flex flex-col items-center py-2">
         <div className="relative">
-          <CountdownRing progress={progress} color={currentMode.color} size={200} />
+          <CountdownRing progress={progress} color={currentMode.color} size={160} />
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
             <div className="text-5xl font-black tabular-nums tracking-tight"
               style={{ color: secondsLeft === 0 ? currentMode.color : undefined }}>
@@ -325,7 +325,7 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
         </div>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 mt-6">
+        <div className="flex items-center gap-4 mt-3">
           <button onClick={reset}
             className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all">
             <RotateCcw className="w-4 h-4" />
