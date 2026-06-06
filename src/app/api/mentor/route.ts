@@ -28,6 +28,19 @@ export async function POST(req: Request) {
   if (!Array.isArray(history) || history.length > 50)
     return NextResponse.json({ error: "Histórico inválido" }, { status: 400 });
 
+  // Sanitiza histórico: valida role e limita tamanho de cada mensagem
+  const VALID_ROLES = new Set(["user", "assistant"]);
+  const safeHistory = history
+    .filter((m: unknown) =>
+      m !== null && typeof m === "object" &&
+      VALID_ROLES.has((m as Record<string, unknown>).role as string) &&
+      typeof (m as Record<string, unknown>).content === "string"
+    )
+    .map((m: { role: string; content: string }) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content.slice(0, 2000),
+    }));
+
   const { data: agent } = await db.from("Agent").select("*").eq("id", agentId).single();
   if (!agent?.active) return NextResponse.json({ error: "Mentor não encontrado" }, { status: 404 });
 
@@ -72,7 +85,7 @@ O app converte [[IR:X]] em botão clicável — use sempre que sugerir uma ativi
     maxTokens: 1024,
     systemPrompt,
     messages: [
-      ...history.map((m: { role: string; content: string }) => ({ role: m.role as "user" | "assistant", content: m.content })),
+      ...safeHistory,
       { role: "user", content: message },
     ],
     cacheSystem: true,

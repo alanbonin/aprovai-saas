@@ -173,6 +173,17 @@ Retorne APENAS JSON válido:
     return NextResponse.json({ error: "texto ou foto são obrigatórios" }, { status: 400 });
   }
 
+  const ALLOWED_IMG_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  const MAX_IMAGE_B64 = 6_800_000; // ~5 MB decoded
+  if (fotoBase64) {
+    if (fotoBase64.length > MAX_IMAGE_B64) {
+      return NextResponse.json({ error: "Imagem muito grande (máx. 5 MB)" }, { status: 400 });
+    }
+    if (fotoType && !ALLOWED_IMG_TYPES.includes(fotoType)) {
+      return NextResponse.json({ error: "Formato de imagem inválido" }, { status: 400 });
+    }
+  }
+
   const profile = await getProfile(user.id);
   const cargo = profile?.cargo ?? "";
   const cargoLine = cargo ? `\nCargo do candidato: ${cargo}` : "";

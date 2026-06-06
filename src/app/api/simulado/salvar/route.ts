@@ -60,6 +60,10 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   // ── 2. Atualiza Progress com SM-2 inteligente ─────────────────────────────
+  if (Array.isArray(answers) && answers.length > 200) {
+    return NextResponse.json({ error: "Número de respostas inválido" }, { status: 400 });
+  }
+
   if (Array.isArray(answers) && answers.length > 0) {
     const questionIds = answers.map((a: { questionId: number; correct: boolean }) => a.questionId);
 

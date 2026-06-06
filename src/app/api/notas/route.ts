@@ -69,6 +69,12 @@ export async function POST(req: Request) {
   if (!title?.trim() && !body?.trim()) {
     return NextResponse.json({ error: "Título ou conteúdo obrigatório" }, { status: 400 });
   }
+  if (title && title.length > 200) {
+    return NextResponse.json({ error: "Título muito longo (máx. 200 caracteres)" }, { status: 400 });
+  }
+  if (body && body.length > 50000) {
+    return NextResponse.json({ error: "Conteúdo muito longo (máx. 50.000 caracteres)" }, { status: 400 });
+  }
 
   const notes = await loadNotes(dbUser.id);
 
@@ -109,6 +115,12 @@ export async function PATCH(req: Request) {
     id: string; title?: string; body?: string; subjectId?: string | null;
   };
   if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
+  if (title && title.length > 200) {
+    return NextResponse.json({ error: "Título muito longo (máx. 200 caracteres)" }, { status: 400 });
+  }
+  if (body && body.length > 50000) {
+    return NextResponse.json({ error: "Conteúdo muito longo (máx. 50.000 caracteres)" }, { status: 400 });
+  }
 
   const notes = await loadNotes(dbUser.id);
   const idx = notes.findIndex(n => n.id === id);
