@@ -53,7 +53,7 @@ export const CONFIG_DEFAULTS = {
   // Geral
   "geral.nome_plataforma": "AprovAI360",
   "geral.email_suporte": "suporte@aprovai360.com.br",
-  "geral.email_admin": "alanbonin@gmail.com",
+  "geral.email_admin": "admin@aprovai360.com.br",
   "geral.whatsapp_suporte": "",
   "geral.modo_manutencao": false,
   "geral.banner_global": "",

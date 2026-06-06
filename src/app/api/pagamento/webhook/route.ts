@@ -57,7 +57,7 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
   if (!plan) {
     // Alerta ao admin — pagamento aprovado mas plano não existe no banco
     sendEmail({
-      to: process.env.ADMIN_EMAIL ?? "alanbonin@gmail.com",
+      to: process.env.ADMIN_EMAIL ?? process.env.EMAIL_FROM ?? "admin@aprovai360.com.br",
       subject: "⚠️ AprovAI: Pagamento aprovado mas plano não encontrado",
       html: `<p>Pagamento <b>${mpPaymentId}</b> aprovado para usuário <b>${userId}</b> mas plano <b>${planId}</b> não foi encontrado no banco. Ative a assinatura manualmente.</p>`,
     }).catch(() => {}); // silencioso — não pode derrubar o webhook

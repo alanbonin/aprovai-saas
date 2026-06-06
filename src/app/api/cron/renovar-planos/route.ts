@@ -52,9 +52,14 @@ async function buildAnalysisSummary(userId: string, profileId: string) {
   return `Desempenho últimas 2 semanas:\n${lines.join("\n")}`;
 }
 
+function checkAuth(req: Request): boolean {
+  const cronSecret = process.env.CRON_SECRET;
+  if (!cronSecret) return process.env.NODE_ENV !== "production";
+  return req.headers.get("authorization") === `Bearer ${cronSecret}`;
+}
+
 export async function GET(req: Request) {
-  const secret = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (secret !== process.env.CRON_SECRET) {
+  if (!checkAuth(req)) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

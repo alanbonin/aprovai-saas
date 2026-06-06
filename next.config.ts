@@ -52,7 +52,7 @@ const nextConfig: NextConfig = {
     // CSP: permite self + Supabase + Anthropic + MercadoPago
     const csp = [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",  // unsafe-eval necessário para Next.js
+      "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       "font-src 'self' data:",
@@ -69,7 +69,7 @@ const nextConfig: NextConfig = {
       { key: "X-Frame-Options",         value: "DENY" },
       { key: "X-XSS-Protection",        value: "1; mode=block" },
       { key: "Referrer-Policy",         value: "strict-origin-when-cross-origin" },
-      { key: "Permissions-Policy",      value: "camera=(), microphone=(), geolocation=(), payment=()" },
+      { key: "Permissions-Policy",      value: "camera=(), microphone=(), geolocation=(), payment=(self)" },
       { key: "Content-Security-Policy", value: csp },
       // HSTS: 2 anos, inclui subdomínios, preload — só em produção (HTTPS obrigatório)
       ...(isProd ? [{
