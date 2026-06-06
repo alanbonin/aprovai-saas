@@ -24,6 +24,9 @@ export async function GET(
 
   const { id: userId } = await params;
 
+  const { data: targetUser } = await db.from("User").select("id").eq("id", userId).maybeSingle();
+  if (!targetUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();
   const sevenDaysAgo  = new Date(now.getTime() -  7 * 24 * 60 * 60 * 1000).toISOString();

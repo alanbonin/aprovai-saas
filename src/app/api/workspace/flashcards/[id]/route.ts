@@ -46,8 +46,17 @@ export async function GET(
 
   if (!set) return NextResponse.json({ error: "Deck não encontrado" }, { status: 404 });
 
-  const rawCards = (set.cards as CardRaw[]) ?? [];
   const isOwn = set.userId === dbUser.id;
+
+  // Se não é o dono, só permite se o dono for admin (deck compartilhado com todos)
+  if (!isOwn) {
+    const { data: owner } = await db.from("User").select("role").eq("id", set.userId).maybeSingle();
+    if (owner?.role !== "ADMIN") {
+      return NextResponse.json({ error: "Deck não encontrado" }, { status: 404 });
+    }
+  }
+
+  const rawCards = (set.cards as CardRaw[]) ?? [];
 
   let cards: CardOut[];
 

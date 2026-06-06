@@ -19,6 +19,9 @@ export async function GET(req: Request) {
   const user = await requireAdmin();
   if (!user) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
+  const rl = await adminAlunosLimiter.check(`admin:${user.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const url = new URL(req.url);
   const page = Math.max(1, parseInt(url.searchParams.get("page") ?? "1", 10));
   const search = (url.searchParams.get("search") ?? "").trim();

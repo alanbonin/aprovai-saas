@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { questoesLimiter } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+  const rl = await questoesLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { searchParams } = new URL(req.url);
   const banca      = searchParams.get("banca");

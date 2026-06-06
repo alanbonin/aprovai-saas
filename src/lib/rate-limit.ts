@@ -120,3 +120,6 @@ export const reportarLimiter = createLimiter({ max: 10, window: "1 h", prefix: "
 
 /** Exclusão de conta LGPD — 1/hora por usuário (ação destrutiva) */
 export const deleteAccountLimiter = createLimiter({ max: 1, window: "1 h", prefix: "delete-account" });
+
+/** Listagem de questões — 30/min por usuário */
+export const questoesLimiter = createLimiter({ max: 30, window: "1 m", prefix: "questoes" });

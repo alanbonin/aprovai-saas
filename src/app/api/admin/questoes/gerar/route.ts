@@ -100,6 +100,9 @@ export async function POST(req: Request) {
 
   // ── Modo lote ──────────────────────────────────────────────────
   if (lote && Array.isArray(lote)) {
+    if (lote.length > 10) {
+      return NextResponse.json({ error: "Lote máximo de 10 matérias por vez" }, { status: 400 });
+    }
     let cargoContext = "";
     let bancaContext = "";
     let resolvedBanca = banca || "CESPE/CEBRASPE";
