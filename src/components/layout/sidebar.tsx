@@ -176,7 +176,7 @@ const SECTIONS_ADMIN: NavSection[] = [
 const BOTTOM_NAV = [
   { href: "/hoje",      label: "Hoje",     icon: "☀️" },
   { href: "/semana",    label: "Semana",   icon: "📅" },
-  { href: "/questoes",  label: "Questões", icon: "📝" },
+  { href: "/workspace", label: "Estudar",  icon: "📚" },
   { href: "/simulado",  label: "Simulado", icon: "🎯" },
 ];
 
