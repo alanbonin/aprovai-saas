@@ -123,3 +123,9 @@ export const deleteAccountLimiter = createLimiter({ max: 1, window: "1 h", prefi
 
 /** Listagem de questões — 30/min por usuário */
 export const questoesLimiter = createLimiter({ max: 30, window: "1 m", prefix: "questoes" });
+
+/** Delete de aluno pelo admin — 10/hora (ação destrutiva) */
+export const adminDeleteLimiter = createLimiter({ max: 10, window: "1 h", prefix: "admin-delete" });
+
+/** Acesso a flashcard deck — 30/min por usuário */
+export const flashcardsLimiter = createLimiter({ max: 30, window: "1 m", prefix: "flashcards" });

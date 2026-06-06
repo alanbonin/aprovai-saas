@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { flashcardsLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/workspace/flashcards/[id]
@@ -36,6 +37,9 @@ export async function GET(
 
   const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  const rl = await flashcardsLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   // Busca o deck (pode ser do aluno ou do admin)
   const { data: set } = await db

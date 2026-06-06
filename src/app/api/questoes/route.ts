@@ -18,10 +18,11 @@ export async function GET(req: Request) {
   // subjectIds aceita múltiplos IDs separados por vírgula (unificação cross-categoria)
   const subjectIdsParam = searchParams.get("subjectIds");
   const subjectIds = subjectIdsParam ? subjectIdsParam.split(",").filter(Boolean) : null;
-  const year       = searchParams.get("year") ? parseInt(searchParams.get("year")!) : null;
+  const yearRaw    = searchParams.get("year");
+  const year       = yearRaw ? (parseInt(yearRaw, 10) || null) : null;
   const onlyFavs   = searchParams.get("favoritos") === "1";
   const onlyErros  = searchParams.get("erros") === "1";
-  const limit      = Math.min(50, parseInt(searchParams.get("limit") ?? "20"));
+  const limit      = Math.min(50, parseInt(searchParams.get("limit") ?? "20", 10) || 20);
 
   // IDs já respondidos (evita repetição)
   const seenParam = searchParams.get("seen"); // CSV de IDs já vistos

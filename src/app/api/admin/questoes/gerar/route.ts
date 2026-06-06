@@ -66,7 +66,7 @@ function buildPrompt(opts: {
 
 ${cargoContext ? `ESPECIALISTA DO CARGO:\n${cargoContext}\n` : ""}
 ${bancaContext ? `ESPECIALISTA DA BANCA:\n${bancaContext}\n` : ""}
-${extraContext ? `CONTEXTO ADICIONAL: ${extraContext}\n` : ""}
+${extraContext ? `CONTEXTO ADICIONAL: ${String(extraContext).slice(0, 500)}\n` : ""}
 
 TAREFA: Gere EXATAMENTE ${count} questões INÉDITAS e DISTINTAS de múltipla escolha.
 Matéria: ${subjectName}

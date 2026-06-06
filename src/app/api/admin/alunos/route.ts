@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
-import { createLimiter } from "@/lib/rate-limit";
+import { createLimiter, adminDeleteLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
 const adminAlunosLimiter = createLimiter({ max: 30, window: "1 m", prefix: "admin-alunos" });
@@ -187,6 +187,8 @@ export async function PATCH(req: Request) {
     const { userIds } = body as { userIds: string[] };
     if (!Array.isArray(userIds) || userIds.length === 0)
       return NextResponse.json({ error: "userIds obrigatório" }, { status: 400 });
+    if (userIds.length > 50)
+      return NextResponse.json({ error: "Máximo 50 usuários por operação" }, { status: 400 });
 
     const errors: string[] = [];
     for (const uid of userIds) {
@@ -328,7 +330,11 @@ export async function PATCH(req: Request) {
 
 // DELETE — remove aluno e todos os dados relacionados
 export async function DELETE(req: Request) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const adminUser = await requireAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const rl = await adminDeleteLimiter.check(`admin-del:${adminUser.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId obrigatório" }, { status: 400 });

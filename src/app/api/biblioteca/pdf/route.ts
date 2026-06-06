@@ -30,7 +30,8 @@ export async function GET(req: NextRequest) {
   const planOrder = ["trial", "focado", "aprovacao", "elite", "prova-marcada"];
   const userLevel = planOrder.indexOf(planSlug);
   const docLevel  = planOrder.indexOf(doc.planLevel);
-  if (docLevel > userLevel && doc.planLevel !== "trial") {
+  // docLevel === -1 significa planLevel desconhecido — bloquear por segurança
+  if (docLevel === -1 || docLevel > userLevel) {
     return new NextResponse("Seu plano não inclui este documento", { status: 403 });
   }
 
