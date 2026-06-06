@@ -531,28 +531,16 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             <span style={{ color: "var(--text-primary)" }}>360</span>
           </p>
         </a>
-        <div className="flex items-center gap-1">
-          <button onClick={handleSignOut} title="Sair"
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors text-xs font-bold">
-            Sair
-          </button>
-          <button
-            onClick={() => setMobileOpen(v => !v)}
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-400 hover:text-white hover:bg-white/10 transition-colors"
-            aria-label="Menu"
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </button>
-        </div>
       </div>
 
-      {/* ── Overlay mobile ────────────────────────────────────────── */}
-      {mobileOpen && (
-        <div
-          className="lg:hidden fixed inset-0 z-[95] bg-black/70 backdrop-blur-sm"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
+      {/* ── Bottom Nav mobile ─────────────────────────────────────── */}
+      <MobileBottomNav
+        pathname={pathname}
+        sections={sections}
+        unreadNotifs={unreadNotifs}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
+      />
 
       {/* ── Botão toggle quando sidebar fechada (desktop) ─────────── */}
       {!desktopOpen && (
@@ -570,11 +558,10 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
     <aside
       className={cn(
         "flex flex-col flex-shrink-0 z-[100]",
-        // Mobile: drawer deslizante da esquerda
-        "fixed top-0 left-0 h-full w-72 transition-transform duration-300 ease-in-out",
-        mobileOpen ? "translate-x-0" : "-translate-x-full",
+        // Mobile: oculto — usa bottom nav em vez de drawer lateral
+        "hidden",
         // Desktop: sticky, largura controlada por desktopOpen
-        "lg:relative lg:translate-x-0 lg:transition-none lg:h-screen lg:sticky lg:top-0",
+        "lg:flex lg:relative lg:translate-x-0 lg:transition-none lg:h-screen lg:sticky lg:top-0",
         desktopOpen ? "lg:w-56" : "lg:w-0 lg:overflow-hidden lg:border-r-0",
         "border-r border-white/[0.06]"
       )}
