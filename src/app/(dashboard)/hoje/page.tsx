@@ -184,7 +184,7 @@ export default function HojePage() {
     getBadge?: () => string | number | undefined;
   }> = {
     questoes: {
-      href: "/questoes",
+      href: "/workspace",
       icon: (done) => <Target className={cn("w-5 h-5", done ? "text-emerald-400" : "text-indigo-400")} />,
       title: "Questões",
       getDone: () => d.questoesHoje >= d.metaQuestoesHoje,
@@ -400,7 +400,7 @@ export default function HojePage() {
         {/* Fallback enquanto o plano carrega */}
         {!plano && (
           <>
-            <ActionCard href="/questoes" icon={<Target className="w-5 h-5 text-indigo-400" />} title="Questões" desc="Carregando plano do dia..." />
+            <ActionCard href="/workspace" icon={<Target className="w-5 h-5 text-indigo-400" />} title="Questões" desc="Carregando plano do dia..." />
             <ActionCard href="/desafio" icon={<Zap className="w-5 h-5 text-amber-400" />} title="Desafio Diário" desc="10 questões cronometradas — XP bônus" />
           </>
         )}
@@ -423,7 +423,7 @@ export default function HojePage() {
               <p className="text-xs text-gray-600 mt-0.5">{d.prioridade.erros} erro{d.prioridade.erros !== 1 ? "s" : ""} recente{d.prioridade.erros !== 1 ? "s" : ""}</p>
             </div>
             <Link
-              href={`/questoes?subject=${encodeURIComponent(d.prioridade.subjectName)}`}
+              href={`/workspace?subject=${encodeURIComponent(d.prioridade.subjectName)}`}
               className="text-xs text-rose-400 hover:text-rose-300 font-semibold transition-colors flex items-center gap-1"
             >
               Praticar <ChevronRight className="w-3 h-3" />
