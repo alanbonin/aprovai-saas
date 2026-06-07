@@ -401,7 +401,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
                         ? <span className="text-[11px] text-red-400 font-semibold flex items-center gap-1"><XCircle className="w-3 h-3" /> Errada</span>
                         : <span className="text-[11px] text-gray-500 font-semibold">Sem resposta</span>
                       }
-                      {q.banca && <span className="text-[10px] text-gray-600">{q.banca}{q.year ? ` ${q.year}` : ""}</span>}
                     </div>
                     <p className="text-sm text-gray-200 line-clamp-2">{q.statement}</p>
                     {!isExpanded && (
@@ -503,8 +502,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
         {/* Question */}
         <div className="flex-1 px-6 py-6 max-w-2xl mx-auto w-full">
           <div className="flex items-center gap-2 mb-4">
-            {q.banca && <span className="text-xs px-2 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400">{q.banca}</span>}
-            {q.year && <span className="text-xs text-gray-600">{q.year}</span>}
             <span className={cn("text-xs px-2 py-0.5 rounded-full", {
               "bg-green-500/10 text-green-400": q.level === "facil",
               "bg-yellow-500/10 text-yellow-400": q.level === "medio",

@@ -322,7 +322,6 @@ export function SimuladoFiltradoInner() {
 
       {/* Meta chips */}
       <div className="flex flex-wrap gap-2 mb-3">
-        {q.year && <span className="text-xs px-2 py-0.5 rounded-full bg-white/5 border border-white/[0.08] text-gray-500">{q.year}</span>}
         <span className={cn(
           "text-xs px-2 py-0.5 rounded-full border",
           q.level === "facil"   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" :

@@ -239,7 +239,6 @@ export function SimuladoRevisaoInner() {
           Errada {q._wrongCount}× · {q._accuracy}% de acerto
         </span>
         {q.subjectName && <span className="text-xs text-gray-600">{q.subjectName}</span>}
-        {q.banca && <span className="text-xs text-gray-600">{q.banca}</span>}
         <span className="text-xs text-gray-600">{LEVEL_MAP[q.level] ?? q.level}</span>
       </div>
 

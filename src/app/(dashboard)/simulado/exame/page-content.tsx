@@ -400,7 +400,6 @@ export function SimuladoExameInner() {
                     {!gave ? "— Sem resposta" : ok ? <><CheckCircle2 className="w-3.5 h-3.5" /> Correta</> : <><XCircle className="w-3.5 h-3.5" /> Errada</>}
                   </span>
                   <span className="text-[10px] text-gray-600 font-semibold">Q{i + 1}</span>
-                  {qq.banca && <span className="text-[10px] text-gray-600">{qq.banca}{qq.year ? ` ${qq.year}` : ""}</span>}
                 </div>
 
                 <p className="text-sm text-gray-200 leading-relaxed mb-3">{qq.statement}</p>
@@ -534,7 +533,7 @@ export function SimuladoExameInner() {
 
       {/* Statement */}
       <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-4">
-        {q.banca && (
+        {false && (
           <p className="text-[10px] text-gray-600 mb-2 font-medium">
             {q.banca}{q.year ? ` · ${q.year}` : ""}
           </p>
