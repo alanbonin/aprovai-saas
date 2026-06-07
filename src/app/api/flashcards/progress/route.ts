@@ -100,6 +100,15 @@ export async function POST(req: Request) {
       srsResult = { interval: srsData.interval, nextReview: srsData.nextReview };
     }
 
+    // Incrementa uso semanal de flashcards
+    const { getAccessLevel } = await import("@/lib/access");
+    const { incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    const access = await getAccessLevel().catch(() => null);
+    const limit = access?.maxFlashcardsPerWeek ?? -1;
+    if (limit > 0 && limit < 9999) {
+      void incrementWeeklyResourceUsage(dbUser.id, "flashcards").catch(() => {});
+    }
+
     // XP apenas quando lembrou
     const xpDelta = quality === "lembrei" ? XP_FLASHCARD_LEMBREI : 0;
     void updateXP(dbUser.id, xpDelta).catch(() => {});
