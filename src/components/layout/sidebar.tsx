@@ -328,7 +328,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
 }
 
 function SidebarSection({
-  section, isAdmin, open, onToggle, pathname, unreadNotifs, isPremium,
+  section, isAdmin, open, onToggle, pathname, unreadNotifs, isPremium, usageLimits,
 }: {
   section: NavSection;
   isAdmin: boolean;
@@ -337,6 +337,7 @@ function SidebarSection({
   pathname: string;
   unreadNotifs: number;
   isPremium?: boolean;
+  usageLimits?: UsageLimits;
 }) {
   const activeInSection = section.items.some(
     item => pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"))
@@ -370,6 +371,11 @@ function SidebarSection({
             const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
             const isNotif = href === "/notificacoes";
             const isLocked = !isPremium && TRIAL_LOCKED_HREFS.has(href);
+            const resourceKey = HREF_RESOURCE[href];
+            const usage = resourceKey && usageLimits ? usageLimits[resourceKey] : null;
+            // Show counter when: resource has a positive finite limit (not -1/9999 = unlimited, not 0 = fully blocked/locked)
+            const showCounter = usage && usage.total > 0 && usage.total < 9999;
+            const usageExhausted = showCounter && usage!.used >= usage!.total;
             return (
               <Link
                 key={href}
@@ -385,9 +391,20 @@ function SidebarSection({
               >
                 <span className="text-sm leading-none flex-shrink-0">{icon}</span>
                 <span className="flex-1 truncate">{label}</span>
-                {isLocked && (
+                {showCounter ? (
+                  <span className={cn(
+                    "text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 tabular-nums",
+                    usageExhausted
+                      ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                      : usage!.used >= usage!.total * 0.75
+                        ? "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                        : "bg-white/[0.07] text-gray-400 border border-white/10"
+                  )}>
+                    {usage!.used}/{usage!.total}
+                  </span>
+                ) : isLocked ? (
                   <span className="text-[10px] text-gray-600 flex-shrink-0">🔒</span>
-                )}
+                ) : null}
                 {badge && isNotif && unreadNotifs > 0 && (
                   <span className="min-w-[16px] h-4 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center px-1 flex-shrink-0">
                     {unreadNotifs > 9 ? "9+" : unreadNotifs}
@@ -420,14 +437,30 @@ const TRIAL_LOCKED_HREFS = new Set([
   "/ranking", "/grupos", "/conquistas", "/timeline", "/notificacoes",
 ]);
 
+interface UsageEntry { used: number; total: number }
+interface UsageLimits { [resource: string]: UsageEntry }
+
+// Maps sidebar href → WeeklyUsage resource key
+const HREF_RESOURCE: Record<string, string> = {
+  "/caso":      "caso",
+  "/redacao":   "redacao",
+  "/simulado":  "simulado",
+  "/simulado/filtrado": "simulado",
+  "/simulado/exame":    "simulado",
+  "/questoes":  "questoes",
+  "/flashcards":"flashcards",
+  "/biblioteca":"pdf",
+};
+
 interface SidebarProps {
   isAdmin?: boolean; userName?: string; planName?: string;
   aiCreditsLeft?: number; aiCreditsTotal?: number; isPremium?: boolean;
   trialDaysLeft?: number | null;
+  usageLimits?: UsageLimits;
 }
 
 /* ── Componente principal ───────────────────────────────────────────────── */
-export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium, trialDaysLeft }: SidebarProps) {
+export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium, trialDaysLeft, usageLimits }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -632,6 +665,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             pathname={pathname}
             unreadNotifs={unreadNotifs}
             isPremium={isPremium}
+            usageLimits={usageLimits}
           />
         ))}
       </nav>
