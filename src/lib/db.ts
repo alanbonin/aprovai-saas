@@ -19,7 +19,7 @@ export async function getUserWithPlan(supabaseId: string) {
     .from("Subscription")
     .select("*, plan:planId(*)")
     .eq("userId", user.id)
-    .in("status", ["ACTIVE", "TRIAL"])
+    .or("status.eq.ACTIVE,status.eq.TRIAL")
     .order("createdAt", { ascending: false })
     .limit(1);
   const subscription = subscriptions?.[0] ?? null;
