@@ -104,6 +104,25 @@ export async function POST(req: Request) {
       });
 
       if (preApproval.init_point) {
+        // Cria também uma Preference para usar o Checkout Brick embutido
+        try {
+          const prefApi = new Preference(mp);
+          const pref = await prefApi.create({
+            body: {
+              items: [{ id: plan.id, title: `AprovAI360 — ${plan.name}`, quantity: 1, unit_price: plan.price, currency_id: "BRL" }],
+              payer: { email: dbUser.email, name: dbUser.name },
+              payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }, { id: "debit_card" }], installments: 1 },
+              back_urls: { success: `${appUrl}/planos/sucesso?plan=${plan.slug}`, failure: `${appUrl}/planos?error=pagamento`, pending: `${appUrl}/planos/pendente?plan=${plan.slug}` },
+              auto_return: "approved",
+              external_reference: `${dbUser.id}|${plan.id}`,
+              notification_url: `${appUrl}/api/pagamento/webhook`,
+              statement_descriptor: "APROVAI360",
+            },
+          });
+          if (pref.id) {
+            return NextResponse.json({ checkoutUrl: preApproval.init_point, preferenceId: pref.id, planSlug: plan.slug });
+          }
+        } catch { /* ignora, usa checkoutUrl direto */ }
         return NextResponse.json({ checkoutUrl: preApproval.init_point });
       }
     } catch (preApprovalErr) {
@@ -147,7 +166,7 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ checkoutUrl: response.init_point });
+    return NextResponse.json({ checkoutUrl: response.init_point, preferenceId: response.id, planSlug: plan.slug });
   } catch (err) {
     log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });

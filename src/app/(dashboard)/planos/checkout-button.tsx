@@ -20,7 +20,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
       });
-      const data = await res.json() as { checkoutUrl?: string; activated?: boolean; error?: string };
+      const data = await res.json() as { checkoutUrl?: string; preferenceId?: string; planSlug?: string; activated?: boolean; error?: string };
 
       if (data.error) {
         setCheckoutError(data.error);
@@ -34,7 +34,11 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
         return;
       }
 
-      if (data.checkoutUrl) {
+      if (data.preferenceId) {
+        const params = new URLSearchParams({ preferenceId: data.preferenceId });
+        if (data.planSlug) params.set("plan", data.planSlug);
+        window.location.href = `/planos/checkout?${params.toString()}`;
+      } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
         setLoading(false);
