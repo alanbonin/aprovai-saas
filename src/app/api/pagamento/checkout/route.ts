@@ -84,7 +84,6 @@ export async function POST(req: Request) {
           excluded_payment_types: [
             { id: "ticket" },
             { id: "atm" },
-            { id: "debit_card" },
           ],
           installments: 1,
         },
