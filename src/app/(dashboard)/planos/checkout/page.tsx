@@ -18,7 +18,6 @@ export default function CheckoutPage() {
   const preferenceId = searchParams.get("preferenceId");
   const plan = searchParams.get("plan");
 
-  const brickRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -33,81 +32,99 @@ export default function CheckoutPage() {
 
     const publicKey = process.env.NEXT_PUBLIC_MP_PUBLIC_KEY;
     if (!publicKey) {
-      setError("Chave pública do Mercado Pago não configurada.");
+      setError("Configuração de pagamento ausente. Tente novamente ou contate o suporte.");
       setLoading(false);
       return;
     }
 
+    // Timeout de segurança: se o Brick não carregar em 20s, mostra erro
+    const brickTimeout = setTimeout(() => {
+      setError("O checkout demorou muito para carregar. Verifique sua conexão e tente novamente.");
+      setLoading(false);
+    }, 20000);
+
+    const successUrl = plan ? `/planos/sucesso?plan=${plan}` : "/planos/sucesso";
+
     const script = document.createElement("script");
     script.src = "https://sdk.mercadopago.com/js/v2";
     script.async = true;
+
     script.onload = () => {
-      const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" });
-      const bricks = mp.bricks();
+      try {
+        const mp = new window.MercadoPago(publicKey, { locale: "pt-BR" });
+        const bricks = mp.bricks();
 
-      const successUrl = plan
-        ? `/planos/sucesso?plan=${plan}`
-        : "/planos/sucesso";
-
-      bricks.create("payment", "mp-payment-brick", {
-        initialization: {
-          amount: 0,
-          preferenceId,
-        },
-        customization: {
-          paymentMethods: {
-            creditCard: "all",
-            debitCard: "none",
-            ticket: "none",
-            bankTransfer: "all",
-            atm: "none",
-            onlineBanking: "none",
-            wallet_purchase: "none",
+        bricks.create("payment", "mp-payment-brick", {
+          initialization: {
+            amount: 0,
+            preferenceId,
           },
-          visual: {
-            style: {
-              theme: "dark",
+          customization: {
+            paymentMethods: {
+              creditCard: "all",
+              debitCard: "none",
+              ticket: "none",
+              bankTransfer: "all",
+              atm: "none",
+              onlineBanking: "none",
+              wallet_purchase: "none",
+            },
+            visual: {
+              style: { theme: "dark" },
             },
           },
-        },
-        callbacks: {
-          onReady: () => setLoading(false),
-          onError: (err: unknown) => {
-            console.error("MP Brick error:", err);
-            setError("Erro ao carregar o checkout. Tente novamente.");
-            setLoading(false);
+          callbacks: {
+            onReady: () => {
+              clearTimeout(brickTimeout);
+              setLoading(false);
+            },
+            onError: (err: unknown) => {
+              clearTimeout(brickTimeout);
+              console.error("MP Brick error:", err);
+              setError("Erro ao carregar o checkout. Tente novamente.");
+              setLoading(false);
+            },
+            onSubmit: async ({ formData }: { selectedPaymentMethod: string; formData: unknown }) => {
+              const res = await fetch("/api/pagamento/processar", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+              });
+              const data = await res.json() as { status?: string; error?: string };
+              if (data.status === "approved") {
+                router.replace(successUrl);
+              } else if (data.status === "pending") {
+                router.replace(plan ? `/planos/pendente?plan=${plan}` : "/planos/pendente");
+              } else {
+                throw new Error(data.error ?? "Pagamento não aprovado");
+              }
+            },
           },
-          onSubmit: async ({ selectedPaymentMethod, formData }: { selectedPaymentMethod: string; formData: unknown }) => {
-            void selectedPaymentMethod;
-            const res = await fetch("/api/pagamento/processar", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(formData),
-            });
-            const data = await res.json() as { status?: string; error?: string };
-            if (data.status === "approved") {
-              router.replace(successUrl);
-            } else if (data.status === "pending") {
-              router.replace(plan ? `/planos/pendente?plan=${plan}` : "/planos/pendente");
-            } else {
-              throw new Error(data.error ?? "Pagamento não aprovado");
-            }
-          },
-        },
-      }).catch((err: unknown) => {
-        console.error("MP Brick create error:", err);
-        setError("Erro ao carregar o checkout. Tente novamente.");
+        }).catch((err: unknown) => {
+          clearTimeout(brickTimeout);
+          console.error("MP Brick create error:", err);
+          setError("Erro ao inicializar o checkout. Tente novamente.");
+          setLoading(false);
+        });
+      } catch (err) {
+        clearTimeout(brickTimeout);
+        console.error("MP init error:", err);
+        setError("Erro ao inicializar o Mercado Pago. Tente novamente.");
         setLoading(false);
-      });
+      }
     };
+
     script.onerror = () => {
+      clearTimeout(brickTimeout);
       setError("Não foi possível carregar o Mercado Pago. Verifique sua conexão.");
       setLoading(false);
     };
+
     document.head.appendChild(script);
 
     return () => {
-      document.head.removeChild(script);
+      clearTimeout(brickTimeout);
+      if (document.head.contains(script)) document.head.removeChild(script);
     };
   }, [preferenceId, plan, router]);
 
@@ -123,20 +140,20 @@ export default function CheckoutPage() {
         <h1 className="text-xl font-semibold text-white mb-6">Finalizar pagamento</h1>
 
         {loading && (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
             <Loader2 className="w-8 h-8 animate-spin text-indigo-400" />
+            <p className="text-sm text-gray-500">Carregando checkout seguro…</p>
           </div>
         )}
 
         {error && (
-          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 text-center">
-            {error}
-            <br />
-            <Link href="/planos" className="underline mt-2 inline-block">Voltar e tentar novamente</Link>
+          <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400 text-center space-y-3">
+            <p>{error}</p>
+            <Link href="/planos" className="underline inline-block">Voltar e tentar novamente</Link>
           </div>
         )}
 
-        <div ref={brickRef} id="mp-payment-brick" />
+        <div id="mp-payment-brick" />
       </div>
     </div>
   );
