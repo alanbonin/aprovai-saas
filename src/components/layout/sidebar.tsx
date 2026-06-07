@@ -367,7 +367,12 @@ function SidebarSection({
       {open && (
         <div className="mt-0.5 space-y-0.5 pl-1">
           {section.items.map(({ href, label, icon, badge }) => {
-            const active = pathname === href || (href !== "/" && pathname.startsWith(href + "/"));
+            const siblingHrefs = new Set(section.items.map(i => i.href));
+            const active = pathname === href || (
+              href !== "/" &&
+              pathname.startsWith(href + "/") &&
+              !section.items.some(i => i.href !== href && pathname.startsWith(i.href))
+            );
             const isNotif = href === "/notificacoes";
             const isLocked = !isPremium && TRIAL_LOCKED_HREFS.has(href);
             const resourceKey = HREF_RESOURCE[href];

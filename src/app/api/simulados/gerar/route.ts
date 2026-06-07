@@ -34,6 +34,16 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Simulados não disponíveis no seu plano. Faça upgrade para acessar." }, { status: 403 });
     }
 
+    // Verifica e incrementa limite semanal
+    if (access.maxSimuladosPerWeek > 0 && access.maxSimuladosPerWeek < 9999) {
+      const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+      const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "simulado");
+      if (usedThisWeek >= access.maxSimuladosPerWeek) {
+        return NextResponse.json({ error: `Você atingiu o limite de ${access.maxSimuladosPerWeek} simulados por semana do seu plano.` }, { status: 403 });
+      }
+      await incrementWeeklyResourceUsage(dbUser.id, "simulado");
+    }
+
     // Burst protection: 3 simulados/min por usuário
     const rl = await simuladoLimiter.check(dbUser.id);
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
