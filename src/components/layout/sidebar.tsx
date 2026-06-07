@@ -441,6 +441,7 @@ interface UsageLimits { [resource: string]: UsageEntry }
 
 // Maps sidebar href → WeeklyUsage resource key
 const HREF_RESOURCE: Record<string, string> = {
+  "/workspace": "questoes",
   "/caso":      "caso",
   "/redacao":   "redacao",
   "/simulado":  "simulado",

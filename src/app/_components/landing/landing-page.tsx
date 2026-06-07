@@ -1259,7 +1259,7 @@ function Pricing() {
               <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Sem cartão. Explore tudo por 7 dias.</p>
               <ul>
                 <li>7 dias grátis, sem cartão</li>
-                <li>20 questões por dia</li>
+                <li>200 questões por semana</li>
                 <li>Flashcards</li>
                 <li>1 mentor IA — 10 msgs/semana</li>
               </ul>
