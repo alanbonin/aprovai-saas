@@ -40,7 +40,7 @@ const EXPIRED_LIMITS = {
 // Fallback para plano trial (caso o banco ainda não tenha os novos campos)
 const TRIAL_DEFAULTS = {
   aiCreditsPerWeek: 10, maxAgents: 1, maxProfiles: 1,
-  maxQuestionsPerWeek: 200, maxFlashcardsPerWeek: 10,
+  maxQuestionsPerWeek: 200, maxFlashcardsPerWeek: 200,
   maxSimuladosPerWeek: 0, maxRedacoesPerWeek: 2, maxCasosPerWeek: 2,
   maxPdfPerWeek: 0,
   hasGroupStudy: true, hasLongTermMemory: false,

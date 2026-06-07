@@ -1260,7 +1260,7 @@ function Pricing() {
               <ul>
                 <li>7 dias grátis, sem cartão</li>
                 <li>200 questões por semana</li>
-                <li>Flashcards</li>
+                <li>200 flashcards por semana</li>
                 <li>1 mentor IA — 10 msgs/semana</li>
               </ul>
               <Link href="/cadastro" className="lc-btn lc-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>Começar grátis</Link>
