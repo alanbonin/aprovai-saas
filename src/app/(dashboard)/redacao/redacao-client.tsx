@@ -229,7 +229,7 @@ export function RedacaoClient() {
   const quaseNoLimite = restantes <= 300;
 
   return (
-    <div className="p-6 text-white max-w-4xl mx-auto">
+    <div className="p-6 text-gray-900 dark:text-white max-w-4xl mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FileText className="w-6 h-6 text-indigo-400" /> Redação Oficial
@@ -291,7 +291,7 @@ export function RedacaoClient() {
               value={tema}
               onChange={e => { setTema(e.target.value); setShowTemas(false); }}
               placeholder={`Ex: Solicitar ao chefe do departamento o afastamento para capacitação`}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
+              className="w-full bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
             />
 
             {/* Temas sugeridos pela IA */}
@@ -315,7 +315,7 @@ export function RedacaoClient() {
           {/* Input mode toggle */}
           <div className="mb-3">
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-gray-300">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                 {inputMode === "texto"
                   ? `Seu ${tipoSel?.label ?? "documento"}`
                   : "Foto da redação manuscrita"}
@@ -340,8 +340,8 @@ export function RedacaoClient() {
                 required
                 placeholder={`Digite seu ${tipoSel?.label ?? "documento"} aqui. Inclua todas as partes obrigatórias (cabeçalho, corpo, assinatura)...`}
                 className={cn(
-                  "w-full bg-white/5 border rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none transition-colors resize-none font-mono leading-relaxed",
-                  restantes <= 0 ? "border-red-500/50 focus:border-red-500" : "border-white/10 focus:border-indigo-500"
+                  "w-full bg-white dark:bg-white/5 border rounded-xl px-4 py-3 text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-600 focus:outline-none transition-colors resize-none font-mono leading-relaxed",
+                  restantes <= 0 ? "border-red-500/50 focus:border-red-500" : "border-gray-200 dark:border-white/10 focus:border-indigo-500"
                 )}
               />
               {quaseNoLimite && restantes > 0 && (
