@@ -19,6 +19,7 @@ export default function CheckoutPage() {
   const plan = searchParams.get("plan");
 
   const amount = parseFloat(searchParams.get("amount") ?? "0");
+  const fallbackUrl = searchParams.get("fallback") ? decodeURIComponent(searchParams.get("fallback")!) : null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -38,11 +39,15 @@ export default function CheckoutPage() {
       return;
     }
 
-    // Timeout de segurança: se o Brick não carregar em 20s, mostra erro
+    // Timeout: se o Brick não carregar em 10s, redireciona para o MP diretamente
     const brickTimeout = setTimeout(() => {
-      setError("O checkout demorou muito para carregar. Verifique sua conexão e tente novamente.");
-      setLoading(false);
-    }, 20000);
+      if (fallbackUrl) {
+        window.location.href = fallbackUrl;
+      } else {
+        setError("O checkout demorou muito para carregar. Verifique sua conexão e tente novamente.");
+        setLoading(false);
+      }
+    }, 10000);
 
     const successUrl = plan ? `/planos/sucesso?plan=${plan}` : "/planos/sucesso";
 
@@ -108,8 +113,12 @@ export default function CheckoutPage() {
 
     script.onerror = () => {
       clearTimeout(brickTimeout);
-      setError("Não foi possível carregar o Mercado Pago. Verifique sua conexão.");
-      setLoading(false);
+      if (fallbackUrl) {
+        window.location.href = fallbackUrl;
+      } else {
+        setError("Não foi possível carregar o Mercado Pago. Verifique sua conexão.");
+        setLoading(false);
+      }
     };
 
     document.head.appendChild(script);

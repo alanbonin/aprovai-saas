@@ -45,6 +45,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
         const params = new URLSearchParams({ preferenceId: data.preferenceId });
         if (data.planSlug) params.set("plan", data.planSlug);
         if (data.amount) params.set("amount", String(data.amount));
+        if (data.checkoutUrl) params.set("fallback", encodeURIComponent(data.checkoutUrl));
         window.location.href = `/planos/checkout?${params.toString()}`;
       } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
