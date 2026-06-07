@@ -91,7 +91,7 @@ export default function TermosPage() {
               Em conformidade com o art. 49 do Código de Defesa do Consumidor (Lei 8.078/1990), o Usuário
               poderá exercer o direito de arrependimento em até <strong className="text-white">7 (sete) dias
               corridos</strong> contados da data da contratação, mediante solicitação pelo e-mail
-              {" "}<a href="mailto:suporte@aprovai.app" className="text-teal-400 hover:underline">suporte@aprovai.app</a>.
+              {" "}<a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">contato@aprovai360.com.br</a>.
               Neste caso, o valor pago será integralmente reembolsado.
             </p>
           </section>
@@ -221,7 +221,7 @@ export default function TermosPage() {
             <ul className="mt-3 space-y-1">
               <li>
                 <strong className="text-gray-100">Suporte:</strong>{" "}
-                <a href="mailto:suporte@aprovai.app" className="text-teal-400 hover:underline">suporte@aprovai.app</a>
+                <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">contato@aprovai360.com.br</a>
               </li>
               <li>
                 <strong className="text-gray-100">Privacidade:</strong>{" "}

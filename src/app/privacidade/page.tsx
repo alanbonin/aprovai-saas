@@ -297,8 +297,8 @@ export default function PrivacidadePage() {
               </li>
               <li>
                 <strong className="text-gray-100">Suporte geral:</strong>{" "}
-                <a href="mailto:suporte@aprovai.app" className="text-teal-400 hover:underline">
-                  suporte@aprovai.app
+                <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">
+                  contato@aprovai360.com.br
                 </a>
               </li>
             </ul>
