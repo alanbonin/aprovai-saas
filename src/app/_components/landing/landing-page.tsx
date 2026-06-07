@@ -282,8 +282,8 @@ function Hero() {
    ════════════════════════════════════════════════════════ */
 function StatsStrip() {
   const stats = [
-    { num: '170.000', suf: '+', label: 'Questões reais de provas anteriores' },
-    { num: '1.200',   suf: '+', label: 'Tópicos mapeados por banca e edital' },
+    { num: '325.000', suf: '+', label: 'Questões reais de provas anteriores' },
+    { num: '1.100',   suf: '+', label: 'Tópicos mapeados por banca e edital' },
     { num: '30',      suf: 's', label: 'Para corrigir sua redação com IA' },
     { num: '7',       suf: 'd', label: 'Grátis — sem cartão de crédito' },
   ];
