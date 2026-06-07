@@ -15,31 +15,22 @@ export async function getUserWithPlan(supabaseId: string) {
   const { data: user } = await db.from("User").select("*").eq("supabaseId", supabaseId).maybeSingle();
   if (!user) return null;
 
-  // Pega a assinatura ACTIVE mais recente (order+limit evita falha do maybeSingle
-  // quando o usuário tem múltiplas linhas ACTIVE por alguma inconsistência de dados)
   const { data: subscriptions } = await db
     .from("Subscription")
-    .select("*")
+    .select("*, plan:planId(*)")
     .eq("userId", user.id)
-    .eq("status", "ACTIVE")
+    .in("status", ["ACTIVE", "TRIAL"])
     .order("createdAt", { ascending: false })
     .limit(1);
   const subscription = subscriptions?.[0] ?? null;
 
-  // Verifica expiração real-time (o cron marca como EXPIRED às 6h, pode haver lag)
   const isExpired = subscription
-    ? new Date(subscription.endDate) < new Date()
+    ? new Date((subscription as { endDate: string }).endDate) < new Date()
     : true;
-
-  const plan = subscription && !isExpired
-    ? (await db.from("Plan").select("*").eq("id", subscription.planId).maybeSingle()).data
-    : null;
 
   return {
     ...user,
-    subscription: subscription && !isExpired
-      ? { ...subscription, plan }
-      : null,
+    subscription: subscription && !isExpired ? subscription : null,
   };
 }
 
