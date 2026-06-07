@@ -452,7 +452,7 @@ export function CasoClient() {
   }
 
   // Enviar avaliação (unificado)
-  async function avaliar(cenarioTexto?: string, cenarioFotoBase64?: string, cenarioFotoType?: string) {
+  async function avaliar(cenarioTexto?: string, cenarioFotoBase64?: string, cenarioFotoType?: string, modoProprio = false) {
     setLoadingAvaliar(true);
     setFotoError("");
 
@@ -478,7 +478,7 @@ export function CasoClient() {
       const res = await fetch("/api/caso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "avaliar", ...body }),
+        body: JSON.stringify({ action: "avaliar", modoProprio, ...body }),
       });
       if (res.status === 403) { showUpgrade("Estudo de Caso"); setLoadingAvaliar(false); return; }
 
@@ -519,7 +519,7 @@ export function CasoClient() {
     const textoCase = casoMode === "texto" ? casoTexto : undefined;
     const fotoBase64 = casoMode === "foto" ? casoFoto.base64 : undefined;
     const fotoType = casoMode === "foto" ? casoFoto.type : undefined;
-    void avaliar(textoCase, fotoBase64, fotoType);
+    void avaliar(textoCase, fotoBase64, fotoType, true);
   }
 
   const temaSel = temas.find(t => t.id === tema) ?? temas[0];

@@ -62,6 +62,7 @@ export async function POST(req: Request) {
   const body = await req.json() as {
     action: string;
     tema?: string;
+    modoProprio?: boolean;
     cenarioTexto?: string;
     cenarioFotoBase64?: string;
     cenarioFotoType?: string;
@@ -170,6 +171,20 @@ Retorne APENAS JSON válido:
 
   // ── Avaliar (suporta todas as combinações de texto/foto para caso e resposta) ─
   if (action === "avaliar") {
+    // Conta uso quando o usuário traz seu próprio caso ("Traga seu tema")
+    if (body.modoProprio && access.maxCasosPerWeek > 0 && access.maxCasosPerWeek < 9999) {
+      const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+      const { db: dbClient } = await import("@/lib/db");
+      const { data: dbUserRow } = await dbClient.from("User").select("id").eq("supabaseId", user.id).single();
+      if (dbUserRow) {
+        const usedThisWeek = await getWeeklyResourceUsage(dbUserRow.id, "caso");
+        if (usedThisWeek >= access.maxCasosPerWeek) {
+          return NextResponse.json({ error: `Você atingiu o limite de ${access.maxCasosPerWeek} casos por semana do seu plano.` }, { status: 403 });
+        }
+        await incrementWeeklyResourceUsage(dbUserRow.id, "caso");
+      }
+    }
+
     const { cenarioTexto, cenarioFotoBase64, cenarioFotoType,
             respostaTexto, respostaFotoBase64, respostaFotoType } = body;
 
