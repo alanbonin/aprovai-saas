@@ -84,6 +84,24 @@ export async function POST(req: Request) {
       },
     });
 
+    // Salva mpSubscriptionId para poder cancelar depois
+    if (preApproval.id) {
+      const now = new Date().toISOString();
+      const { data: existing } = await db.from("Subscription").select("id").eq("userId", dbUser.id).maybeSingle();
+      if (existing) {
+        await db.from("Subscription").update({ mpSubscriptionId: String(preApproval.id), updatedAt: now }).eq("id", existing.id);
+      } else {
+        await db.from("Subscription").insert({
+          id: crypto.randomUUID(), userId: dbUser.id, planId,
+          status: "PENDING",
+          startDate: now,
+          endDate: new Date(Date.now() + 86400000).toISOString(),
+          mpSubscriptionId: String(preApproval.id),
+          createdAt: now, updatedAt: now,
+        });
+      }
+    }
+
     log.info(LogEvent.PAYMENT_APPROVED, { stage: "preapproval_created", userId: dbUser.id });
 
     return NextResponse.json({ checkoutUrl: preApproval.init_point });

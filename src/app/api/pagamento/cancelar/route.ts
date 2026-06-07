@@ -20,18 +20,19 @@ export async function POST() {
 
     const { data: sub } = await db
       .from("Subscription")
-      .select("id, mpPaymentId, status")
+      .select("id, mpPaymentId, mpSubscriptionId, status")
       .eq("userId", dbUser.id)
       .maybeSingle();
 
     if (!sub) return NextResponse.json({ error: "Assinatura não encontrada" }, { status: 404 });
 
-    // Cancela no Mercado Pago se tiver ID de preapproval
-    if (sub.mpPaymentId && sub.mpPaymentId.length > 10) {
+    // Cancela no Mercado Pago usando mpSubscriptionId (PreApproval ID)
+    const mpSubId = sub.mpSubscriptionId ?? sub.mpPaymentId;
+    if (mpSubId) {
       try {
         const preApprovalApi = new PreApproval(getMp());
         await preApprovalApi.update({
-          id: sub.mpPaymentId,
+          id: mpSubId,
           body: { status: "cancelled" },
         });
       } catch { /* ignora erro do MP — cancela no banco de qualquer forma */ }
