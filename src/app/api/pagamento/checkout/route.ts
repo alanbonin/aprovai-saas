@@ -5,6 +5,8 @@ import MercadoPago, { Preference } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
+export const maxDuration = 30;
+
 function getMp() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado.");
@@ -13,9 +15,13 @@ function getMp() {
 
 export async function POST(req: Request) {
   try {
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "checkout_start" });
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "auth_ok", userId: user.id });
 
     const rl = await checkoutLimiter.check(`checkout:${user.id}`);
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
@@ -23,9 +29,13 @@ export async function POST(req: Request) {
     const dbUser = await getUserWithPlan(user.id);
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "user_ok", userId: user.id });
+
     const { planId } = await req.json();
     const { data: plan } = await db.from("Plan").select("*").eq("id", planId).single();
     if (!plan) return NextResponse.json({ error: "Plano não encontrado" }, { status: 404 });
+
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "plan_ok", planId });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -56,6 +66,7 @@ export async function POST(req: Request) {
     }
 
     // ── Plano pago: Preference (1 chamada à API do MP) ───────────────────────
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "mp_start", price: plan.price });
     const mp = getMp();
     const preference = new Preference(mp);
     const response = await preference.create({
@@ -91,6 +102,8 @@ export async function POST(req: Request) {
         expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
     });
+
+    log.info(LogEvent.PAYMENT_FAILED, { stage: "mp_ok", preferenceId: response.id });
 
     return NextResponse.json({
       checkoutUrl: response.init_point,
