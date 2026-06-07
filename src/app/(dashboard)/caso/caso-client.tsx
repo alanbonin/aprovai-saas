@@ -612,9 +612,9 @@ export function CasoClient() {
           {/* Cenário gerado */}
           {cenario && (
             <div>
-              <div className="rounded-xl bg-gray-50 dark:bg-white/5 border border-gray-200 dark:border-white/5 p-6 mb-5">
+              <div className="rounded-xl bg-white/5 border border-white/5 p-6 mb-5">
                 <div className="flex items-start justify-between gap-4 mb-4">
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">{cenario.titulo}</h2>
+                  <h2 className="text-lg font-bold text-white">{cenario.titulo}</h2>
                   <button
                     onClick={resetState}
                     className="flex items-center gap-1 text-xs text-gray-500 hover:text-white transition-colors flex-shrink-0"
@@ -622,10 +622,10 @@ export function CasoClient() {
                     <RefreshCw className="w-3 h-3" /> Novo caso
                   </button>
                 </div>
-                <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap mb-5">{cenario.contexto}</div>
-                <div className="p-4 rounded-lg bg-purple-100 dark:bg-purple-500/10 border border-purple-300 dark:border-purple-500/30">
-                  <p className="text-xs font-semibold mb-1 text-purple-700 dark:text-purple-400">❓ Pergunta:</p>
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-200 leading-relaxed">{cenario.pergunta}</p>
+                <div className="text-sm text-gray-300 leading-relaxed whitespace-pre-wrap mb-5">{cenario.contexto}</div>
+                <div className="p-4 rounded-lg bg-purple-500/10 border border-purple-500/30">
+                  <p className="text-xs font-semibold mb-1 text-purple-400">❓ Pergunta:</p>
+                  <p className="text-sm font-medium text-white leading-relaxed">{cenario.pergunta}</p>
                 </div>
 
                 <button
