@@ -30,8 +30,8 @@ export default function PrivacidadePage() {
               <p><strong className="text-white">Marca:</strong> AprovAI360</p>
               <p>
                 <strong className="text-white">Contato DPO / Privacidade:</strong>{" "}
-                <a href="mailto:privacidade@aprovai.app" className="text-teal-400 hover:underline">
-                  privacidade@aprovai.app
+                <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">
+                  contato@aprovai360.com.br
                 </a>
               </p>
             </div>
@@ -223,8 +223,8 @@ export default function PrivacidadePage() {
             </ul>
             <p className="mt-4">
               Para exercer qualquer desses direitos, entre em contato pelo e-mail{" "}
-              <a href="mailto:privacidade@aprovai.app" className="text-teal-400 hover:underline">
-                privacidade@aprovai.app
+              <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">
+                contato@aprovai360.com.br
               </a>
               . Atenderemos sua solicitação no prazo legal de até 15 (quinze) dias.
             </p>
@@ -291,8 +291,8 @@ export default function PrivacidadePage() {
             <ul className="mt-3 space-y-1">
               <li>
                 <strong className="text-gray-100">E-mail DPO:</strong>{" "}
-                <a href="mailto:privacidade@aprovai.app" className="text-teal-400 hover:underline">
-                  privacidade@aprovai.app
+                <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">
+                  contato@aprovai360.com.br
                 </a>
               </li>
               <li>

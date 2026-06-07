@@ -225,7 +225,7 @@ export default function TermosPage() {
               </li>
               <li>
                 <strong className="text-gray-100">Privacidade:</strong>{" "}
-                <a href="mailto:privacidade@aprovai.app" className="text-teal-400 hover:underline">privacidade@aprovai.app</a>
+                <a href="mailto:contato@aprovai360.com.br" className="text-teal-400 hover:underline">contato@aprovai360.com.br</a>
               </li>
               <li>
                 <strong className="text-gray-100">Empresa:</strong> AprovAI360 Tecnologia Ltda.
