@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import MercadoPago, { Preference, PreApprovalPlan, PreApproval } from "mercadopago";
+import MercadoPago, { Preference } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
@@ -9,12 +9,6 @@ function getMp() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
   if (!token) throw new Error("MERCADOPAGO_ACCESS_TOKEN não configurado.");
   return new MercadoPago({ accessToken: token });
-}
-
-function getFrequency(intervalDays: number): { frequency: number; frequency_type: "months" | "days" } {
-  if (intervalDays >= 360) return { frequency: 12, frequency_type: "months" };
-  if (intervalDays >= 28)  return { frequency: 1,  frequency_type: "months" };
-  return { frequency: intervalDays, frequency_type: "days" };
 }
 
 export async function POST(req: Request) {
@@ -61,76 +55,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 
-    // ── Plano pago: assinatura recorrente via PreApproval ────────────────────
+    // ── Plano pago: Preference (1 chamada à API do MP) ───────────────────────
     const mp = getMp();
-    const { frequency, frequency_type } = getFrequency(plan.intervalDays ?? 30);
-
-    try {
-      // 1. Cria plano de assinatura no MP
-      const planApi = new PreApprovalPlan(mp);
-      const mpPlan = await planApi.create({
-        body: {
-          reason: `AprovAI360 — ${plan.name}`,
-          auto_recurring: {
-            frequency,
-            frequency_type,
-            transaction_amount: plan.price,
-            currency_id: "BRL",
-          },
-          payment_methods_allowed: {
-            payment_types: [{ id: "credit_card" }],
-          },
-          back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
-        },
-      });
-
-      // 2. Cria assinatura vinculada ao plano
-      const preApprovalApi = new PreApproval(mp);
-      const preApproval = await preApprovalApi.create({
-        body: {
-          preapproval_plan_id: mpPlan.id!,
-          reason: `AprovAI360 — ${plan.name}`,
-          external_reference: `${dbUser.id}|${plan.id}`,
-          payer_email: dbUser.email ?? undefined,
-          auto_recurring: {
-            frequency,
-            frequency_type,
-            transaction_amount: plan.price,
-            currency_id: "BRL",
-          },
-          back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
-          status: "pending",
-        },
-      });
-
-      if (preApproval.init_point) {
-        // Cria também uma Preference para usar o Checkout Brick embutido
-        try {
-          const prefApi = new Preference(mp);
-          const pref = await prefApi.create({
-            body: {
-              items: [{ id: plan.id, title: `AprovAI360 — ${plan.name}`, quantity: 1, unit_price: plan.price, currency_id: "BRL" }],
-              payer: { email: dbUser.email, name: dbUser.name },
-              payment_methods: { excluded_payment_types: [{ id: "ticket" }, { id: "atm" }, { id: "debit_card" }], installments: 1 },
-              back_urls: { success: `${appUrl}/planos/sucesso?plan=${plan.slug}`, failure: `${appUrl}/planos?error=pagamento`, pending: `${appUrl}/planos/pendente?plan=${plan.slug}` },
-              auto_return: "approved",
-              external_reference: `${dbUser.id}|${plan.id}`,
-              notification_url: `${appUrl}/api/pagamento/webhook`,
-              statement_descriptor: "APROVAI360",
-            },
-          });
-          if (pref.id) {
-            return NextResponse.json({ checkoutUrl: preApproval.init_point, preferenceId: pref.id, planSlug: plan.slug });
-          }
-        } catch { /* ignora, usa checkoutUrl direto */ }
-        return NextResponse.json({ checkoutUrl: preApproval.init_point });
-      }
-    } catch (preApprovalErr) {
-      log.error(LogEvent.PAYMENT_FAILED, { stage: "preapproval_create" }, preApprovalErr);
-      // Fallback para Preference (checkout avulso)
-    }
-
-    // ── Fallback: Preference (checkout avulso) ───────────────────────────────
     const preference = new Preference(mp);
     const response = await preference.create({
       body: {
@@ -166,7 +92,11 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ checkoutUrl: response.init_point, preferenceId: response.id, planSlug: plan.slug });
+    return NextResponse.json({
+      checkoutUrl: response.init_point,
+      preferenceId: response.id,
+      planSlug: plan.slug,
+    });
   } catch (err) {
     log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
