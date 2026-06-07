@@ -18,6 +18,7 @@ export default function CheckoutPage() {
   const preferenceId = searchParams.get("preferenceId");
   const plan = searchParams.get("plan");
 
+  const amount = parseFloat(searchParams.get("amount") ?? "0");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -56,7 +57,7 @@ export default function CheckoutPage() {
 
         bricks.create("payment", "mp-payment-brick", {
           initialization: {
-            amount: 0,
+            amount: amount > 0 ? amount : 1,
             preferenceId,
           },
           customization: {
@@ -67,7 +68,6 @@ export default function CheckoutPage() {
               bankTransfer: "all",
               atm: "none",
               onlineBanking: "none",
-              wallet_purchase: "none",
             },
             visual: {
               style: { theme: "dark" },

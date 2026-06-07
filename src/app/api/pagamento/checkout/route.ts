@@ -109,6 +109,7 @@ export async function POST(req: Request) {
       checkoutUrl: response.init_point,
       preferenceId: response.id,
       planSlug: plan.slug,
+      amount: plan.price,
     });
   } catch (err) {
     log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);

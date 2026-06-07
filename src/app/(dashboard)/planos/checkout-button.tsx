@@ -27,7 +27,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
       });
       clearTimeout(timeout);
 
-      const data = await res.json() as { checkoutUrl?: string; preferenceId?: string; planSlug?: string; activated?: boolean; error?: string };
+      const data = await res.json() as { checkoutUrl?: string; preferenceId?: string; planSlug?: string; amount?: number; activated?: boolean; error?: string };
 
       if (!res.ok || data.error) {
         setCheckoutError(data.error ?? `Erro ${res.status}. Tente novamente.`);
@@ -44,6 +44,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
       if (data.preferenceId) {
         const params = new URLSearchParams({ preferenceId: data.preferenceId });
         if (data.planSlug) params.set("plan", data.planSlug);
+        if (data.amount) params.set("amount", String(data.amount));
         window.location.href = `/planos/checkout?${params.toString()}`;
       } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
