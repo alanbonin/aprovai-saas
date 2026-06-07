@@ -44,7 +44,6 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/desafio",       label: "Desafio Diário",  icon: "⚡" },
       { href: "/quiz",          label: "Quiz Rápido",      icon: "🏃" },
       { href: "/desafio-semanal",label: "Desafio Semanal", icon: "⚔️" },
-      { href: "/questoes",      label: "Questões",         icon: "📝" },
       { href: "/adaptativo",    label: "Adaptativo",       icon: "🧠" },
       { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰" },
       { href: "/caso",          label: "Casos",            icon: "🔍" },
@@ -447,7 +446,6 @@ const HREF_RESOURCE: Record<string, string> = {
   "/simulado":  "simulado",
   "/simulado/filtrado": "simulado",
   "/simulado/exame":    "simulado",
-  "/questoes":  "questoes",
   "/flashcards":"flashcards",
   "/biblioteca":"pdf",
 };
