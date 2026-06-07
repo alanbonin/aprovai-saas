@@ -124,6 +124,15 @@ export async function POST(req: Request) {
           currency_id: "BRL",
         }],
         payer: { email: dbUser.email, name: dbUser.name },
+        payment_methods: {
+          excluded_payment_types: [
+            { id: "ticket" },
+            { id: "bank_transfer" },
+            { id: "atm" },
+            { id: "debit_card" },
+          ],
+          installments: 1,
+        },
         back_urls: {
           success: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
           failure: `${appUrl}/planos?error=pagamento`,
