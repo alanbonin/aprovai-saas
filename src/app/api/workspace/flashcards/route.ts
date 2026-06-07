@@ -27,16 +27,9 @@ export async function GET() {
     subjectIds = (legacy ?? []).map(s => s.subjectId as string);
   }
 
-  // IDs dos admins (para incluir todos os decks criados por admins)
-  const { data: adminUsers } = await db
-    .from("User")
-    .select("id")
-    .eq("role", "ADMIN");
-  const adminIds = (adminUsers ?? []).map(u => u.id as string);
-
   // Busca em 2 queries separadas para evitar transferir a coluna "cards" (JSON pesado) dos decks de admin:
   // 1. Decks do próprio aluno — inclui "cards" para calcular dueCount e totalCards
-  // 2. Decks de admins/matérias — SEM "cards" (apenas metadados), limitado a 100
+  // 2. Decks de outros usuários — SEM "cards", filtrados pelas matérias matriculadas do aluno
 
   const ownQuery = db
     .from("FlashcardSet")
@@ -44,23 +37,18 @@ export async function GET() {
     .eq("userId", dbUser.id as string)
     .order("updatedAt", { ascending: false });
 
-  const adminOrParts: string[] = [];
-  if (adminIds.length > 0) adminOrParts.push(`userId.in.(${adminIds.join(",")})`);
-  if (subjectIds.length > 0) adminOrParts.push(`subjectId.in.(${subjectIds.join(",")})`);
+  // Decks de biblioteca: apenas das matérias em que o aluno está matriculado
+  const adminQueryPromise = subjectIds.length > 0
+    ? db
+        .from("FlashcardSet")
+        .select("id, name, subjectId, updatedAt, userId")
+        .neq("userId", dbUser.id as string)
+        .in("subjectId", subjectIds)
+        .order("updatedAt", { ascending: false })
+        .range(0, 99)
+    : Promise.resolve({ data: [] as Array<{ id: string; name: string; subjectId: string; updatedAt: string; userId: string }> });
 
-  const adminQueryBase = db
-    .from("FlashcardSet")
-    .select("id, name, subjectId, updatedAt, userId") // sem "cards" — evita payload enorme
-    .neq("userId", dbUser.id as string)
-    .order("updatedAt", { ascending: false })
-    .range(0, 99); // máximo 100 decks de biblioteca
-
-  const [ownResult, adminResult] = await Promise.all([
-    ownQuery,
-    adminOrParts.length > 0
-      ? adminQueryBase.or(adminOrParts.join(","))
-      : Promise.resolve({ data: [] as Array<{ id: string; name: string; subjectId: string; updatedAt: string; userId: string }> }),
-  ]);
+  const [ownResult, adminResult] = await Promise.all([ownQuery, adminQueryPromise]);
 
   // Combina: decks do aluno (com cards) + decks de admin/matérias (sem cards)
   type SetWithCards = { id: string; name: string; subjectId: string; updatedAt: string; userId: string; cards: unknown };
