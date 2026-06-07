@@ -49,6 +49,10 @@
     {
       "path": "/api/cron/renovar-planos",
       "schedule": "0 5 * * 1"
+    },
+    {
+      "path": "/api/cron/cobrar-renovacoes",
+      "schedule": "30 6 * * *"
     }
   ]
 }

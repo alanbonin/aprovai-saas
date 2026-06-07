@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import MercadoPago, { Payment, MerchantOrder } from "mercadopago";
+import MercadoPago, { Payment, MerchantOrder, Customer, CustomerCard } from "mercadopago";
 import { createHmac } from "crypto";
 import { log as slog, LogEvent } from "@/lib/logger";
 import { sendEmail } from "@/lib/mailer";
@@ -95,6 +95,46 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
   }
 }
 
+// Salva customer_id e card_id do MP para cobranças futuras automáticas
+async function savePaymentMethod(userId: string, email: string, paymentData: { card?: { id?: string }; payer?: { id?: string | number } }) {
+  try {
+    const mp = getMPInstance();
+    const cardToken = paymentData.card?.id;
+    if (!cardToken) return;
+
+    const customerApi = new Customer(mp);
+
+    // Tenta encontrar customer existente pelo email
+    let customerId: string | undefined;
+    try {
+      const search = await customerApi.search({ options: { email } });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = (search as any)?.results ?? (search as any)?.customers;
+      if (Array.isArray(results) && results.length > 0) {
+        customerId = String(results[0].id);
+      }
+    } catch { /* sem customer ainda */ }
+
+    if (!customerId) {
+      const newCustomer = await customerApi.create({ body: { email } });
+      customerId = String(newCustomer.id);
+    }
+
+    // Associa o cartão ao customer
+    const cardApi = new CustomerCard(mp);
+    const card = await cardApi.create({ customerId, body: { token: cardToken } });
+    const cardId = String(card.id);
+
+    await db.from("Subscription").update({
+      mpCustomerId: customerId,
+      mpCardId: cardId,
+      updatedAt: new Date().toISOString(),
+    }).eq("userId", userId);
+  } catch (e) {
+    slog.error(LogEvent.PAYMENT_FAILED, { stage: "save_payment_method", userId }, e);
+  }
+}
+
 async function cancelSubscription(userId: string, reason: string) {
   const { data: existing } = await db.from("Subscription").select("id").eq("userId", userId).maybeSingle();
   if (existing) {
@@ -115,7 +155,11 @@ export async function POST(req: Request) {
 
     // Verificação de assinatura
     if (!verifySignature(req, rawBody)) {
-      await log("signature_invalid", { headers: Object.fromEntries(req.headers) });
+      await log("signature_invalid", {
+        hasXSignature: !!req.headers.get("x-signature"),
+        hasXRequestId: !!req.headers.get("x-request-id"),
+        contentType: req.headers.get("content-type"),
+      });
       slog.security(LogEvent.PAYMENT_WEBHOOK, { result: "signature_invalid" });
       return NextResponse.json({ error: "Assinatura inválida" }, { status: 401 });
     }
@@ -153,6 +197,11 @@ export async function POST(req: Request) {
         }
 
         await activateSubscription(userId, planId, mpPaymentIdStr);
+        // Salva customer+card para renovação automática futura
+        const { data: dbUser } = await db.from("User").select("email").eq("id", userId).single();
+        if (dbUser?.email) {
+          await savePaymentMethod(userId, dbUser.email, paymentData as { card?: { id?: string }; payer?: { id?: string | number } });
+        }
         await log("payment_approved", { userId, planId, paymentId: paymentData.id });
         slog.info(LogEvent.PAYMENT_APPROVED, { userId, planId });
       } else if (status === "refunded" || status === "cancelled" || status === "charged_back") {
