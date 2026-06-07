@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import MercadoPago, { Preference } from "mercadopago";
+import MercadoPago, { PreApproval } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
@@ -13,15 +13,17 @@ function getMp() {
   return new MercadoPago({ accessToken: token });
 }
 
+function getFrequency(intervalDays: number): { frequency: number; frequency_type: "months" | "days" } {
+  if (intervalDays >= 360) return { frequency: 12, frequency_type: "months" };
+  if (intervalDays >= 28)  return { frequency: 1,  frequency_type: "months" };
+  return { frequency: intervalDays, frequency_type: "days" };
+}
+
 export async function POST(req: Request) {
   try {
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "checkout_start" });
-
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "auth_ok", userId: user.id });
 
     const rl = await checkoutLimiter.check(`checkout:${user.id}`);
     if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
@@ -29,13 +31,9 @@ export async function POST(req: Request) {
     const dbUser = await getUserWithPlan(user.id);
     if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "user_ok", userId: user.id });
-
     const { planId } = await req.json();
     const { data: plan } = await db.from("Plan").select("*").eq("id", planId).single();
     if (!plan) return NextResponse.json({ error: "Plano não encontrado" }, { status: 404 });
-
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "plan_ok", planId });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -65,51 +63,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 
-    // ── Plano pago: Preference (1 chamada à API do MP) ───────────────────────
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "mp_start", price: plan.price });
+    // ── Plano pago: PreApproval (assinatura recorrente automática via MP) ────
     const mp = getMp();
-    const preference = new Preference(mp);
-    const response = await preference.create({
+    const { frequency, frequency_type } = getFrequency(plan.intervalDays ?? 30);
+    const preApprovalApi = new PreApproval(mp);
+
+    const preApproval = await preApprovalApi.create({
       body: {
-        items: [{
-          id: plan.id,
-          title: `AprovAI360 — ${plan.name}`,
-          description: plan.features?.[0] ?? "Plano de estudos para concursos",
-          quantity: 1,
-          unit_price: plan.price,
-          currency_id: "BRL",
-        }],
-        payer: { email: dbUser.email, name: dbUser.name },
-        payment_methods: {
-          excluded_payment_types: [
-            { id: "ticket" },
-            { id: "atm" },
-          ],
-          installments: 1,
-        },
-        back_urls: {
-          success: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
-          failure: `${appUrl}/planos?error=pagamento`,
-          pending: `${appUrl}/planos/pendente?plan=${plan.slug}`,
-        },
-        auto_return: "approved",
+        reason: `AprovAI360 — ${plan.name}`,
         external_reference: `${dbUser.id}|${plan.id}`,
-        notification_url: `${appUrl}/api/pagamento/webhook`,
-        statement_descriptor: "APROVAI360",
-        expires: true,
-        expiration_date_from: new Date().toISOString(),
-        expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+        payer_email: dbUser.email ?? undefined,
+        auto_recurring: {
+          frequency,
+          frequency_type,
+          transaction_amount: plan.price,
+          currency_id: "BRL",
+        },
+        back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
+        status: "pending",
       },
     });
 
-    log.info(LogEvent.PAYMENT_FAILED, { stage: "mp_ok", preferenceId: response.id });
+    log.info(LogEvent.PAYMENT_APPROVED, { stage: "preapproval_created", userId: dbUser.id });
 
-    return NextResponse.json({
-      checkoutUrl: response.init_point,
-      preferenceId: response.id,
-      planSlug: plan.slug,
-      amount: plan.price,
-    });
+    return NextResponse.json({ checkoutUrl: preApproval.init_point });
   } catch (err) {
     log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
