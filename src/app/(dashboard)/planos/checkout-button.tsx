@@ -41,13 +41,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
         return;
       }
 
-      if (data.preferenceId) {
-        const params = new URLSearchParams({ preferenceId: data.preferenceId });
-        if (data.planSlug) params.set("plan", data.planSlug);
-        if (data.amount) params.set("amount", String(data.amount));
-        if (data.checkoutUrl) params.set("fallback", encodeURIComponent(data.checkoutUrl));
-        window.location.href = `/planos/checkout?${params.toString()}`;
-      } else if (data.checkoutUrl) {
+      if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
         setCheckoutError("Não foi possível iniciar o checkout. Tente novamente.");
