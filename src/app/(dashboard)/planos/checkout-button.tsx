@@ -14,16 +14,23 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
   async function handleCheckout() {
     setLoading(true);
     setCheckoutError(null);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
     try {
       const res = await fetch("/api/pagamento/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
+
       const data = await res.json() as { checkoutUrl?: string; preferenceId?: string; planSlug?: string; activated?: boolean; error?: string };
 
-      if (data.error) {
-        setCheckoutError(data.error);
+      if (!res.ok || data.error) {
+        setCheckoutError(data.error ?? `Erro ${res.status}. Tente novamente.`);
         setLoading(false);
         return;
       }
@@ -41,10 +48,17 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
       } else if (data.checkoutUrl) {
         window.location.href = data.checkoutUrl;
       } else {
+        setCheckoutError("Não foi possível iniciar o checkout. Tente novamente.");
         setLoading(false);
       }
-    } catch {
-      setCheckoutError("Erro inesperado ao iniciar o checkout. Tente novamente.");
+    } catch (err) {
+      clearTimeout(timeout);
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      setCheckoutError(
+        isTimeout
+          ? "Tempo limite esgotado. Verifique sua conexão e tente novamente."
+          : "Erro ao conectar ao servidor. Tente novamente."
+      );
       setLoading(false);
     }
   }
@@ -73,7 +87,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
       >
         {loading && <Loader2 className="w-4 h-4 animate-spin" />}
         {loading
-          ? (isFree ? "Ativando..." : "Redirecionando...")
+          ? (isFree ? "Ativando..." : "Aguarde...")
           : isFree
             ? "Começar grátis — 7 dias"
             : "Começar agora"}
