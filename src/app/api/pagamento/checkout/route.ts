@@ -127,7 +127,6 @@ export async function POST(req: Request) {
         payment_methods: {
           excluded_payment_types: [
             { id: "ticket" },
-            { id: "bank_transfer" },
             { id: "atm" },
             { id: "debit_card" },
           ],
