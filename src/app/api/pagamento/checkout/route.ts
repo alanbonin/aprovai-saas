@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import MercadoPago, { PreApproval } from "mercadopago";
+import MercadoPago, { PreApproval, Preference } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
@@ -63,48 +63,79 @@ export async function POST(req: Request) {
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 
-    // ── Plano pago: PreApproval (assinatura recorrente automática via MP) ────
     const mp = getMp();
     const { frequency, frequency_type } = getFrequency(plan.intervalDays ?? 30);
-    const preApprovalApi = new PreApproval(mp);
 
-    const preApproval = await preApprovalApi.create({
-      body: {
-        reason: `AprovAI360 — ${plan.name}`,
-        external_reference: `${dbUser.id}|${plan.id}`,
-        payer_email: dbUser.email ?? undefined,
-        auto_recurring: {
-          frequency,
-          frequency_type,
-          transaction_amount: plan.price,
-          currency_id: "BRL",
+    // ── Tenta PreApproval (assinatura recorrente) ────────────────────────────
+    try {
+      const preApprovalApi = new PreApproval(mp);
+      const preApproval = await preApprovalApi.create({
+        body: {
+          reason: `AprovAI360 — ${plan.name}`,
+          external_reference: `${dbUser.id}|${plan.id}`,
+          payer_email: dbUser.email ?? undefined,
+          auto_recurring: {
+            frequency,
+            frequency_type,
+            transaction_amount: plan.price,
+            currency_id: "BRL",
+          },
+          back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
+          status: "pending",
         },
-        back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
-        status: "pending",
-      },
-    });
+      });
 
-    // Salva mpSubscriptionId para poder cancelar depois
-    if (preApproval.id) {
-      const now = new Date().toISOString();
-      const { data: existing } = await db.from("Subscription").select("id").eq("userId", dbUser.id).maybeSingle();
-      if (existing) {
-        await db.from("Subscription").update({ mpSubscriptionId: String(preApproval.id), updatedAt: now }).eq("id", existing.id);
-      } else {
-        await db.from("Subscription").insert({
-          id: crypto.randomUUID(), userId: dbUser.id, planId,
-          status: "PENDING",
-          startDate: now,
-          endDate: new Date(Date.now() + 86400000).toISOString(),
-          mpSubscriptionId: String(preApproval.id),
-          createdAt: now, updatedAt: now,
-        });
+      if (preApproval.init_point) {
+        // Salva mpSubscriptionId para cancelamento posterior
+        if (preApproval.id) {
+          const now = new Date().toISOString();
+          const { data: existing } = await db.from("Subscription").select("id").eq("userId", dbUser.id).maybeSingle();
+          if (existing) {
+            await db.from("Subscription").update({ mpSubscriptionId: String(preApproval.id), updatedAt: now }).eq("id", existing.id);
+          } else {
+            await db.from("Subscription").insert({
+              id: crypto.randomUUID(), userId: dbUser.id, planId,
+              status: "PENDING", startDate: now,
+              endDate: new Date(Date.now() + 86400000).toISOString(),
+              mpSubscriptionId: String(preApproval.id),
+              createdAt: now, updatedAt: now,
+            });
+          }
+        }
+        log.info(LogEvent.PAYMENT_APPROVED, { stage: "preapproval_ok", userId: dbUser.id });
+        return NextResponse.json({ checkoutUrl: preApproval.init_point });
       }
+    } catch (preApprovalErr) {
+      log.error(LogEvent.PAYMENT_FAILED, { stage: "preapproval_failed" }, preApprovalErr);
+      // Fallback para Preference (pagamento avulso)
     }
 
-    log.info(LogEvent.PAYMENT_APPROVED, { stage: "preapproval_created", userId: dbUser.id });
-
-    return NextResponse.json({ checkoutUrl: preApproval.init_point });
+    // ── Fallback: Preference (pagamento único) ───────────────────────────────
+    const preference = new Preference(mp);
+    const response = await preference.create({
+      body: {
+        items: [{ id: plan.id, title: `AprovAI360 — ${plan.name}`, quantity: 1, unit_price: plan.price, currency_id: "BRL" }],
+        payer: { email: dbUser.email, name: dbUser.name },
+        payment_methods: {
+          excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
+          installments: 1,
+        },
+        back_urls: {
+          success: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
+          failure: `${appUrl}/planos?error=pagamento`,
+          pending: `${appUrl}/planos/pendente?plan=${plan.slug}`,
+        },
+        auto_return: "approved",
+        external_reference: `${dbUser.id}|${plan.id}`,
+        notification_url: `${appUrl}/api/pagamento/webhook`,
+        statement_descriptor: "APROVAI360",
+        expires: true,
+        expiration_date_from: new Date().toISOString(),
+        expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      },
+    });
+    log.info(LogEvent.PAYMENT_APPROVED, { stage: "preference_ok", userId: dbUser.id });
+    return NextResponse.json({ checkoutUrl: response.init_point });
   } catch (err) {
     log.error(LogEvent.PAYMENT_FAILED, { stage: "checkout_create" }, err);
     return NextResponse.json({ error: "Erro interno" }, { status: 500 });
