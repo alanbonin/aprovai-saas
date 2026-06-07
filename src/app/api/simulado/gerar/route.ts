@@ -16,6 +16,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Simulados não disponíveis no seu plano. Faça upgrade para acessar." }, { status: 403 });
   }
 
+  // Verifica e incrementa limite semanal
+  if (access.maxSimuladosPerWeek > 0 && access.maxSimuladosPerWeek < 9999) {
+    const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "simulado");
+    if (usedThisWeek >= access.maxSimuladosPerWeek) {
+      return NextResponse.json({ error: `Você atingiu o limite de ${access.maxSimuladosPerWeek} simulados por semana do seu plano.` }, { status: 403 });
+    }
+    await incrementWeeklyResourceUsage(dbUser.id, "simulado");
+  }
+
   const { total = 20, subjectIds, banca, level } = await req.json().catch(() => ({} as Record<string, unknown>)) as { total?: number; subjectIds?: string[]; banca?: string; level?: string };
 
   // Busca matérias do aluno se não fornecidas
