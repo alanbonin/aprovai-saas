@@ -46,12 +46,72 @@ export async function GET() {
   const activePlans = plans.filter((p: { slug: string }) => !p.slug.includes("deprecado") && !p.slug.includes("trial"));
   const trial = plans.find((p: { slug: string }) => p.slug === "trial");
 
+  const APP_URL = "https://aprovai360.com.br";
+  const SUPORTE_URL = "https://aprovai360.com.br/suporte";
+
+  const faq = [
+    {
+      pergunta: "Como faço para me cadastrar?",
+      resposta: `Acesse ${APP_URL} e clique em 'Começar Grátis'. O cadastro leva menos de 1 minuto e não precisa de cartão de crédito.`,
+    },
+    {
+      pergunta: "Tem período gratuito?",
+      resposta: "Sim! O Trial Gratuito dá 7 dias de acesso sem precisar de cartão de crédito.",
+    },
+    {
+      pergunta: "Quais planos estão disponíveis?",
+      resposta: activePlans.map((p: { name: string; price: number; billingCycle: string }) =>
+        `${p.name}: R$ ${p.price},00/${p.billingCycle === "ANNUAL" ? "ano" : "mês"}`
+      ).join(" | "),
+    },
+    {
+      pergunta: "Como funciona o mentor IA?",
+      resposta: "O mentor IA é especializado por área do conhecimento e banca. Você pode tirar dúvidas, pedir explicações, criar planos de estudo e receber correções personalizadas.",
+    },
+    {
+      pergunta: "Quantas questões tem no banco?",
+      resposta: `Mais de ${stats.questoes.toLocaleString("pt-BR")} questões reais de provas anteriores, organizadas por matéria, banca e edital.`,
+    },
+    {
+      pergunta: "Funciona para qual concurso?",
+      resposta: "Para qualquer concurso público federal, estadual ou municipal. A plataforma também atende ENEM, Vestibular, OAB, REVALIDA e CFC.",
+    },
+    {
+      pergunta: "Como cancelo minha assinatura?",
+      resposta: "Acesse Configurações dentro da plataforma e clique em 'Cancelar assinatura'. O acesso continua até o fim do período pago.",
+    },
+    {
+      pergunta: "Tem aplicativo?",
+      resposta: `Sim! O AprovAI360 é um PWA (Progressive Web App). No celular, acesse ${APP_URL} pelo navegador e instale direto na tela inicial — funciona como app nativo sem precisar de loja.`,
+    },
+    {
+      pergunta: "O simulado da OAB tem o formato oficial?",
+      resposta: "Sim. O simulado modo OAB tem 80 questões, 5 horas de duração e exige 50% de aproveitamento, igual ao exame real.",
+    },
+    {
+      pergunta: "Como funciona o pagamento?",
+      resposta: "Aceitamos cartão de crédito e PIX via Mercado Pago. O pagamento é seguro e processado diretamente pela plataforma.",
+    },
+    {
+      pergunta: "Posso estudar para mais de um concurso?",
+      resposta: "Depende do plano. Focado: 1 concurso. Aprovação: até 2. Elite: até 5 concursos simultâneos.",
+    },
+    {
+      pergunta: "Como entro em contato com o suporte?",
+      resposta: `Acesse ${SUPORTE_URL} ou responda este chat. Nosso time responde em até 24h úteis.`,
+    },
+    {
+      pergunta: "A plataforma é segura? Como tratam meus dados?",
+      resposta: `Sim. Seguimos a LGPD (Lei 13.709/2018). Seus dados são protegidos e você pode solicitar exportação ou exclusão a qualquer momento em Configurações. Mais detalhes em ${APP_URL}/privacidade`,
+    },
+  ];
+
   const data = {
     plataforma: {
       nome: "AprovAI360",
-      url: "https://aprovai360.com.br",
+      url: APP_URL,
       descricao: "Plataforma de estudos para concursos públicos com mentores IA especializados por área e banca.",
-      suporte: "https://aprovai360.com.br/suporte",
+      suporte: SUPORTE_URL,
       modalidades: ["Concurso Público", "ENEM", "Vestibular", "OAB", "REVALIDA", "CFC"],
     },
     estatisticas: {
@@ -88,62 +148,7 @@ export async function GET() {
       modo_companhia: p.hasCompanhia,
       recursos: p.features,
     })),
-    faq: [
-      {
-        pergunta: "Como faço para me cadastrar?",
-        resposta: `Acesse ${data.plataforma.url} e clique em 'Começar Grátis'. O cadastro leva menos de 1 minuto e não precisa de cartão de crédito.`,
-      },
-      {
-        pergunta: "Tem período gratuito?",
-        resposta: `Sim! O Trial Gratuito dá 7 dias de acesso sem precisar de cartão de crédito.`,
-      },
-      {
-        pergunta: "Quais planos estão disponíveis?",
-        resposta: activePlans.map((p: { name: string; price: number; billingCycle: string }) =>
-          `${p.name}: R$ ${p.price},00/${p.billingCycle === "ANNUAL" ? "ano" : "mês"}`
-        ).join(" | "),
-      },
-      {
-        pergunta: "Como funciona o mentor IA?",
-        resposta: "O mentor IA é especializado por área do conhecimento e banca. Você pode tirar dúvidas, pedir explicações, criar planos de estudo e receber correções personalizadas.",
-      },
-      {
-        pergunta: "Quantas questões tem no banco?",
-        resposta: `Mais de ${stats.questoes.toLocaleString("pt-BR")} questões reais de provas anteriores, organizadas por matéria, banca e edital.`,
-      },
-      {
-        pergunta: "Funciona para qual concurso?",
-        resposta: "Para qualquer concurso público federal, estadual ou municipal. A plataforma também atende ENEM, Vestibular, OAB, REVALIDA e CFC.",
-      },
-      {
-        pergunta: "Como cancelo minha assinatura?",
-        resposta: "Acesse Configurações dentro da plataforma e clique em 'Cancelar assinatura'. O acesso continua até o fim do período pago.",
-      },
-      {
-        pergunta: "Tem aplicativo?",
-        resposta: `Sim! O AprovAI360 é um PWA (Progressive Web App). No celular, acesse ${data.plataforma.url} pelo navegador e instale direto na tela inicial — funciona como app nativo sem precisar de loja.`,
-      },
-      {
-        pergunta: "O simulado da OAB tem o formato oficial?",
-        resposta: "Sim. O simulado modo OAB tem 80 questões, 5 horas de duração e exige 50% de aproveitamento, igual ao exame real.",
-      },
-      {
-        pergunta: "Como funciona o pagamento?",
-        resposta: "Aceitamos cartão de crédito e PIX via Mercado Pago. O pagamento é seguro e processado diretamente pela plataforma.",
-      },
-      {
-        pergunta: "Posso estudar para mais de um concurso?",
-        resposta: "Depende do plano. Focado: 1 concurso. Aprovação: até 2. Elite: até 5 concursos simultâneos.",
-      },
-      {
-        pergunta: "Como entro em contato com o suporte?",
-        resposta: `Acesse ${data.plataforma.suporte} ou responda este chat. Nosso time responde em até 24h úteis.`,
-      },
-      {
-        pergunta: "A plataforma é segura? Como tratam meus dados?",
-        resposta: `Sim. Seguimos a LGPD (Lei 13.709/2018). Seus dados são protegidos e você pode solicitar exportação ou exclusão a qualquer momento em Configurações. Mais detalhes em ${data.plataforma.url}/privacidade`,
-      },
-    ],
+    faq,
   };
 
   return NextResponse.json(data, {

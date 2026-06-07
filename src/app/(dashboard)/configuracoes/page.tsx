@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Lock, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
@@ -26,6 +26,65 @@ const NOTIF_OPTIONS: { key: keyof Prefs; label: string; desc: string }[] = [
   { key: "emailRelatorioSemanal", label: "Relatório semanal",      desc: "Resumo de desempenho toda segunda-feira" },
   { key: "emailReativacao",       label: "Email de reativação",    desc: "Aviso quando ficar muito tempo sem estudar" },
 ];
+
+function CancelSubscriptionButton() {
+  const [loading, setLoading] = React.useState(false);
+  const [msg, setMsg] = React.useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
+  const [confirm, setConfirm] = React.useState(false);
+
+  async function handleCancel() {
+    setLoading(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/pagamento/cancelar", { method: "POST" });
+      if (res.ok) {
+        setMsg({ tipo: "ok", texto: "Assinatura cancelada. Seu acesso continua até o fim do período pago." });
+        setConfirm(false);
+      } else {
+        const d = await res.json();
+        setMsg({ tipo: "erro", texto: d.error ?? "Erro ao cancelar." });
+      }
+    } catch {
+      setMsg({ tipo: "erro", texto: "Erro de conexão." });
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div>
+      {!confirm ? (
+        <button
+          onClick={() => setConfirm(true)}
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/30 text-orange-400 text-sm hover:bg-orange-500/10 transition-colors"
+        >
+          Cancelar renovação automática
+        </button>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xs text-orange-300">Tem certeza? A cobrança automática será desativada.</p>
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              disabled={loading}
+              className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-300 text-sm hover:bg-orange-500/30 transition-colors disabled:opacity-50"
+            >
+              {loading ? "Cancelando…" : "Sim, cancelar"}
+            </button>
+            <button
+              onClick={() => setConfirm(false)}
+              className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 text-sm hover:bg-white/10 transition-colors"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      )}
+      {msg && (
+        <p className={`mt-2 text-xs ${msg.tipo === "ok" ? "text-green-400" : "text-red-400"}`}>{msg.texto}</p>
+      )}
+    </div>
+  );
+}
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -463,6 +522,16 @@ export default function ConfiguracoesPage() {
                   {exportLoading ? "Exportando…" : "Exportar meus dados"}
                 </button>
               </div>
+            </section>
+
+            {/* Cancelar assinatura */}
+            <hr className="border-white/8" />
+            <section className="rounded-2xl bg-orange-500/5 border border-orange-500/20 p-5">
+              <h2 className="text-sm font-semibold text-orange-400 mb-1">Cancelar assinatura</h2>
+              <p className="text-xs text-gray-500 mb-4">
+                Você continua com acesso até o fim do período já pago. A renovação automática será desativada.
+              </p>
+              <CancelSubscriptionButton />
             </section>
 
             {/* Zona de perigo — deletar conta (LGPD Art. 18) */}
