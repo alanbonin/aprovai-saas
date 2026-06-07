@@ -59,20 +59,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Recurso não disponível no seu plano. Faça upgrade para acessar Estudos de Caso." }, { status: 403 });
   }
 
-  // Verificar limite semanal real (se não for ilimitado)
-  if (access.maxCasosPerWeek > 0) {
-    const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
-    const { db: dbClient } = await import("@/lib/db");
-    const { data: dbUserRow } = await dbClient.from("User").select("id").eq("supabaseId", user.id).single();
-    if (dbUserRow) {
-      const usedThisWeek = await getWeeklyResourceUsage(dbUserRow.id, "caso");
-      if (usedThisWeek >= access.maxCasosPerWeek) {
-        return NextResponse.json({ error: `Você atingiu o limite de ${access.maxCasosPerWeek} casos por semana do seu plano.` }, { status: 403 });
-      }
-      await incrementWeeklyResourceUsage(dbUserRow.id, "caso");
-    }
-  }
-
   const body = await req.json() as {
     action: string;
     tema?: string;
@@ -125,14 +111,33 @@ Retorne APENAS JSON válido:
 
   // ── Gerar cenário ────────────────────────────────────────────────────────────
   if (action === "gerar") {
+    // Verificar e incrementar limite semanal (só conta ao gerar, não ao sugerir/avaliar)
+    if (access.maxCasosPerWeek > 0 && access.maxCasosPerWeek < 9999) {
+      const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+      const { db: dbClient } = await import("@/lib/db");
+      const { data: dbUserRow } = await dbClient.from("User").select("id").eq("supabaseId", user.id).single();
+      if (dbUserRow) {
+        const usedThisWeek = await getWeeklyResourceUsage(dbUserRow.id, "caso");
+        if (usedThisWeek >= access.maxCasosPerWeek) {
+          return NextResponse.json({ error: `Você atingiu o limite de ${access.maxCasosPerWeek} casos por semana do seu plano.` }, { status: 403 });
+        }
+        await incrementWeeklyResourceUsage(dbUserRow.id, "caso");
+      }
+    }
+
     const profile = await getProfile(user.id);
     const cargo = profile?.cargo ?? "";
     const orgao = profile?.orgao ?? "";
     const { tema } = body;
+    const sanitize = (s: string, max = 150) =>
+      s.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+    const safeTema = tema ? sanitize(String(tema), 150) : "ética no serviço público";
+    const safeCargo = sanitize(cargo, 80);
+    const safeOrgao = sanitize(orgao, 80);
 
-    const perfilLine = cargo ? `\nCargo alvo: ${cargo}${orgao ? ` | Órgão: ${orgao}` : ""}` : "";
+    const perfilLine = safeCargo ? `\nCargo alvo: ${safeCargo}${safeOrgao ? ` | Órgão: ${safeOrgao}` : ""}` : "";
 
-    const prompt = `Gere um estudo de caso para concurso público sobre: "${tema ?? "ética no serviço público"}"${perfilLine}
+    const prompt = `Gere um estudo de caso para concurso público sobre: "${safeTema}"${perfilLine}
 
 Seja específico para a área. Use nomes fictícios, datas e valores concretos. Contexto com 3 parágrafos objetivos.
 
