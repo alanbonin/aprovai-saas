@@ -252,12 +252,17 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
               </div>
             ))}
 
-            {/* Config + Sair */}
-            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/8">
+            {/* Config + Suporte + Sair */}
+            <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-white/8">
               <Link href="/configuracoes" onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
-                ⚙️ <span>Configurações</span>
+                ⚙️ <span>Config.</span>
               </Link>
+              <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer"
+                onClick={() => setMobileOpen(false)}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-500/[0.08] border border-green-500/20 text-xs text-green-400">
+                💬 <span>Suporte</span>
+              </a>
               <button
                 onClick={handleSignOut}
                 className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
@@ -764,6 +769,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
                 <div className="flex gap-2 mt-0.5">
                   <a href="/termos" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Termos</a>
                   <a href="/privacidade" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Privacidade</a>
+                  <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer" className="text-[10px] text-green-600 hover:text-green-400 transition-colors">💬 Suporte</a>
                 </div>
               </div>
             )}
