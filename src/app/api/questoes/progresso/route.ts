@@ -96,8 +96,6 @@ function calcNextReview(existing: { interval: number; easeFactor: number } | nul
   return { interval: newInterval, easeFactor: newEase, nextReview: nextReview.toISOString(), correct };
 }
 
-const TRIAL_DAILY_LIMIT = 20;
-
 export async function POST(req: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -111,32 +109,19 @@ export async function POST(req: Request) {
   const activeProfile = await getActiveProfile(dbUser.id);
   const profileId = activeProfile?.id ?? null;
 
-  // ── Limite trial: 20 questões/dia ────────────────────────────────────────
-  const { data: subRow } = await db
-    .from("Subscription")
-    .select("status, endDate, Plan(price)")
-    .eq("userId", dbUser.id)
-    .eq("status", "ACTIVE")
-    .maybeSingle();
+  // ── Limite semanal de questões (compartilhado entre /workspace e /questoes) ─
+  const { getAccessLevel } = await import("@/lib/access");
+  const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+  const access = await getAccessLevel();
+  const weeklyLimit = access.maxQuestionsPerWeek; // -1 = ilimitado, 0 = bloqueado
 
-  const planPrice = (() => {
-    const p = (subRow as { Plan?: { price?: number } | { price?: number }[] | null } | null)?.Plan;
-    if (!p) return 0;
-    return Array.isArray(p) ? (p[0]?.price ?? 0) : (p.price ?? 0);
-  })();
-  const isTrial = !subRow || planPrice === 0 || (subRow.endDate && new Date(subRow.endDate) < new Date());
-
-  if (isTrial) {
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const { count } = await db
-      .from("Progress")
-      .select("id", { count: "exact", head: true })
-      .eq("userId", dbUser.id)
-      .gte("reviewedAt", todayStart.toISOString());
-    const todayCount = count ?? 0;
-    if (todayCount >= TRIAL_DAILY_LIMIT) {
-      return NextResponse.json({ limitReached: true, todayCount, limit: TRIAL_DAILY_LIMIT }, { status: 200 });
+  if (weeklyLimit === 0) {
+    return NextResponse.json({ error: "Questões não disponíveis no seu plano." }, { status: 403 });
+  }
+  if (weeklyLimit > 0 && weeklyLimit < 9999) {
+    const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "questoes");
+    if (usedThisWeek >= weeklyLimit) {
+      return NextResponse.json({ limitReached: true, usedThisWeek, limit: weeklyLimit }, { status: 200 });
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
@@ -189,6 +174,11 @@ export async function POST(req: Request) {
       createdAt: new Date().toISOString(),
     });
     if (insertErr) console.error("Progress insert error:", insertErr.message);
+  }
+
+  // Incrementa uso semanal de questões (compartilhado workspace + /questoes)
+  if (weeklyLimit > 0 && weeklyLimit < 9999) {
+    void incrementWeeklyResourceUsage(dbUser.id, "questoes").catch(() => {});
   }
 
   // Atualiza XP e streak (fire-and-forget)
