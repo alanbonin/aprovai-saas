@@ -61,14 +61,6 @@ export default function CheckoutPage() {
             preferenceId,
           },
           customization: {
-            paymentMethods: {
-              creditCard: "all",
-              debitCard: "none",
-              ticket: "none",
-              bankTransfer: "all",
-              atm: "none",
-              onlineBanking: "none",
-            },
             visual: {
               style: { theme: "dark" },
             },
