@@ -140,6 +140,15 @@ html.light select.bg-slate-800   {
   border-color: var(--border-color) !important;
 }
 
+/* Inputs/textareas genéricos no light mode — garante fundo e texto legíveis */
+html.light input,
+html.light textarea,
+html.light select {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-color) !important;
+}
+
 /* Placeholder */
 html.light ::placeholder { color: var(--text-muted) !important; }
 
