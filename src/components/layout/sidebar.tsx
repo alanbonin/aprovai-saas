@@ -24,7 +24,7 @@ async function handleSignOut() {
 }
 
 /* ── Tipos ─────────────────────────────────────────────────────────────── */
-interface NavItem { href: string; label: string; icon: string; badge?: boolean }
+interface NavItem { href: string; label: string; icon: string; badge?: boolean; comingSoon?: boolean }
 interface NavSection { id: string; title: string; color: string; items: NavItem[]; defaultOpen?: boolean }
 
 /* ── Seções do aluno ────────────────────────────────────────────────────── */
@@ -44,7 +44,7 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/desafio",       label: "Desafio Diário",  icon: "⚡" },
       { href: "/quiz",          label: "Quiz Rápido",      icon: "🏃" },
       { href: "/desafio-semanal",label: "Desafio Semanal", icon: "⚔️" },
-      { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰" },
+      { href: "/biblioteca",    label: "Biblioteca PDF",   icon: "📰", comingSoon: true },
       { href: "/caso",          label: "Casos",            icon: "🔍" },
       { href: "/redacao",       label: "Redação",          icon: "✍️" },
       { href: "/flashcards",    label: "Flashcards",       icon: "🗂️" },
@@ -72,8 +72,6 @@ const SECTIONS_STUDENT: NavSection[] = [
     id: "aprender", title: "Aprender IA", color: "#06b6d4", defaultOpen: false,
     items: [
       { href: "/mentor",    label: "Mentores",    icon: "🎓" },
-      { href: "/glossario", label: "Glossário IA",icon: "📖" },
-      { href: "/artigos",   label: "Artigos IA",  icon: "📜" },
     ],
   },
   {
@@ -89,8 +87,8 @@ const SECTIONS_STUDENT: NavSection[] = [
   {
     id: "social", title: "Social", color: "#f97316", defaultOpen: false,
     items: [
-      { href: "/ranking",      label: "Ranking",        icon: "🏆" },
-      { href: "/arena",        label: "Arena",          icon: "⚔️" },
+      { href: "/ranking",      label: "Ranking",        icon: "🏆", comingSoon: true },
+      { href: "/arena",        label: "Arena",          icon: "⚔️", comingSoon: true },
       { href: "/grupos",       label: "Grupos",         icon: "👥" },
       { href: "/conquistas",   label: "Conquistas",     icon: "🎖️" },
       { href: "/timeline",     label: "Linha do Tempo", icon: "🕐" },
@@ -365,7 +363,7 @@ function SidebarSection({
       {/* Items */}
       {open && (
         <div className="mt-0.5 space-y-0.5 pl-1">
-          {section.items.map(({ href, label, icon, badge }) => {
+          {section.items.map(({ href, label, icon, badge, comingSoon }) => {
             const siblingHrefs = new Set(section.items.map(i => i.href));
             const active = pathname === href || (
               href !== "/" &&
@@ -394,7 +392,9 @@ function SidebarSection({
               >
                 <span className="text-sm leading-none flex-shrink-0">{icon}</span>
                 <span className="flex-1 truncate">{label}</span>
-                {showCounter ? (
+                {comingSoon ? (
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-white/[0.07] text-gray-500 border border-white/10">em breve</span>
+                ) : showCounter ? (
                   <span className={cn(
                     "text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 tabular-nums",
                     usageExhausted
