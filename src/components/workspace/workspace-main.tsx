@@ -1298,38 +1298,9 @@ function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUp
   onCelebrate?: (msg: string) => void;
   isPremium: boolean; todayCount: number;
 }) {
-  const [modo, setModo] = useState<"normal" | "adaptativo">("normal");
-
-  // Revisão Inteligente bloqueada para trial
-  const handleModoAdaptativo = () => {
-    if (!isPremium) { setModo("normal"); return; } // bloqueado — não muda
-    setModo("adaptativo");
-  };
-
   return (
     <div>
-      <div className="flex gap-1 mb-4">
-        <button onClick={() => setModo("normal")}
-          className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors",
-            modo === "normal" ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white")}>
-          <Target className="w-3.5 h-3.5" /> Por matéria
-        </button>
-        <button onClick={handleModoAdaptativo}
-          className={cn("flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors relative",
-            modo === "adaptativo" ? "bg-indigo-600 border-indigo-500 text-white" : "bg-white/5 border-white/10 text-gray-400 hover:text-white",
-            !isPremium && "opacity-60"
-          )}>
-          <Brain className="w-3.5 h-3.5" /> 🧠 Revisão Inteligente
-          {!isPremium && <Lock size={10} className="ml-1 text-gray-500" />}
-        </button>
-      </div>
-      {!isPremium && modo === "adaptativo" && (
-        <LockedSection recurso="Revisão Inteligente" desc="Modo adaptativo com algoritmo SM-2 personalizado ao seu desempenho. Disponível nos planos pagos." onUpgrade={() => setModo("normal")} />
-      )}
-      {modo === "normal"
-        ? <QuestoesTab items={items} subjectName={subjectName} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} isPremium={isPremium} todayCount={todayCount} />
-        : isPremium ? <QuestoesAdaptativas subjectId={subjectId} subjectName={subjectName} onClose={() => setModo("normal")} /> : null
-      }
+      <QuestoesTab items={items} subjectName={subjectName} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} isPremium={isPremium} todayCount={todayCount} />
     </div>
   );
 }
