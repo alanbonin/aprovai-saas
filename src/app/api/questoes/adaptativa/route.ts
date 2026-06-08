@@ -85,8 +85,10 @@ export async function GET(req: Request) {
   }
 
   let questoesResult = await questoesQuery;
-  // Fallback se coluna aprovado não existe ainda
-  if (questoesResult.error && (questoesResult.error as { code?: string }).code === "42703") {
+  // Fallback se coluna aprovado não existe ou retornou vazio
+  const needsFallback = questoesResult.error ||
+    (!questoesResult.error && (!questoesResult.data || questoesResult.data.length === 0));
+  if (needsFallback) {
     let fallbackQ = db.from("Question")
       .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
       .limit(200);
