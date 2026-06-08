@@ -85,10 +85,8 @@ export async function GET(req: Request) {
   }
 
   let questoesResult = await questoesQuery;
-  // Fallback se coluna aprovado não existe ou retornou vazio
-  const needsFallback = questoesResult.error ||
-    (!questoesResult.error && (!questoesResult.data || questoesResult.data.length === 0));
-  if (needsFallback) {
+  // Fallback 1: sem filtro aprovado, mas com filtro de matéria
+  if (questoesResult.error || !questoesResult.data?.length) {
     let fallbackQ = db.from("Question")
       .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
       .limit(200);
@@ -98,6 +96,19 @@ export async function GET(req: Request) {
       fallbackQ = fallbackQ.in("subjectId", [...mySubjectIds]);
     }
     questoesResult = await fallbackQ;
+  }
+  // Fallback 2: sem nenhum filtro — retorna qualquer questão disponível
+  if (!questoesResult.data?.length) {
+    questoesResult = await db.from("Question")
+      .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+      .eq("aprovado", true)
+      .limit(200);
+  }
+  // Fallback 3: tudo sem filtro aprovado
+  if (!questoesResult.data?.length) {
+    questoesResult = await db.from("Question")
+      .select("id, subjectId, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation, banca, year")
+      .limit(200);
   }
   const allQuestions = questoesResult.data;
   if (!allQuestions?.length) return NextResponse.json({ questoes: [], modo: "sem_questoes" });
