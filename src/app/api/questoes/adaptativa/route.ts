@@ -53,8 +53,11 @@ export async function GET(req: Request) {
   const activeProfile = await getActiveProfile(dbUser.id);
   const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
 
-  const { data: studentSubjectsRaw } = await db.from("StudentSubject")
-    .select("subjectId, Subject(name)").eq("userId", dbUser.id);
+  const profileIdForSS = activeProfile?.id ?? null;
+  let ssQueryAdapt = db.from("StudentSubject").select("subjectId, Subject(name)").eq("userId", dbUser.id);
+  if (profileIdForSS) ssQueryAdapt = ssQueryAdapt.eq("profileId", profileIdForSS);
+  else ssQueryAdapt = ssQueryAdapt.is("profileId", null);
+  const { data: studentSubjectsRaw } = await ssQueryAdapt;
 
   let mySubjectIds: Set<string>;
   if (!subjectId && materiasHoje && materiasHoje.length > 0) {
@@ -159,6 +162,7 @@ export async function GET(req: Request) {
   const subjectNameMap: Record<string, string> = {};
   for (const s of subjects ?? []) subjectNameMap[s.id] = s.name;
 
+  // Gabarito (answer/explanation) removido — não enviar ao cliente antes da resposta
   const questoes = selecionadas.map(({ q, tipo }) => ({
     id: q.id,
     subjectId: q.subjectId,
@@ -170,8 +174,6 @@ export async function GET(req: Request) {
     optionC: q.optionC,
     optionD: q.optionD,
     optionE: q.optionE,
-    answer: q.answer,
-    explanation: q.explanation,
     banca: q.banca,
     year: q.year,
     tipo,

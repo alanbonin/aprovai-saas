@@ -14,12 +14,12 @@ import { log } from "@/lib/logger";
  */
 
 function getWeekStart(): string {
-  const now = new Date();
-  const day = now.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const monday = new Date(now);
-  monday.setDate(now.getDate() + diff);
-  return monday.toISOString().split("T")[0];
+  // BRT = UTC-3: alinha com getWeekStartStr de api-utils (evita dessincronismo)
+  const now = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const day = now.getUTCDay();
+  const diff = day === 0 ? -6 : 1 - day; // segunda-feira
+  now.setUTCDate(now.getUTCDate() + diff);
+  return now.toISOString().slice(0, 10);
 }
 
 async function buildAnalysisSummary(userId: string, profileId: string) {

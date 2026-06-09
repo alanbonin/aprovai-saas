@@ -62,14 +62,15 @@ export async function GET(req: Request) {
   // Busca um pool maior e randomiza no servidor para variedade
   const poolSize = Math.min(2000, limit * 50);
 
+  // Gabarito (answer/explanation) removido — enviado apenas pela rota /verificar após resposta
   let query = db.from("Question")
-    .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+    .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
     .limit(poolSize);
 
   // Apenas questões aprovadas (favoritos ignoram esse filtro)
   if (!onlyFavs) query = query.eq("aprovado", true);
 
-  if (banca)          query = query.ilike("banca", `%${banca}%`);
+  if (banca)          query = query.ilike("banca", `%${banca.replace(/[%_\\]/g, "\\$&").slice(0, 100)}%`);
   if (level)          query = query.eq("level", level);
   if (subjectIds?.length) query = query.in("subjectId", subjectIds);   // múltiplos (cross-categoria)
   else if (subjectId) query = query.eq("subjectId", subjectId);        // legado: ID único
@@ -88,7 +89,7 @@ export async function GET(req: Request) {
   // Fallback sem filtro de aprovado se coluna não existe ainda (código PostgREST: 42703)
   if (queryError && (queryError as { code?: string }).code === "42703") {
     const fallbackResult = await db.from("Question")
-      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
       .limit(poolSize);
     questions = fallbackResult.data;
     queryError = fallbackResult.error;
@@ -99,7 +100,7 @@ export async function GET(req: Request) {
     // Se esgotou questões não-vistas, retorna sem filtro de seen
     const { data: fallback } = await db
       .from("Question")
-      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,source")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
       .eq("aprovado", true)
       .limit(limit);
     const shuffled = (fallback ?? []).sort(() => Math.random() - 0.5).slice(0, limit);
@@ -121,8 +122,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
   }
 
-  const body = await req.json();
-  const { data, error } = await db.from("Question").insert({ ...body, aprovado: false }).select().single();
+  const body = await req.json() as Record<string, unknown>;
+  const ALLOWED = ["statement", "optionA", "optionB", "optionC", "optionD", "optionE", "answer", "explanation", "level", "year", "banca", "subjectId", "artigo", "dicaBanca", "tipo", "source"];
+  const insert: Record<string, unknown> = { aprovado: false };
+  for (const key of ALLOWED) {
+    if (key in body) insert[key] = body[key];
+  }
+  const { data, error } = await db.from("Question").insert(insert).select().single();
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data, { status: 201 });
 }

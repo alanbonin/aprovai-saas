@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -28,13 +29,15 @@ export async function POST(req: NextRequest) {
 
   const { total = 20, subjectIds, banca, level } = await req.json().catch(() => ({} as Record<string, unknown>)) as { total?: number; subjectIds?: string[]; banca?: string; level?: string };
 
-  // Busca matérias do aluno se não fornecidas
+  // Busca matérias do aluno se não fornecidas (filtradas pelo perfil ativo)
   let sIds: string[] = subjectIds ?? [];
   if (sIds.length === 0) {
-    const { data: ss } = await db
-      .from("StudentSubject")
-      .select("subjectId")
-      .eq("userId", dbUser.id);
+    const activeProfile = await getActiveProfile(dbUser.id);
+    const profileId = activeProfile?.id ?? null;
+    let ssQ = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
+    if (profileId) ssQ = ssQ.eq("profileId", profileId);
+    else ssQ = ssQ.is("profileId", null);
+    const { data: ss } = await ssQ;
     sIds = (ss ?? []).map((s: { subjectId: string }) => s.subjectId);
   }
 
@@ -49,10 +52,11 @@ export async function POST(req: NextRequest) {
     .eq("userId", dbUser.id);
   const answeredIds = (answered ?? []).map((p: { questionId: number }) => p.questionId);
 
-  // Busca questões das matérias do aluno
+  // Busca questões das matérias do aluno — SEM answer/explanation (gabarito só após resposta)
+  const Q_SELECT = "id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE";
   let query = db
     .from("Question")
-    .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+    .select(Q_SELECT)
     .in("subjectId", sIds)
     .eq("aprovado", true);
 
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
   // Fallback se coluna aprovado não existe ainda
   if (mainResult.error && (mainResult.error as { code?: string }).code === "42703") {
     let fallbackMain = db.from("Question")
-      .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+      .select(Q_SELECT)
       .in("subjectId", sIds);
     if (banca) fallbackMain = fallbackMain.eq("banca", banca);
     if (level) fallbackMain = fallbackMain.eq("level", level);
@@ -80,7 +84,7 @@ export async function POST(req: NextRequest) {
     // Fallback: busca qualquer questão das matérias, ignorando histórico
     let fallbackQ = db
       .from("Question")
-      .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+      .select(Q_SELECT)
       .in("subjectId", sIds)
       .eq("aprovado", true);
     if (banca) fallbackQ = fallbackQ.eq("banca", banca);
@@ -88,7 +92,7 @@ export async function POST(req: NextRequest) {
     let fallbackResult = await fallbackQ.limit(total);
     if (fallbackResult.error && (fallbackResult.error as { code?: string }).code === "42703") {
       let fallbackQ2 = db.from("Question")
-        .select("id, subjectId, banca, year, level, statement, optionA, optionB, optionC, optionD, optionE, answer, explanation")
+        .select(Q_SELECT)
         .in("subjectId", sIds);
       if (banca) fallbackQ2 = fallbackQ2.eq("banca", banca);
       if (level) fallbackQ2 = fallbackQ2.eq("level", level);

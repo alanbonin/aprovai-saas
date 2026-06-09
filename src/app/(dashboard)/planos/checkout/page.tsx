@@ -18,8 +18,19 @@ export default function CheckoutPage() {
   const preferenceId = searchParams.get("preferenceId");
   const plan = searchParams.get("plan");
 
-  const amount = parseFloat(searchParams.get("amount") ?? "0");
-  const fallbackUrl = searchParams.get("fallback") ? decodeURIComponent(searchParams.get("fallback")!) : null;
+  // amount removido do URL — nunca confiar em valor do cliente; preferenceId já contém o valor correto no MP
+  const fallbackUrl = searchParams.get("fallback")
+    ? (() => {
+        // Valida que o fallback é uma URL do Mercado Pago (evita open redirect)
+        try {
+          const u = new URL(decodeURIComponent(searchParams.get("fallback")!));
+          if (u.hostname.endsWith("mercadopago.com") || u.hostname.endsWith("mercadolibre.com")) {
+            return u.toString();
+          }
+        } catch { /* URL inválida */ }
+        return null;
+      })()
+    : null;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const mountedRef = useRef(false);
@@ -62,7 +73,7 @@ export default function CheckoutPage() {
 
         bricks.create("payment", "mp-payment-brick", {
           initialization: {
-            amount: amount > 0 ? amount : 1,
+            // amount omitido: o Brick MP lê o valor diretamente da preferenceId (seguro)
             preferenceId,
           },
           customization: {

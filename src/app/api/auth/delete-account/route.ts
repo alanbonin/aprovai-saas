@@ -51,7 +51,16 @@ export async function DELETE(req: Request) {
     // 4. Apagar perfil do aluno
     await db.from("StudentProfile").delete().eq("userId", userId);
 
-    // 5. Deletar usuário do Supabase Auth via Admin API (service role)
+    // 5. Apagar demais dados pessoais — LGPD Art. 18 (direito ao esquecimento)
+    await db.from("FlashcardSet").delete().eq("userId", userId);
+    await db.from("AiUsage").delete().eq("userId", userId);
+    await db.from("WeeklyUsage").delete().eq("userId", userId);
+    await db.from("SimuladoHistory").delete().eq("userId", userId);
+    await db.from("UserAgent").delete().eq("userId", userId);
+    await db.from("StudentSubject").delete().eq("userId", userId);
+    await db.from("QuestionProgress").delete().eq("userId", userId);
+
+    // 6. Deletar usuário do Supabase Auth via Admin API (service role)
     const adminUrl = process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
     const adminKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? "";
     const adminSupabase = createAdminClient(adminUrl, adminKey);

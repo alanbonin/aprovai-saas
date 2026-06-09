@@ -12,7 +12,12 @@ export const db = createClient(
 // Busca usuário completo com plano
 // Verifica endDate em tempo real para não depender do cron de expiração
 export async function getUserWithPlan(supabaseId: string) {
-  const { data: user } = await db.from("User").select("*").eq("supabaseId", supabaseId).maybeSingle();
+  // select explícito — evita expor campos internos em respostas de API
+  const { data: user } = await db
+    .from("User")
+    .select("id, supabaseId, name, email, role, activeProfileId, phone, createdAt, updatedAt")
+    .eq("supabaseId", supabaseId)
+    .maybeSingle();
   if (!user) return null;
 
   const { data: subscriptions } = await db
