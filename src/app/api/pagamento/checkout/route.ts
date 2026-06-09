@@ -39,27 +39,47 @@ export async function POST(req: Request) {
 
     // ── Plano Trial/Gratuito: ativa diretamente sem checkout ────────────────
     if (plan.price === 0) {
+      // 1. Verificar email confirmado (evita abuse com emails temporários)
+      if (!user.email_confirmed_at) {
+        return NextResponse.json(
+          { error: "Confirme seu e-mail antes de ativar o período gratuito." },
+          { status: 403 }
+        );
+      }
+
+      // 2. Verificar se já teve qualquer subscription anterior (evita re-trial infinito)
+      const { data: existingAny } = await db
+        .from("Subscription")
+        .select("id, status, planId")
+        .eq("userId", dbUser.id)
+        .maybeSingle();
+
+      if (existingAny) {
+        const { data: existingPlan } = await db
+          .from("Plan").select("price").eq("id", existingAny.planId).maybeSingle();
+        if (existingPlan && existingPlan.price === 0) {
+          return NextResponse.json(
+            { error: "Você já utilizou o período trial gratuito. Escolha um plano para continuar." },
+            { status: 403 }
+          );
+        }
+        return NextResponse.json(
+          { error: "Você já possui uma conta ativa. Para reativar, escolha um plano pago." },
+          { status: 403 }
+        );
+      }
+
+      // 3. Criar trial apenas para usuários sem histórico de subscription
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + (plan.intervalDays ?? 7));
       const now = new Date().toISOString();
 
-      const { data: existing } = await db
-        .from("Subscription").select("id").eq("userId", dbUser.id).maybeSingle();
-
-      if (existing) {
-        await db.from("Subscription").update({
-          planId, status: "TRIAL",
-          startDate: now, endDate: endDate.toISOString(),
-          mpPaymentId: null, updatedAt: now,
-        }).eq("id", existing.id);
-      } else {
-        await db.from("Subscription").insert({
-          id: crypto.randomUUID(), userId: dbUser.id,
-          planId, status: "TRIAL",
-          startDate: now, endDate: endDate.toISOString(),
-          createdAt: now, updatedAt: now,
-        });
-      }
+      await db.from("Subscription").insert({
+        id: crypto.randomUUID(), userId: dbUser.id,
+        planId, status: "TRIAL",
+        startDate: now, endDate: endDate.toISOString(),
+        createdAt: now, updatedAt: now,
+      });
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 

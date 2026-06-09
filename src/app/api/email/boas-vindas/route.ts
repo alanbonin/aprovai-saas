@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   // Validação básica via secret interno para evitar uso externo
   const authHeader = req.headers.get("authorization");
   const internalSecret = process.env.CRON_SECRET;
-  if (internalSecret && authHeader !== `Bearer ${internalSecret}`) {
+  if (!internalSecret || authHeader !== `Bearer ${internalSecret}`) {
     return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
   }
 

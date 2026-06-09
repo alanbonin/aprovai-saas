@@ -18,7 +18,11 @@ export function getAnthropic(): Anthropic {
   if (!_client) {
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
-    _client = new Anthropic({ apiKey });
+    _client = new Anthropic({
+      apiKey,
+      timeout: 30 * 1000, // 30s — evita usuário travado em loading indefinidamente
+      maxRetries: 1,
+    });
   }
   return _client;
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -58,12 +59,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: rl.error }, { status: 429 });
   }
 
+  // Verificar sessão ativa — supabaseId DEVE pertencer ao usuário autenticado
+  const supabase = await createClient();
+  const { data: { user: sessionUser } } = await supabase.auth.getUser();
+  if (!sessionUser) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+
   const body = await req.json();
   const parseResult = RegisterSchema.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
   }
-  const { supabaseId, name, email } = parseResult.data;
+  const { name, email } = parseResult.data;
+  // Sempre usa o supabaseId da sessão — ignora o que veio no body
+  const supabaseId = sessionUser.id;
 
   const now = new Date().toISOString();
 

@@ -54,9 +54,12 @@ export const UNAUTHORIZED = NextResponse.json(
 import { db } from "@/lib/db";
 
 export function getWeekStartStr(): string {
-  const d = new Date();
-  d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().slice(0, 10);
+  // Usa BRT (UTC-3) e recua até a segunda-feira mais recente
+  const now = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const day = now.getUTCDay(); // 0=Dom, 1=Seg, ..., 6=Sáb
+  const diff = day === 0 ? -6 : 1 - day; // recua até segunda
+  now.setUTCDate(now.getUTCDate() + diff);
+  return now.toISOString().slice(0, 10);
 }
 
 export async function getWeeklyResourceUsage(userId: string, resource: string): Promise<number> {

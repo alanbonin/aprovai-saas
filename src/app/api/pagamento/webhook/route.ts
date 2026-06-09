@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import MercadoPago, { Payment, MerchantOrder, Customer, CustomerCard } from "mercadopago";
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 import { log as slog, LogEvent } from "@/lib/logger";
 import { sendEmail } from "@/lib/mailer";
 
@@ -34,7 +34,15 @@ function verifySignature(req: Request, rawBody: string): boolean {
 
   const manifest = `id:${dataId};request-id:${xRequestId};ts:${ts};`;
   const expected = createHmac("sha256", secret).update(manifest).digest("hex");
-  return expected === v1;
+  // Comparação timing-safe — evita timing attack para deduzir bytes da assinatura
+  try {
+    const expectedBuf = Buffer.from(expected, "hex");
+    const v1Buf = Buffer.from(v1, "hex");
+    if (expectedBuf.length !== v1Buf.length) return false;
+    return timingSafeEqual(expectedBuf, v1Buf);
+  } catch {
+    return false;
+  }
 }
 
 // ── Audit log no Note table ───────────────────────────────────────────────────
@@ -52,8 +60,8 @@ async function log(type: string, payload: unknown, error?: string) {
 }
 
 // ── Helpers de subscription ────────────────────────────────────────────────────
-async function activateSubscription(userId: string, planId: string, mpPaymentId: string) {
-  const { data: plan } = await db.from("Plan").select("intervalDays").eq("id", planId).single();
+async function activateSubscription(userId: string, planId: string, mpPaymentId: string, paidAmount?: number) {
+  const { data: plan } = await db.from("Plan").select("intervalDays, price").eq("id", planId).single();
   if (!plan) {
     // Alerta ao admin — pagamento aprovado mas plano não existe no banco
     sendEmail({
@@ -62,6 +70,25 @@ async function activateSubscription(userId: string, planId: string, mpPaymentId:
       html: `<p>Pagamento <b>${mpPaymentId}</b> aprovado para usuário <b>${userId}</b> mas plano <b>${planId}</b> não foi encontrado no banco. Ative a assinatura manualmente.</p>`,
     }).catch(() => {}); // silencioso — não pode derrubar o webhook
     throw new Error(`Plano não encontrado: ${planId}`);
+  }
+
+  // Valida que o valor pago é compatível com o preço do plano (2% de tolerância)
+  if (plan.price > 0 && paidAmount !== undefined) {
+    const tolerance = plan.price * 0.02;
+    if (paidAmount < plan.price - tolerance) {
+      slog.error(LogEvent.PAYMENT_FAILED, {
+        stage: "amount_mismatch",
+        userId, planId,
+        expected: plan.price,
+        received: paidAmount,
+      });
+      sendEmail({
+        to: process.env.ADMIN_EMAIL ?? process.env.EMAIL_FROM ?? "contato@aprovai360.com.br",
+        subject: "⚠️ AprovAI: Tentativa de pagamento com valor incorreto",
+        html: `<p>Usuário <b>${userId}</b> tentou ativar plano <b>${planId}</b> (R$${plan.price}) com pagamento de R$${paidAmount}. Assinatura NÃO ativada.</p>`,
+      }).catch(() => {});
+      throw new Error(`Valor pago (${paidAmount}) menor que preço do plano (${plan.price})`);
+    }
   }
 
   const endDate = new Date();
@@ -196,7 +223,7 @@ export async function POST(req: Request) {
           return NextResponse.json({ ok: true });
         }
 
-        await activateSubscription(userId, planId, mpPaymentIdStr);
+        await activateSubscription(userId, planId, mpPaymentIdStr, paymentData.transaction_amount ?? undefined);
         // Salva customer+card para renovação automática futura
         const { data: dbUser } = await db.from("User").select("email").eq("id", userId).single();
         if (dbUser?.email) {

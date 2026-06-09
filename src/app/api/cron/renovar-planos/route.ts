@@ -45,15 +45,18 @@ async function buildAnalysisSummary(userId: string, profileId: string) {
 
   const lines = Object.entries(bySubject)
     .sort((a, b) => b[1].wrong / (b[1].total || 1) - a[1].wrong / (a[1].total || 1))
-    .map(([name, { total, wrong }]) =>
-      `- ${name}: ${total} questões, ${wrong} erros (${Math.round(wrong / total * 100)}% erro)`
-    );
+    .map(([name, { total, wrong }]) => {
+      const safeName = name.replace(/[\n\r]/g, " ").slice(0, 80);
+      return `- ${safeName}: ${total} questões, ${wrong} erros (${Math.round(wrong / total * 100)}% erro)`;
+    });
 
   return `Desempenho últimas 2 semanas:\n${lines.join("\n")}`;
 }
 
 function checkAuth(req: Request): boolean {
   const cronSecret = process.env.CRON_SECRET;
+  // Sem secret em dev local: permite (facilita desenvolvimento)
+  // Em produção: sem secret = rejeita sempre
   if (!cronSecret) return process.env.NODE_ENV !== "production";
   return req.headers.get("authorization") === `Bearer ${cronSecret}`;
 }
@@ -109,11 +112,16 @@ export async function GET(req: Request) {
         // Gera novo plano
         const cargoId = resolveCargoId(profile.cargo ?? "", "");
         const materias = cargoId?.cargoId ? await getMateriasParaCargo(cargoId.cargoId) : [];
-        const materiasStr = materias.slice(0, 15).join(", ");
+        const sanitizePrompt = (s: string, max = 100) =>
+          s.replace(/[\x00-\x1F\x7F-\x9F`"'\\${}[\]()]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+        const materiasStr = materias.slice(0, 15).map(m => sanitizePrompt(String(m), 60)).join(", ");
         const analysisSummary = await buildAnalysisSummary(user.id, profile.id);
 
-        const safeCargo = (profile.cargo ?? "Não informado").replace(/[\n\r]/g, " ").slice(0, 100);
-        const safeBanca = (profile.banca ?? "Não informada").replace(/[\n\r]/g, " ").slice(0, 100);
+        const safeCargo = sanitizePrompt(profile.cargo ?? "Não informado");
+        const safeBanca = sanitizePrompt(profile.banca ?? "Não informada");
+        const safeSummary = analysisSummary
+          ? analysisSummary.replace(/[\x00-\x1F\x7F-\x9F`"'\\${}[\]()]/g, " ").replace(/\s+/g, " ").trim().slice(0, 600)
+          : null;
 
         const prompt = `Você é um mentor de concursos públicos. Gere um plano de estudos semanal personalizado.
 
@@ -121,7 +129,7 @@ Cargo: ${safeCargo}
 Banca: ${safeBanca}
 Data da prova: ${profile.dataProva ?? "Não informada"}
 Matérias do edital: ${materiasStr || "Gerais"}
-${analysisSummary ? `\n${analysisSummary}` : ""}
+${safeSummary ? `\n${safeSummary}` : ""}
 
 Gere um JSON com o plano da semana (segunda a domingo), priorizando as matérias com mais erros recentes.
 

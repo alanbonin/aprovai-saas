@@ -54,5 +54,12 @@
       "path": "/api/cron/cobrar-renovacoes",
       "schedule": "30 6 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/cron/renovar-planos/route.ts": { "maxDuration": 300 },
+    "src/app/api/cron/importar-editais/route.ts": { "maxDuration": 300 },
+    "src/app/api/email/relatorio-semanal/route.ts": { "maxDuration": 300 },
+    "src/app/api/email/reativacao/route.ts": { "maxDuration": 120 },
+    "src/app/api/workspace/estrategia/route.ts": { "maxDuration": 60 }
+  }
 }

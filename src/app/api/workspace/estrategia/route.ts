@@ -95,10 +95,12 @@ async function savePlanNote(userId: string, profileId: string | null, data: Plan
 }
 
 async function getProfileAndSubjects(userId: string) {
-  const [profileRow, subjectsRes] = await Promise.all([
-    getActiveProfile(userId),
-    db.from("StudentSubject").select("Subject(id, name)").eq("userId", userId),
-  ]);
+  const profileRow = await getActiveProfile(userId);
+  const profileId = profileRow?.id ?? null;
+  let ssQ = db.from("StudentSubject").select("Subject(id, name)").eq("userId", userId);
+  if (profileId) ssQ = ssQ.eq("profileId", profileId);
+  else ssQ = ssQ.is("profileId", null);
+  const subjectsRes = await ssQ;
   const profileRes = { data: profileRow };
 
   const profile = profileRes.data;
@@ -267,6 +269,16 @@ Retorne APENAS JSON válido:
     }
 
     // ── GERAR ─────────────────────────────────────────────────────────────────
+    // Limite: 1 geração por semana (verificar ANTES, incrementar só após sucesso)
+    {
+      const { getWeeklyResourceUsage } = await import("@/lib/api-utils");
+      const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "plano_ia");
+      if (usedThisWeek >= 1) {
+        return NextResponse.json({ error: "Você já gerou o Plano IA esta semana. Ele será liberado novamente na próxima semana." }, { status: 429 });
+      }
+      // NÃO incrementa aqui — incrementa só após salvar o plano com sucesso (ver abaixo)
+    }
+
     const horasPorDia = body.horasPorDia ?? (profile?.horasEstudo as number | null) ?? 3;
     const diasDisp = body.diasDisp ?? ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
@@ -341,6 +353,11 @@ Retorne APENAS JSON (sem texto antes ou depois), incluindo TODOS os 7 dias (Segu
         : [],
     };
     await savePlanNote(dbUser.id, profileId, planData, existingNote?.id);
+
+    // Incrementa crédito SOMENTE após save bem-sucedido
+    // (evita consumir crédito se a IA falhar)
+    const { incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    await incrementWeeklyResourceUsage(dbUser.id, "plano_ia");
 
     return NextResponse.json({ cronograma, ajustes: planData.ajustes });
   } catch (err) {

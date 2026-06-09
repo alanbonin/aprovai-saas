@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from "react";
 import { Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2, Sparkles, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import DOMPurify from "isomorphic-dompurify";
 
 // ── Mapa de action cards [[IR:X]] ────────────────────────────────────────────
 const ACTION_MAP: Record<string, { label: string; icon: string; nav: string; color: string }> = {
@@ -714,11 +715,11 @@ export function MentorChat({
                         ) : (
                           msg.content
                             ? <span
-                                dangerouslySetInnerHTML={{ __html: parseMarkdown(
+                                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(parseMarkdown(
                                   // Remove [[IR:X]] markers before rendering markdown,
                                   // then append action cards below
                                   msg.content.replace(/\[\[IR:[a-z-]+\]\]/g, "")
-                                ) }}
+                                )) }}
                               />
                             : <span className="text-gray-600">...</span>
                         )}
