@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { defaultAiLimiter } from "@/lib/rate-limit";
 
 const DIAS_PT = ["domingo","segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado"];
 
@@ -38,8 +39,11 @@ export async function GET() {
   const todayStr = brtNow.toISOString().slice(0, 10);
   const diaSemana = DIAS_PT[brtNow.getDay()];
 
-  // Verifica cache (Note __PLANO_DIA__:data)
-  const cacheKey = `__PLANO_DIA__:${todayStr}`;
+  const activeProfileForCache = await getActiveProfile(dbUser.id);
+  const profileIdForCache = activeProfileForCache?.id ?? null;
+
+  // Verifica cache (Note __PLANO_DIA__:data) — isolado por perfil
+  const cacheKey = profileIdForCache ? `__PLANO_DIA__:${todayStr}:${profileIdForCache}` : `__PLANO_DIA__:${todayStr}`;
   const { data: cached } = await db.from("Note").select("content")
     .eq("userId", dbUser.id).eq("subjectId", cacheKey).maybeSingle();
 
@@ -48,6 +52,10 @@ export async function GET() {
       return NextResponse.json(JSON.parse(cached.content) as PlanoDia);
     } catch { /* regenera */ }
   }
+
+  // Só aplica rate limit quando vai chamar a IA (cache miss)
+  const rl = await defaultAiLimiter.check(dbUser.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   // Busca contexto do aluno
   const [profileRes, statsRes, revisaoRes, flashRes, semanaRes] = await Promise.all([
@@ -128,13 +136,13 @@ Retorne APENAS JSON válido:
 
     const plano: PlanoDia = { tarefas: parsed.tarefas, frase: parsed.frase, geradoEm: todayStr };
 
-    // Salva cache (Note do dia)
+    // Salva cache (Note do dia) — isolado por perfil
     const now = new Date().toISOString();
     const { data: ex } = await db.from("Note").select("id").eq("userId", dbUser.id).eq("subjectId", cacheKey).maybeSingle();
     if (ex?.id) {
       await db.from("Note").update({ content: JSON.stringify(plano), updatedAt: now }).eq("id", ex.id);
     } else {
-      await db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, subjectId: cacheKey, content: JSON.stringify(plano), createdAt: now, updatedAt: now });
+      await db.from("Note").insert({ id: crypto.randomUUID(), userId: dbUser.id, profileId: profileIdForCache, subjectId: cacheKey, content: JSON.stringify(plano), createdAt: now, updatedAt: now });
     }
 
     return NextResponse.json(plano);

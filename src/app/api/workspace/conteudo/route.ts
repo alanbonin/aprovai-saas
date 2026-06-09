@@ -14,6 +14,19 @@ export async function GET(req: Request) {
   const subjectId = searchParams.get("subjectId");
   if (!subjectId) return NextResponse.json({ materiais: [], questoes: [], flashcards: [] });
 
+  // Verifica se o usuário tem perfil de aluno (garante que é um estudante ativo, não conta avulsa)
+  const { data: studentProfile } = await db
+    .from("StudentProfile")
+    .select("id")
+    .eq("userId", dbUser.id)
+    .limit(1)
+    .maybeSingle();
+
+  const isAdmin = (dbUser as unknown as { role?: string }).role === "ADMIN";
+  if (!isAdmin && !studentProfile) {
+    return NextResponse.json({ materiais: [], questoes: [], flashcards: [] });
+  }
+
   const [
     { data: materiais },
     questoesResult,

@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
 
   // Otimização de imports de pacotes pesados
   experimental: {
-    optimizePackageImports: ["lucide-react", "@supabase/supabase-js"],
+    optimizePackageImports: ["lucide-react", "@supabase/supabase-js", "three", "@react-pdf/renderer"],
   },
 
   // Domínios permitidos para next/image

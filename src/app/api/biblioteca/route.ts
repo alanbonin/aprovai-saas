@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     query = query.eq("subjectId", subjectId);
   }
   if (topicId) query = query.eq("topicId", topicId);
-  if (search)  query = query.ilike("title", `%${search}%`);
+  if (search)  query = query.ilike("title", `%${search.replace(/[%_\\]/g, "\\$&").slice(0, 100)}%`);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: "Erro ao listar documentos" }, { status: 500 });

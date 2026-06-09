@@ -134,16 +134,27 @@ export default function CadastroPage() {
               <span className="text-3xl">✉️</span>
             </div>
             <h2 className="text-white font-bold text-xl mb-2">Confirme seu e-mail</h2>
-            <p className="text-gray-400 text-sm mb-6">
+            <p className="text-gray-400 text-sm mb-4">
               Enviamos um link de confirmação para{" "}
-              <strong className="text-white">{email}</strong>.{" "}
-              Após confirmar, clique em entrar.
+              <strong className="text-white">{email}</strong>.
             </p>
+
+            {/* Aviso sobre spam */}
+            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5 text-left">
+              <p className="text-amber-300 text-xs font-semibold mb-1">⚠️ Não recebeu o e-mail?</p>
+              <p className="text-amber-200/80 text-xs leading-relaxed">
+                Verifique sua <strong>caixa de spam</strong> ou <strong>lixo eletrônico</strong> — às vezes nossos e-mails chegam por lá.
+              </p>
+              <p className="text-amber-200/80 text-xs leading-relaxed mt-1.5">
+                Ao confirmar, <strong>marque o e-mail como &quot;Não é spam&quot;</strong> para que as próximas mensagens cheguem direto na caixa de entrada.
+              </p>
+            </div>
+
             <a
               href="/login"
               className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium text-white text-center transition-colors"
             >
-              Ir para o login
+              Já confirmei — ir para o login
             </a>
           </div>
         </div>

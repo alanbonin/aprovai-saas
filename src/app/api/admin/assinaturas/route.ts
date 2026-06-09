@@ -30,7 +30,7 @@ export async function GET() {
     { data: plans },
   ] = await Promise.all([
     db.from("Subscription")
-      .select("id, userId, status, planId, startDate, endDate, createdAt")
+      .select("id, userId, status, planId, startDate, endDate, createdAt, mpPaymentId")
       .order("createdAt", { ascending: false })
       .limit(500),
     db.from("Plan").select("id, name, slug, price"),
@@ -57,13 +57,21 @@ export async function GET() {
     for (const u of users ?? []) userMap[u.id as string] = { name: u.name as string, email: u.email as string };
   }
 
-  // Revenue summary: MRR from active subs
-  const mrr = ativas.reduce((sum, s) => {
+  // Exclui cortesias/isentos do MRR e contagem de pagas
+  const isSubPaga = (s: { mpPaymentId?: string | null }) => {
+    const mp = s.mpPaymentId ?? "";
+    return mp !== "" && !mp.startsWith("CORTESIA:") && mp !== "ISENTO" && !mp.startsWith("TRIAL");
+  };
+
+  const ativasPagas = ativas.filter(isSubPaga);
+
+  // Revenue summary: MRR apenas de subs pagas
+  const mrr = ativasPagas.reduce((sum, s) => {
     const plan = planMap[s.planId as string];
     return sum + ((plan as { price?: number } | undefined)?.price ?? 0);
   }, 0);
 
-  // Plan distribution
+  // Plan distribution (todas as ativas, incluindo cortesias — para visão operacional)
   const byPlan: Record<string, number> = {};
   for (const s of ativas) {
     const pname = (planMap[s.planId as string] as { name?: string } | undefined)?.name ?? "—";
@@ -89,7 +97,8 @@ export async function GET() {
 
   return NextResponse.json({
     summary: {
-      totalAtivas: ativas.length,
+      totalAtivas: ativasPagas.length,
+      totalAtivasComCortesia: ativas.length,
       totalExpiradas: subs.filter(s => s.status === "EXPIRED").length,
       novas30d: novas30d.length,
       mrr,

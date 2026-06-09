@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { pushSubscribeLimiter } from "@/lib/rate-limit";
 
 const PREFIX = "__PUSH_SUBSCRIPTION__";
 
@@ -20,6 +21,12 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  // Rate limit — previne flood de subscriptions no banco (tabela Note)
+  const rl = await pushSubscribeLimiter.check(user.id);
+  if (!rl.ok) {
+    return NextResponse.json({ error: rl.error }, { status: 429 });
+  }
+
   const body = await req.json() as { subscription: PushSubscriptionJSON };
   const { subscription } = body;
 
@@ -30,12 +37,13 @@ export async function POST(req: Request) {
   const content = JSON.stringify(subscription);
 
   // Verifica se já existe esta subscription (pelo endpoint)
+  const safeSuffix = subscription.endpoint.slice(-40).replace(/%/g, "\\%").replace(/_/g, "\\_");
   const { data: existing } = await db
     .from("Note")
     .select("id")
     .eq("userId", dbUser.id)
     .eq("subjectId", PREFIX)
-    .like("content", `%${subscription.endpoint.slice(-40)}%`)
+    .like("content", `%${safeSuffix}%`)
     .limit(1)
     .maybeSingle();
 
@@ -72,7 +80,7 @@ export async function DELETE(req: Request) {
   const { endpoint } = await req.json() as { endpoint: string };
   if (!endpoint) return NextResponse.json({ error: "endpoint obrigatório" }, { status: 400 });
 
-  const suffix = endpoint.slice(-40);
+  const suffix = endpoint.slice(-40).replace(/%/g, "\\%").replace(/_/g, "\\_");
   await db
     .from("Note")
     .delete()

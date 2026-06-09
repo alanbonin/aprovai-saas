@@ -39,7 +39,7 @@ export async function GET(req: Request) {
     .order("id");
 
   if (subjectId) query = query.eq("subjectId", subjectId);
-  if (banca)     query = query.ilike("banca", `%${banca}%`);
+  if (banca)     query = query.ilike("banca", `%${banca.replace(/[%_\\]/g, "\\$&").slice(0, 100)}%`);
 
   const { data: questions, error } = await query;
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });

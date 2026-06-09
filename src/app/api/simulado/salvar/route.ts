@@ -45,14 +45,39 @@ export async function POST(req: NextRequest) {
   const activeProfile = await getActiveProfile(dbUser.id);
   const profileId = activeProfile?.id ?? null;
 
-  const { total, correct, timeSecs, subjectIds, answers } = await req.json();
+  const { total, timeSecs, subjectIds, answers } = await req.json();
+
+  // ── 0. Verifica gabaritos SERVER-SIDE ─────────────────────────────────────
+  // O frontend envia `resposta` (alternativa escolhida) — nunca `correct: boolean`.
+  // O backend busca os gabaritos em batch e computa acertos de forma autoritativa.
+  const validAnswers = Array.isArray(answers) ? answers as { questionId: number; resposta?: string }[] : [];
+  const safeTotal = Math.min(Math.max(0, total ?? validAnswers.length), 200);
+
+  let serverCorrect = 0;
+  const answersWithResult: { questionId: number; isCorrect: boolean }[] = [];
+
+  if (validAnswers.length > 0) {
+    const qIds = validAnswers.map(a => a.questionId);
+    const { data: gabaritos } = await db
+      .from("Question")
+      .select("id, answer")
+      .in("id", qIds);
+
+    const gabaritoMap = new Map((gabaritos ?? []).map(g => [g.id as number, g.answer as string]));
+
+    for (const a of validAnswers) {
+      const correct = gabaritoMap.has(a.questionId) && (a.resposta ?? "").toUpperCase() === gabaritoMap.get(a.questionId);
+      if (correct) serverCorrect++;
+      answersWithResult.push({ questionId: a.questionId, isCorrect: correct });
+    }
+  }
 
   // ── 1. Salva no histórico ─────────────────────────────────────────────────
   const { error } = await db.from("SimuladoHistory").insert({
     userId:     dbUser.id,
     profileId,
-    total:      total      ?? 0,
-    correct:    correct    ?? 0,
+    total:      safeTotal,
+    correct:    serverCorrect,   // sempre server-computed
     timeSecs:   timeSecs   ?? 0,
     subjectIds: subjectIds ?? [],
   });
@@ -60,12 +85,12 @@ export async function POST(req: NextRequest) {
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
   // ── 2. Atualiza Progress com SM-2 inteligente ─────────────────────────────
-  if (Array.isArray(answers) && answers.length > 200) {
+  if (validAnswers.length > 200) {
     return NextResponse.json({ error: "Número de respostas inválido" }, { status: 400 });
   }
 
-  if (Array.isArray(answers) && answers.length > 0) {
-    const questionIds = answers.map((a: { questionId: number; correct: boolean }) => a.questionId);
+  if (answersWithResult.length > 0) {
+    const questionIds = answersWithResult.map(a => a.questionId);
 
     // Busca registros existentes de uma vez
     const { data: existingRows } = await db
@@ -83,7 +108,7 @@ export async function POST(req: NextRequest) {
     const toInsert: object[] = [];
     const toUpdate: { id: string; fields: object }[] = [];
 
-    for (const a of answers as { questionId: number; correct: boolean }[]) {
+    for (const a of answersWithResult) {
       const existing = existingMap.get(a.questionId);
 
       // ── Regra de mescla SM-2 ──────────────────────────────────────────────
@@ -95,7 +120,7 @@ export async function POST(req: NextRequest) {
       const nextReviewDate = (existing?.nextReview as string | null | undefined) ?? null;
       const isDue    = existing && nextReviewDate !== null && nextReviewDate.slice(0, 10) <= today;
       const isNew    = !existing;
-      const isWrong  = !a.correct;
+      const isWrong  = !a.isCorrect;
 
       const shouldUpdate = isWrong || isNew || isDue;
       if (!shouldUpdate) continue;
@@ -148,19 +173,17 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // ── 3. XP pelo simulado: 3 XP por acerto ─────────────────────────────────
-  const xpDelta = (correct ?? 0) * XP_SIMULADO_PER_ACERTO;
+  // ── 3. XP pelo simulado: 3 XP por acerto (server-computed) ───────────────
+  const xpDelta = serverCorrect * XP_SIMULADO_PER_ACERTO;
   void updateXP(dbUser.id, xpDelta).catch(() => {});
 
   // ── 4. Notificação in-app de simulado concluído ───────────────────────────
   // O sistema de notificações usa Note como KV store com prefixos.
   // Persiste o último simulado concluído para o GET /api/notificacoes capturar.
-  const safeTotal   = total   ?? 0;
-  const safeCorrect = correct ?? 0;
-  const score = safeTotal > 0 ? Math.round((safeCorrect / safeTotal) * 100) : 0;
+  const score = safeTotal > 0 ? Math.round((serverCorrect / safeTotal) * 100) : 0;
   const SIMULADO_NOTIF_PREFIX = "__SIMULADO_NOTIF__";
   const notifPayload = JSON.stringify({
-    correct: safeCorrect,
+    correct: serverCorrect,
     total:   safeTotal,
     score,
     at:      new Date().toISOString(),
@@ -181,5 +204,11 @@ export async function POST(req: NextRequest) {
     } catch { /* silencioso — não quebra o fluxo */ }
   })();
 
-  return NextResponse.json({ ok: true });
+  // Retorna resultados por questão para o frontend atualizar a tela de revisão
+  return NextResponse.json({
+    ok: true,
+    correct: serverCorrect,
+    total: safeTotal,
+    results: answersWithResult,
+  });
 }

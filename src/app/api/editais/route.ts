@@ -50,7 +50,10 @@ export async function GET(req: Request) {
     if (status)       query = query.eq("status", status);
     if (escolaridade) query = query.eq("escolaridade", escolaridade);
     if (nivel)        query = query.eq("nivel", nivel);
-    if (search)       query = query.or(`titulo.ilike.%${search}%,orgao.ilike.%${search}%,cargo.ilike.%${search}%`);
+    if (search) {
+      const safeSearch = search.replace(/[%_\\]/g, "\\$&").slice(0, 100);
+      query = query.or(`titulo.ilike.%${safeSearch}%,orgao.ilike.%${safeSearch}%,cargo.ilike.%${safeSearch}%`);
+    }
     if (soFavoritos)  query = query.in("id", favSet.size > 0 ? [...favSet] : ["__none__"]);
 
     const { data: editais, count, error } = await query.range(offset, offset + limit - 1);

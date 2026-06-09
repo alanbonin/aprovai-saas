@@ -65,7 +65,7 @@ export async function POST(req: Request) {
   }
 
   else {
-    return NextResponse.json({ error: `Operação desconhecida: ${operacao}` }, { status: 400 });
+    return NextResponse.json({ error: "Operação inválida" }, { status: 400 });
   }
 
   return NextResponse.json({ ok: true, operacao, results });

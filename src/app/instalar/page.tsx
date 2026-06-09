@@ -42,13 +42,13 @@ const STEPS: Record<OS, { icon: string; title: string; steps: { num: string; tit
   },
   ios: {
     icon: '🍎',
-    title: 'iPhone / iPad (Safari)',
+    title: 'iPhone / iPad',
     steps: [
       {
         num: '01',
-        title: 'Abra o Safari',
-        desc: 'Acesse aprovai360.com.br pelo Safari — o navegador padrão do iPhone. No iOS, a instalação só funciona pelo Safari.',
-        tip: 'Não funciona pelo Chrome ou Firefox no iOS',
+        title: 'Abra o Safari ou Chrome',
+        desc: 'Acesse aprovai360.com.br pelo Safari ou Chrome no seu iPhone/iPad. Certifique-se de estar logado na sua conta.',
+        tip: 'Funciona no Safari e no Chrome',
       },
       {
         num: '02',

@@ -1,9 +1,18 @@
-import { getAccessLevel } from "@/lib/access";
-import { UpgradeUI } from "@/components/upgrade-ui";
-import { RankingInner } from "./page-content";
+import { ComingSoonUI } from "@/components/coming-soon-ui";
 
-export default async function Page() {
-  const { isPremium } = await getAccessLevel();
-  if (!isPremium) return <UpgradeUI recurso="Ranking" desc="Compete com outros candidatos e suba no ranking." icon="🏆" />;
-  return <RankingInner />;
+export default function Page() {
+  return (
+    <ComingSoonUI
+      recurso="Ranking"
+      icon="🏆"
+      desc="Compete com outros candidatos, suba no ranking e acompanhe sua evolução em relação a outros concurseiros."
+      features={[
+        "Ranking geral e por cargo/matéria",
+        "Posição semanal e histórico de evolução",
+        "Comparativo com candidatos do mesmo concurso",
+        "Conquistas e medalhas por desempenho",
+        "Liga de competição entre amigos",
+      ]}
+    />
+  );
 }

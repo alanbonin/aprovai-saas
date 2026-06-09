@@ -24,8 +24,9 @@ export async function GET(
 
   const { id: userId } = await params;
 
-  const { data: targetUser } = await db.from("User").select("id").eq("id", userId).maybeSingle();
+  const { data: targetUser } = await db.from("User").select("id, role").eq("id", userId).maybeSingle();
   if (!targetUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+  if (targetUser.role !== "STUDENT") return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
 
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString();

@@ -28,9 +28,9 @@ export async function GET(req: Request) {
     .select("id, statement, answer, level, banca, year, subjectId, createdAt", { count: "exact" });
 
   if (subjectId) query = query.eq("subjectId", subjectId);
-  if (banca) query = query.ilike("banca", `%${banca}%`);
+  if (banca) query = query.ilike("banca", `%${banca.replace(/[%_\\]/g, "\\$&").slice(0, 100)}%`);
   if (level) query = query.eq("level", level);
-  if (search) query = query.ilike("statement", `%${search}%`);
+  if (search) query = query.ilike("statement", `%${search.replace(/[%_\\]/g, "\\$&").slice(0, 200)}%`);
 
   const { data: questions, count, error } = await query
     .order("id", { ascending: false })
@@ -49,9 +49,22 @@ export async function GET(req: Request) {
 // PATCH — edita uma questão por ID
 export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  const { id, ...fields } = await req.json() as { id: number; [key: string]: unknown };
+  const body = await req.json() as { id: number; [key: string]: unknown };
+  const { id } = body;
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
-  const { data, error } = await db.from("Question").update(fields).eq("id", id).select().single();
+
+  const ALLOWED = ["statement", "optionA", "optionB", "optionC", "optionD", "optionE",
+    "answer", "explanation", "level", "year", "banca", "subjectId", "aprovado",
+    "artigo", "dicaBanca", "tipo"];
+  const updates: Record<string, unknown> = {};
+  for (const field of ALLOWED) {
+    if (field in body) updates[field] = body[field];
+  }
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Nenhum campo válido para atualizar" }, { status: 400 });
+  }
+
+  const { data, error } = await db.from("Question").update(updates).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data);
 }

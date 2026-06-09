@@ -25,7 +25,8 @@ export async function POST(req: Request) {
     horasEstudo?: number | null;
     categoria?: string | null;
     modalidade?: string | null;
-    novoPerfil?: boolean; // true = sempre criar perfil novo
+    novoPerfil?: boolean;    // true = sempre criar perfil novo
+    updateProfileId?: string; // ID específico do perfil a atualizar
   };
 
   // Busca perfis existentes
@@ -60,28 +61,36 @@ export async function POST(req: Request) {
     updatedAt: new Date().toISOString(),
   };
 
+  let savedProfileId: string | null = null;
+
   if (!isNovoPerfil && existingProfiles && existingProfiles.length > 0) {
-    // Atualiza o perfil padrão existente
-    const { error } = await db
-      .from("StudentProfile")
-      .update(profileData)
-      .eq("userId", dbUser.id)
-      .eq("isDefault", true);
+    // Se veio updateProfileId, atualiza esse perfil específico; senão atualiza o padrão
+    let updateQuery = db.from("StudentProfile").update(profileData).eq("userId", dbUser.id);
+    if (body.updateProfileId) {
+      updateQuery = updateQuery.eq("id", body.updateProfileId);
+    } else {
+      updateQuery = updateQuery.eq("isDefault", true);
+    }
+    const { data: updated, error } = await updateQuery.select("id").maybeSingle();
 
     if (error) {
       log.error("db.onboarding_update_profile", { table: "StudentProfile" }, error);
       return NextResponse.json({ error: "Erro ao salvar perfil" }, { status: 500 });
     }
+    savedProfileId = updated?.id ?? null;
   } else {
     // Cria novo perfil
-    const { error } = await db
+    const { data: inserted, error } = await db
       .from("StudentProfile")
-      .insert({ ...profileData, createdAt: new Date().toISOString() });
+      .insert({ ...profileData, createdAt: new Date().toISOString() })
+      .select("id")
+      .maybeSingle();
 
     if (error) {
       log.error("db.onboarding_insert_profile", { table: "StudentProfile" }, error);
       return NextResponse.json({ error: "Erro ao criar perfil" }, { status: 500 });
     }
+    savedProfileId = inserted?.id ?? null;
   }
 
   // Atualiza nome preferido no User se fornecido
@@ -160,12 +169,17 @@ export async function POST(req: Request) {
       subjectIds = (byCat ?? []).map((s: { id: string }) => s.id);
     }
 
-    // 3. Insere evitando duplicatas
+    // 3. Se for atualização de perfil existente, remove matérias antigas do perfil
+    if (!isNovoPerfil && savedProfileId) {
+      await db.from("StudentSubject").delete().eq("userId", dbUser.id).eq("profileId", savedProfileId);
+    }
+
+    // 4. Insere novas matérias (isolado por perfil)
     if (subjectIds.length > 0) {
-      const { data: existing } = await db
-        .from("StudentSubject")
-        .select("subjectId")
-        .eq("userId", dbUser.id);
+      let existingQ = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
+      if (savedProfileId) existingQ = existingQ.eq("profileId", savedProfileId);
+      else existingQ = existingQ.is("profileId", null);
+      const { data: existing } = await existingQ;
       const existingIds = new Set((existing ?? []).map((e: { subjectId: string }) => e.subjectId));
 
       const toInsert = subjectIds
@@ -173,6 +187,7 @@ export async function POST(req: Request) {
         .map(subjectId => ({
           id: crypto.randomUUID(),
           userId: dbUser.id,
+          profileId: savedProfileId,
           subjectId,
           fromEdital,
           createdAt: now,

@@ -83,15 +83,14 @@ export function SimuladoExameInner() {
     const ans = answersRef.current;
     const cfg = PRESETS[presetRef.current];
     const timeTaken = cfg.minutes * 60 - timeLeftRef.current;
-    const finalCorrect = qs.filter((qq, i) => ans[i] === qq.answer).length;
-    const fullAns = qs.map((q, i) => ({ questionId: q.id, correct: ans[i] === q.answer }));
+    // Envia `resposta` (alternativa escolhida) — gabarito verificado server-side
+    const fullAns = qs.map((q, i) => ({ questionId: q.id, resposta: ans[i] ?? "" }));
 
     void fetch("/api/simulado/salvar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         total: qs.length,
-        correct: finalCorrect,
         timeSecs: timeTaken,
         answers: fullAns,
       }),

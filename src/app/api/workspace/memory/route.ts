@@ -64,7 +64,13 @@ export async function POST(req: Request) {
     const transcript = messages
       .slice(-20)
       .map(m => {
-        const safeContent = String(m.content).replace(/\[\[/g, "[ [").replace(/\]\]/g, "] ]").slice(0, 500);
+        const safeContent = String(m.content)
+          .replace(/[\x00-\x1F\x7F-\x9F]/g, " ") // chars de controle
+          .replace(/\[\[|\]\]/g, "")               // delimitadores de diretiva
+          .replace(/```/g, "` ` `")               // code blocks
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 500);
         return `${m.role === "user" ? "Aluno" : "Mentor"}: ${safeContent}`;
       })
       .join("\n");

@@ -28,11 +28,15 @@ export async function GET() {
   const todayKey = brtNow.toISOString().slice(0, 10); // YYYY-MM-DD
 
   // Paraleliza: nota do desafio + perfil ativo + matérias do aluno (eram 4 queries sequenciais)
-  const [{ data: desafioNote }, activeProfile, { data: studentSubs }] = await Promise.all([
+  const [{ data: desafioNote }, activeProfile] = await Promise.all([
     db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__DESAFIO__").maybeSingle(),
     getActiveProfile(dbUser.id),
-    db.from("StudentSubject").select("subjectId, Subject(name)").eq("userId", dbUser.id),
   ]);
+  const profileId = activeProfile?.id ?? null;
+  let ssQD = db.from("StudentSubject").select("subjectId, Subject(name)").eq("userId", dbUser.id);
+  if (profileId) ssQD = ssQD.eq("profileId", profileId);
+  else ssQD = ssQD.is("profileId", null);
+  const { data: studentSubs } = await ssQD;
 
   // Plano semanal IA (depende do profileId — roda depois do Promise.all acima)
   const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);

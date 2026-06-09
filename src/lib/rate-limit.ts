@@ -147,3 +147,9 @@ export const adminUploadLimiter = createLimiter({ max: 50, window: "1 d", prefix
 
 /** Configurações PATCH — 20/hora por usuário */
 export const configuracoesLimiter = createLimiter({ max: 20, window: "1 h", prefix: "configuracoes" });
+
+/** Verificar gabarito — 60/min por usuário (anti brute-force de respostas) */
+export const verificarLimiter = createLimiter({ max: 60, window: "1 m", prefix: "verificar" });
+
+/** Push subscribe — 10/hora por usuário (anti flood no banco) */
+export const pushSubscribeLimiter = createLimiter({ max: 10, window: "1 h", prefix: "push-sub" });

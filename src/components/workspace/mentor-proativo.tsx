@@ -53,7 +53,7 @@ export function MentorProativo() {
 
   return (
     <div
-      className="fixed bottom-5 right-5 z-50 max-w-sm w-full"
+      className="fixed bottom-20 right-5 z-50 max-w-sm w-full lg:bottom-5"
       style={{
         animation: dismissed ? "proativoOut 0.3s ease-in both" : "proativoIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
       }}>

@@ -52,13 +52,20 @@ export async function POST(req: Request) {
   const subjectName = (subject as { name: string } | null)?.name ?? "Concursos";
 
   // Monta o prompt
-  const prompt = `Questão: ${q.statement}
+  const sanitize = (s: string, max = 500) =>
+    s.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+  const safeStatement = sanitize(String(q.statement ?? ""), 500);
+  const safeOption = sanitize(String((q as unknown as Record<string, string>)[`option${q.answer as string}`] ?? ""), 200);
+  const safeExplanation = sanitize(String(q.explanation ?? "Não fornecida."), 400);
+  const safeSubject = sanitize(subjectName, 80);
 
-Alternativa correta: ${q.answer}) ${(q as unknown as Record<string, string>)[`option${q.answer as string}`] ?? ""}
+  const prompt = `Questão: ${safeStatement}
 
-Explicação: ${q.explanation ?? "Não fornecida."}
+Alternativa correta: ${q.answer as string}) ${safeOption}
 
-Matéria: ${subjectName}
+Explicação: ${safeExplanation}
+
+Matéria: ${safeSubject}
 
 Crie 1 flashcard no formato:
 {"frente": "pergunta direta sobre o conceito", "verso": "resposta objetiva com fundamento legal ou conceito chave"}`;

@@ -9,17 +9,18 @@ interface Props {
   initialConfigs: Record<string, ConfigValue>;
 }
 
-type TabId = "gamificacao" | "trial" | "mentor" | "reativacao" | "limites" | "geral" | "crons" | "limpeza";
+type TabId = "gamificacao" | "trial" | "mentor" | "reativacao" | "limites" | "cortesia" | "geral" | "crons" | "limpeza";
 
 const TABS: { id: TabId; label: string; icon: string }[] = [
-  { id: "gamificacao", label: "Gamificação e XP", icon: "🎮" },
-  { id: "trial",       label: "Trial e Planos",   icon: "📅" },
-  { id: "mentor",      label: "Mentor Proativo",  icon: "🤖" },
-  { id: "reativacao",  label: "Reativação",        icon: "📧" },
-  { id: "limites",     label: "Limites",           icon: "🔒" },
-  { id: "geral",       label: "Geral",             icon: "⚙️" },
-  { id: "crons",       label: "Cron Jobs",         icon: "🕐" },
-  { id: "limpeza",     label: "Limpeza de Dados",  icon: "🗑️" },
+  { id: "gamificacao", label: "Gamificação e XP",   icon: "🎮" },
+  { id: "trial",       label: "Trial e Planos",     icon: "📅" },
+  { id: "mentor",      label: "Mentor Proativo",    icon: "🤖" },
+  { id: "reativacao",  label: "Reativação",          icon: "📧" },
+  { id: "limites",     label: "Limites",             icon: "🔒" },
+  { id: "cortesia",    label: "Políticas Cortesia",  icon: "🎁" },
+  { id: "geral",       label: "Geral",               icon: "⚙️" },
+  { id: "crons",       label: "Cron Jobs",           icon: "🕐" },
+  { id: "limpeza",     label: "Limpeza de Dados",    icon: "🗑️" },
 ];
 
 const CRON_LIST = [
@@ -597,6 +598,57 @@ export function ConfiguracoesClient({ initialConfigs }: Props) {
                 <NumberField label="Máximo de favoritos por usuário" configKey="limites.max_favoritos" value={c["limites.max_favoritos"]} onSave={save} onReset={reset} />
                 <NumberField label="Máximo de notas por usuário" configKey="limites.max_notas" value={c["limites.max_notas"]} onSave={save} onReset={reset} />
                 <NumberField label="Máximo de caracteres por mensagem no mentor" configKey="limites.max_message_len" value={c["limites.max_message_len"]} onSave={save} onReset={reset} />
+              </div>
+            </>
+          )}
+
+          {/* Políticas de Cortesia */}
+          {activeTab === "cortesia" && (
+            <>
+              <h2 className="text-lg font-semibold text-white flex items-center gap-2">🎁 Políticas de Cortesia</h2>
+              <p className="text-sm text-gray-500 -mt-3">Define o plano e duração padrão ao atribuir acesso cortesia a um usuário. O admin pode sobrescrever manualmente em cada caso.</p>
+              <div className="grid gap-6">
+                {[
+                  { tipo: "colaborador", emoji: "⭐", label: "Colaborador",  desc: "Sócio, equipe, investidor ou contribuidor" },
+                  { tipo: "influencer",  emoji: "📣", label: "Influencer",   desc: "Criador de conteúdo que divulga a plataforma" },
+                  { tipo: "beta",        emoji: "🧪", label: "Beta-tester",  desc: "Testa funcionalidades e envia feedback" },
+                  { tipo: "parceria",    emoji: "🤝", label: "Parceria",     desc: "Acordo comercial ou troca por divulgação" },
+                  { tipo: "cortesia",    emoji: "🎁", label: "Cortesia",     desc: "Acesso gratuito por decisão interna" },
+                  { tipo: "brinde",      emoji: "🎀", label: "Brinde",       desc: "Promoção, sorteio ou ação de marketing" },
+                ].map(({ tipo, emoji, label, desc }) => (
+                  <div key={tipo} className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-lg">{emoji}</span>
+                      <div>
+                        <p className="text-sm font-semibold text-white">{label}</p>
+                        <p className="text-xs text-gray-500">{desc}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Plano padrão (slug)</label>
+                        <input
+                          type="text"
+                          defaultValue={String(c[`cortesia.${tipo}_plano` as keyof typeof c] ?? "")}
+                          onBlur={e => save(`cortesia.${tipo}_plano` as never, e.target.value as never)}
+                          placeholder="focado, aprovacao, elite..."
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-gray-400 mb-1">Duração (dias)</label>
+                        <input
+                          type="number"
+                          defaultValue={Number(c[`cortesia.${tipo}_dias` as keyof typeof c] ?? 30)}
+                          onBlur={e => save(`cortesia.${tipo}_dias` as never, Number(e.target.value) as never)}
+                          placeholder="30, 365, 36500 = permanente"
+                          className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500"
+                        />
+                        <p className="text-[10px] text-gray-600 mt-1">36500 = permanente</p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
             </>
           )}

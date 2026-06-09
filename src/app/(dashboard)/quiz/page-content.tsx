@@ -122,7 +122,7 @@ export function QuizInner() {
     fetch("/api/questoes/progresso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: isCorrect ? 3 : 0 }),
+      body: JSON.stringify({ questionId: q.id, resposta: opt ?? "", quality: isCorrect ? 3 : 0 }),
     }).catch(() => {});
   }
 

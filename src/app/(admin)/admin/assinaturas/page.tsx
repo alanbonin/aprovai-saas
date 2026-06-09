@@ -17,6 +17,7 @@ interface SubEntry {
 
 interface Summary {
   totalAtivas: number;
+  totalAtivasComCortesia?: number;
   totalExpiradas: number;
   novas30d: number;
   mrr: number;
@@ -138,8 +139,8 @@ export default function AssinaturasAdminPage() {
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
         {[
-          { label: "Ativas",       value: summary.totalAtivas,                      icon: Users,        color: "text-emerald-400" },
-          { label: "MRR",          value: `R$ ${(summary.mrr / 100).toLocaleString("pt-BR", { minimumFractionDigits: 0 })}`, icon: TrendingUp,   color: "text-indigo-400" },
+          { label: "Pagas ativas",  value: `${summary.totalAtivas} / ${summary.totalAtivasComCortesia ?? summary.totalAtivas}`, icon: Users, color: "text-emerald-400" },
+          { label: "MRR (pagas)",  value: summary.mrr.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }), icon: TrendingUp, color: "text-indigo-400" },
           { label: "Novas (30d)",  value: summary.novas30d,                         icon: Clock,        color: "text-blue-400" },
           { label: "Expiradas",    value: summary.totalExpiradas,                   icon: AlertTriangle, color: "text-amber-400" },
         ].map(k => (

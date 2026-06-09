@@ -49,10 +49,9 @@ export async function GET() {
     casoSemanaRes,
     flashcardsHojeRes,
   ] = await Promise.all([
-    db.from("StudentProfile")
-      .select("streak, lastStudyDate, xp, horasEstudo")
-      .eq("userId", dbUser.id)
-      .single(),
+    profileId
+      ? db.from("StudentProfile").select("streak, lastStudyDate, xp, horasEstudo, cargo, orgao, modalidade, id").eq("userId", dbUser.id).eq("id", profileId).maybeSingle()
+      : db.from("StudentProfile").select("streak, lastStudyDate, xp, horasEstudo, cargo, orgao, modalidade, id").eq("userId", dbUser.id).maybeSingle(),
     profileId
       ? db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", todayStart)
       : db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart),
@@ -199,5 +198,9 @@ export async function GET() {
     redacaoSemana,
     casoSemana,
     flashcardsRevisadosHoje,
+    profileId,
+    cargo: (profile?.cargo as string | null) ?? null,
+    orgao: (profile?.orgao as string | null) ?? null,
+    modalidade: (profile?.modalidade as string | null) ?? "CONCURSO_PUBLICO",
   });
 }

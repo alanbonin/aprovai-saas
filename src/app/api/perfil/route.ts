@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
+import { getActiveProfile } from "@/lib/get-active-profile";
 
 /**
  * GET /api/perfil
@@ -14,17 +15,26 @@ export async function GET() {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const activeProfile = await getActiveProfile(dbUser.id);
+  const profileId = activeProfile?.id ?? null;
+
+  let ssQuery = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
+  if (profileId) {
+    ssQuery = ssQuery.eq("profileId", profileId);
+  } else {
+    ssQuery = ssQuery.is("profileId", null);
+  }
+
   const [profileRes, progressRes, studentSubjectsRes, profileStatsRes] = await Promise.all([
     db.from("StudentProfile")
       .select("cargo, orgao, dataProva, dificuldades, streak, xp, lastStudyDate")
       .eq("userId", dbUser.id)
-      .single(),
+      .eq("id", profileId ?? "")
+      .maybeSingle(),
     db.from("Progress")
       .select("correct", { count: "exact" })
       .eq("userId", dbUser.id),
-    db.from("StudentSubject")
-      .select("subjectId")
-      .eq("userId", dbUser.id),
+    ssQuery,
     db.from("SimuladoHistory")
       .select("id", { count: "exact" })
       .eq("userId", dbUser.id),

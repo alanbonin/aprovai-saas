@@ -30,11 +30,9 @@ export function PWAInstallPrompt() {
     const ua = navigator.userAgent;
     const ios = /iphone|ipad|ipod/i.test(ua) && !("MSStream" in window);
     if (ios) {
-      // Só mostra se estiver no Safari (não em outros browsers do iOS)
-      if ((navigator as unknown as { standalone?: boolean }).standalone !== undefined) {
-        setIsIOS(true);
-        setTimeout(() => setVisible(true), 3000);
-      }
+      // Mostra em qualquer browser do iOS (Safari, Chrome, Firefox)
+      setIsIOS(true);
+      setTimeout(() => setVisible(true), 3000);
       return;
     }
 
@@ -106,7 +104,7 @@ export function PWAInstallPrompt() {
           <div className="mt-3 space-y-2">
             <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-white/[0.05]">
               <span className="w-6 h-6 rounded-full bg-[#0ab5bd]/20 text-[#0ab5bd] text-xs font-bold flex items-center justify-center flex-shrink-0">1</span>
-              <p className="text-xs text-gray-300">Toque no ícone <strong className="text-white">Compartilhar ⬆️</strong> no Safari</p>
+              <p className="text-xs text-gray-300">Toque no ícone <strong className="text-white">Compartilhar ⬆️</strong> na barra do navegador</p>
             </div>
             <div className="flex items-center gap-2.5 px-2 py-2 rounded-xl bg-white/[0.05]">
               <span className="w-6 h-6 rounded-full bg-[#0ab5bd]/20 text-[#0ab5bd] text-xs font-bold flex items-center justify-center flex-shrink-0">2</span>

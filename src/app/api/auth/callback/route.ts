@@ -42,6 +42,9 @@ export async function GET(request: Request) {
 
       log.info(LogEvent.AUTH_LOGIN_OK, { userId: data.user?.id ?? "unknown", via: "email_confirmation" });
 
+      // Revoga todas as outras sessões — impede compartilhamento de conta
+      await supabase.auth.signOut({ scope: "others" }).catch(() => {});
+
       // Redireciona para workspace — o onboarding detecta se é primeira vez
       // Bloqueia protocol-relative URLs (//evil.com) que passam no startsWith("/")
       const safePath = next.startsWith("/") && !next.startsWith("//") ? next : "/workspace";

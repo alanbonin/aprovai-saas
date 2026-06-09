@@ -47,8 +47,16 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const { id, ...updates } = await req.json();
+  const body = await req.json() as Record<string, unknown>;
+  const { id } = body;
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
+
+  const ALLOWED = ["name", "slug", "price", "intervalDays", "aiCreditsPerWeek", "maxAgents", "features", "active"];
+  const updates: Record<string, unknown> = {};
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key];
+  }
+  if (typeof updates.price === "number") updates.price = Number(updates.price);
 
   const { data, error } = await db.from("Plan").update(updates).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });

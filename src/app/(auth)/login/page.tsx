@@ -19,8 +19,24 @@ export default function LoginPage() {
     const params = new URLSearchParams(window.location.search);
     const erro = params.get("erro");
     const confirmado = params.get("confirmado");
+    const aviso = params.get("aviso");
     if (erro) setError(decodeURIComponent(erro));
     if (confirmado) setInfo("E-mail confirmado! Faça login para acessar sua conta.");
+    if (aviso === "sessao_encerrada") setError("Sua sessão foi encerrada porque sua conta foi acessada em outro dispositivo.");
+    // Flag gravada pelo SessionGuard (localStorage persiste após redirect server-side)
+    try {
+      const kickedOut = localStorage.getItem("kicked_out");
+      const wasLoggedIn = localStorage.getItem("was_logged_in");
+      if (kickedOut) {
+        localStorage.removeItem("kicked_out");
+        localStorage.removeItem("was_logged_in");
+        setError("⚠️ Sua sessão foi encerrada porque esta conta foi acessada em outro dispositivo.");
+      } else if (wasLoggedIn) {
+        // Servidor redirecionou sem o SessionGuard ter rodado — sessão revogada externamente
+        localStorage.removeItem("was_logged_in");
+        setError("⚠️ Sua sessão foi encerrada porque esta conta foi acessada em outro dispositivo.");
+      }
+    } catch {}
   }, []);
 
   async function handleLogin(e: React.FormEvent) {
@@ -33,6 +49,9 @@ export default function LoginPage() {
       setLoading(false);
       return;
     }
+    // Revoga todas as outras sessões ativas — impede compartilhamento de conta
+    // Se o usuário logar em outro dispositivo, as sessões anteriores são invalidadas
+    await supabase.auth.signOut({ scope: "others" }).catch(() => {});
     // Reload completo garante cookies frescos e evita conflitos de navegação
     // admin é redirecionado para /admin pelo layout; aluno vai para o Briefing do Dia
     window.location.href = "/hoje";

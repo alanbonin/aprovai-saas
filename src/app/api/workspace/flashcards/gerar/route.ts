@@ -45,10 +45,19 @@ export async function POST(req: Request) {
     .maybeSingle();
 
   const count = Math.min(20, Math.max(5, qty));
-  const topicoLine = topico ? `\nFoco específico neste tópico: ${topico}` : "";
-  const perfilLine = profile?.cargo ? `\nCargo alvo do aluno: ${profile.cargo} (${profile.orgao ?? "N/A"})` : "";
+  const sanitize = (s: string, max = 200) =>
+    s.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
 
-  const prompt = `Gere EXATAMENTE ${count} flashcards sobre: ${subjectName}${topicoLine}${perfilLine}
+  // Usa nome verificado no banco, não o valor enviado pelo cliente
+  const safeSubjectName = sanitize(subject.name, 100);
+  const safeTopico = topico ? sanitize(topico, 150) : null;
+  const safeCargo = profile?.cargo ? sanitize(profile.cargo, 80) : null;
+  const safeOrgao = profile?.orgao ? sanitize(profile.orgao, 80) : null;
+
+  const topicoLine = safeTopico ? `\nFoco específico neste tópico: ${safeTopico}` : "";
+  const perfilLine = safeCargo ? `\nCargo alvo do aluno: ${safeCargo} (${safeOrgao ?? "N/A"})` : "";
+
+  const prompt = `Gere EXATAMENTE ${count} flashcards sobre: ${safeSubjectName}${topicoLine}${perfilLine}
 
 Regras:
 - Frente: pergunta direta e objetiva no estilo de concurso público (20-60 palavras)

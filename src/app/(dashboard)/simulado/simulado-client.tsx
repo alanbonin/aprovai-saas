@@ -101,24 +101,44 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     // Garante que todas as questões têm resposta (pode não ter se o tempo esgotou)
     const fullAns = qs.map(q => {
       const found = ans.find(a => a.questionId === q.id);
-      return found ?? { questionId: q.id, correct: false, selected: null };
+      return found ?? { questionId: q.id, correct: false, selected: null as string | null };
     });
 
-    await fetch("/api/simulado/salvar", {
+    // Envia `resposta` (alternativa escolhida) — gabarito verificado server-side
+    const res = await fetch("/api/simulado/salvar", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         total,
-        correct,
         timeSecs: timeUsed,
         subjectIds: [...new Set(qs.map(q => q.subjectId))],
-        answers: fullAns.map(a => ({ questionId: a.questionId, correct: a.correct })),
+        answers: fullAns.map(a => ({ questionId: a.questionId, resposta: a.selected ?? "" })),
       }),
     });
 
-    setAnswers(fullAns);
+    // Atualiza `correct` com gabarito server-side para exibir revisão corretamente
+    if (res.ok) {
+      const data = await res.json() as { correct?: number; results?: { questionId: number; isCorrect: boolean }[] };
+      if (data.results) {
+        const resultMap = new Map(data.results.map(r => [r.questionId, r.isCorrect]));
+        const updatedAns = fullAns.map(a => ({ ...a, correct: resultMap.get(a.questionId) ?? false }));
+        setAnswers(updatedAns);
+        setResult({ correct: data.correct ?? 0, total, timeSecs: timeUsed });
+        // Atualiza histórico local com correct server-computed
+        setHistory(h => [{
+          id: Date.now(),
+          total,
+          correct: data.correct ?? 0,
+          timeSecs: timeUsed,
+          createdAt: new Date().toISOString(),
+        }, ...h.slice(0, 4)]);
+        return;
+      }
+    }
 
-    // Atualiza histórico local
+    // Fallback se server não retornou results (não deveria acontecer)
+    setAnswers(fullAns);
+    setResult({ correct, total, timeSecs: timeUsed });
     setHistory(h => [{
       id: Date.now(),
       total,
@@ -200,8 +220,8 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     if (selected) return;
     setSelected(key);
     const q = questions[current];
-    const isCorrect = key === q.answer;
-    setAnswers(a => [...a, { questionId: q.id, correct: isCorrect, selected: key }]);
+    // `correct` será preenchido pelo server após submissão (q.answer removido do payload)
+    setAnswers(a => [...a, { questionId: q.id, correct: false, selected: key }]);
   }
 
   function nextQuestion() {

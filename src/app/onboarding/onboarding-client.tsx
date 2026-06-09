@@ -70,8 +70,10 @@ function prevStep(current: Step, state: WizardState): Step {
   return STEPS[0];
 }
 
+export type { Modalidade };
+
 // ── Animações de geração ────────────────────────────────────────────────────────
-const GEN_STEPS_CONCURSO = [
+export const GEN_STEPS_CONCURSO = [
   { icon: "🎯", text: "Analisando seu cargo e área de concurso…" },
   { icon: "📚", text: "Selecionando as matérias mais cobradas para o seu cargo…" },
   { icon: "⚖️",  text: "Calculando peso de cada disciplina…" },
@@ -80,7 +82,7 @@ const GEN_STEPS_CONCURSO = [
   { icon: "✨", text: "Finalizando seu plano personalizado…" },
 ];
 
-const GEN_STEPS_ENEM = [
+export const GEN_STEPS_ENEM = [
   { icon: "📘", text: "Mapeando as áreas do ENEM…" },
   { icon: "📚", text: "Selecionando conteúdos mais cobrados no Exame…" },
   { icon: "⚖️",  text: "Equilibrando as cinco áreas do conhecimento…" },
@@ -89,7 +91,7 @@ const GEN_STEPS_ENEM = [
   { icon: "✨", text: "Finalizando seu plano para o ENEM…" },
 ];
 
-const GEN_STEPS_OAB = [
+export const GEN_STEPS_OAB = [
   { icon: "⚖️",  text: "Analisando as áreas do Exame de Ordem…" },
   { icon: "📚", text: "Selecionando as disciplinas mais cobradas pela FGV…" },
   { icon: "🔍", text: "Priorizando Direito Civil, Penal, Constitucional…" },
@@ -334,7 +336,7 @@ function StepNome({ nome, onChange, onNext }: {
 }
 
 // ── STEP: MODALIDADE ──────────────────────────────────────────────────────────
-function StepModalidade({ nome, modalidade, onSelect, onBack }: {
+export function StepModalidade({ nome, modalidade, onSelect, onBack }: {
   nome: string; modalidade: Modalidade | null;
   onSelect: (m: Modalidade) => void; onBack: () => void;
 }) {
@@ -375,7 +377,7 @@ function StepModalidade({ nome, modalidade, onSelect, onBack }: {
 }
 
 // ── STEP: CARGO — Cascata: Área → Órgão → Cargo ────────────────────────────────
-function StepCargo({ cargo, onSelect, onBack }: {
+export function StepCargo({ cargo, onSelect, onBack }: {
   cargo: Cargo | null;
   onSelect: (c: Cargo) => void;
   onBack: () => void;
@@ -521,7 +523,7 @@ function StepCargo({ cargo, onSelect, onBack }: {
 }
 
 // ── STEP: ESTADO ──────────────────────────────────────────────────────────────
-function StepEstado({ cargo, estado, onSelect, onBack }: {
+export function StepEstado({ cargo, estado, onSelect, onBack }: {
   cargo: Cargo | null;
   estado: string | null;
   onSelect: (est: string) => void;
@@ -628,7 +630,7 @@ function StepData({ dataProva, onChange, onNext, onBack }: {
 }
 
 // ── STEP: TEMPO ───────────────────────────────────────────────────────────────
-function StepTempo({ horasEstudo, onSelect, onBack, error }: {
+export function StepTempo({ horasEstudo, onSelect, onBack, error }: {
   horasEstudo: number | null; onSelect: (min: number) => void; onBack: () => void; error: string | null;
 }) {
   return (
@@ -671,7 +673,7 @@ function StepTempo({ horasEstudo, onSelect, onBack, error }: {
 }
 
 // ── STEP: GERANDO ─────────────────────────────────────────────────────────────
-function StepGerando({ genStep, saving, steps }: {
+export function StepGerando({ genStep, saving, steps }: {
   genStep: number; saving: boolean; steps: { icon: string; text: string }[];
 }) {
   return (

@@ -1,8 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2, Trophy, Clock } from "lucide-react";
+import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2, Trophy, Clock, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CargoWizardModal } from "@/components/cargo-wizard-modal";
 
 interface WeeklyDigestMini {
   emoji: string;
@@ -32,6 +33,10 @@ interface HojeData {
   redacaoSemana: boolean;
   casoSemana: boolean;
   flashcardsRevisadosHoje: boolean;
+  profileId?: string | null;
+  cargo?: string | null;
+  orgao?: string | null;
+  modalidade?: string | null;
 }
 
 function RingProgress({ pct, size = 80 }: { pct: number; size?: number }) {
@@ -108,6 +113,7 @@ export default function HojePage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [digest, setDigest] = useState<WeeklyDigestMini | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
 
   const now = new Date();
   const dateLabel = `${DIAS_PT[now.getDay()]}, ${now.getDate()} de ${MESES_PT[now.getMonth()]}`;
@@ -483,6 +489,16 @@ export default function HojePage() {
               : "Sem revisões vencidas — ótimo! Foco na meta de questões."}
           </p>
         </div>
+      )}
+
+      {/* Wizard de troca de cargo */}
+      {showWizard && d.profileId && (
+        <CargoWizardModal
+          profileId={d.profileId}
+          nomeUsuario={typeof window !== "undefined" ? (document.title.split("—")[0]?.trim() ?? "você") : "você"}
+          onClose={() => setShowWizard(false)}
+          onDone={() => { setShowWizard(false); load(); }}
+        />
       )}
     </div>
   );

@@ -88,13 +88,13 @@ export default async function AdminPage() {
     db.from("Agent").select("*", { count: "exact", head: true }).eq("active", true),
     db.from("Question").select("*", { count: "exact", head: true }),
     db.from("Subject").select("*", { count: "exact", head: true }),
-    db.from("Subscription").select("planId, Plan(price, name)").eq("status", "ACTIVE"),
+    db.from("Subscription").select("planId, mpPaymentId, Plan(price, name)").eq("status", "ACTIVE"),
     db.from("Progress").select("*", { count: "exact", head: true }).gte("createdAt", todayIso),
     db.from("User").select("*", { count: "exact", head: true }).eq("role", "STUDENT").gte("createdAt", weekIso),
     db.from("SimuladoHistory").select("*", { count: "exact", head: true }).gte("createdAt", monthStart),
     // Novas assinaturas nos últimos 30 dias para gráfico de receita
     db.from("Subscription")
-      .select("startDate, Plan(price)")
+      .select("startDate, mpPaymentId, Plan(price)")
       .gte("startDate", thirtyDaysAgoIso)
       .order("startDate", { ascending: true }),
     // Churned this month
@@ -112,20 +112,26 @@ export default async function AdminPage() {
     db.from("Subscription").select("*", { count: "exact", head: true }),
   ]);
 
-  // ── MRR ──────────────────────────────────────────────────────────────────
-  type SubRow = { Plan: { price?: number; name?: string } | { price?: number; name?: string }[] | null };
+  // ── MRR — exclui cortesias, isentos e trial ──────────────────────────────
+  type SubRow = { mpPaymentId?: string | null; Plan: { price?: number; name?: string } | { price?: number; name?: string }[] | null };
+  const isSubPaga = (s: SubRow) => {
+    const mp = s.mpPaymentId ?? "";
+    return !mp.startsWith("CORTESIA:") && mp !== "ISENTO" && mp !== "" && !mp.startsWith("TRIAL");
+  };
   const mrr = (assinaturas ?? []).reduce((sum: number, s: SubRow) => {
+    if (!isSubPaga(s)) return sum;
     const plan = Array.isArray(s.Plan) ? s.Plan[0] : s.Plan;
     return sum + (plan?.price ?? 0);
   }, 0);
-  const assinaturasAtivas = (assinaturas ?? []).length;
+  const assinaturasAtivas = (assinaturas ?? []).filter(isSubPaga).length;
+  const assinaturasTotal = (assinaturas ?? []).length;
   const churnCount = (churnedSubs ?? []).length;
   const conversionRate = (totalAlunos ?? 0) > 0
     ? ((assinaturasAtivas / (totalAlunos ?? 1)) * 100).toFixed(1)
     : "0.0";
 
   // ── Receita diária (30 dias) ─────────────────────────────────────────────
-  type SubRecenteRow = { startDate: string; Plan: { price?: number } | { price?: number }[] | null };
+  type SubRecenteRow = { startDate: string; mpPaymentId?: string | null; Plan: { price?: number } | { price?: number }[] | null };
   const revenueByDay: Record<string, number> = {};
   const daysLabels: string[] = [];
   for (let i = 29; i >= 0; i--) {
@@ -135,13 +141,17 @@ export default async function AdminPage() {
     daysLabels.push(key);
     revenueByDay[key] = 0;
   }
+  // Só conta receita de subs pagas (exclui cortesias/isentos)
   (subsRecentes ?? []).forEach((s: SubRecenteRow) => {
+    const mp = s.mpPaymentId ?? "";
+    if (!mp || mp.startsWith("CORTESIA:") || mp === "ISENTO" || mp.startsWith("TRIAL")) return;
     const day = (s.startDate ?? "").slice(0, 10);
     const plan = Array.isArray(s.Plan) ? s.Plan[0] : s.Plan;
     const price = plan?.price ?? 0;
     if (day in revenueByDay) revenueByDay[day] += price;
   });
   const revenueData = daysLabels.map(d => revenueByDay[d]);
+  // Novas subs (todas, inclui cortesias — representa volume de acesso)
   const newSubsData = daysLabels.map(d =>
     (subsRecentes ?? []).filter((s: SubRecenteRow) => (s.startDate ?? "").slice(0, 10) === d).length
   );
@@ -160,8 +170,8 @@ export default async function AdminPage() {
 
   const kpis = [
     { label: "Total de alunos",           value: (totalAlunos ?? 0).toLocaleString("pt-BR"), icon: Users,       color: "text-indigo-400", bg: "bg-indigo-500/10" },
-    { label: "Assinaturas ativas",         value: assinaturasAtivas.toLocaleString("pt-BR"),   icon: UserCheck,   color: "text-green-400",  bg: "bg-green-500/10" },
-    { label: "MRR",                        value: mrr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),    icon: TrendingUp,  color: "text-emerald-400", bg: "bg-emerald-500/10" },
+    { label: "Assinaturas pagas",           value: `${assinaturasAtivas} / ${assinaturasTotal}`,   icon: UserCheck,   color: "text-green-400",  bg: "bg-green-500/10" },
+    { label: "MRR (pagas)",                value: mrr.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),    icon: TrendingUp,  color: "text-emerald-400", bg: "bg-emerald-500/10" },
     { label: "Questões respondidas hoje",  value: (questoesHoje ?? 0).toLocaleString("pt-BR"), icon: Target,      color: "text-blue-400",   bg: "bg-blue-500/10" },
     { label: "Novos alunos (7 dias)",      value: (novosAlunosEstaSemana ?? 0).toLocaleString("pt-BR"), icon: Activity, color: "text-yellow-400", bg: "bg-yellow-500/10" },
     { label: "Simulados este mês",         value: (simuladosEsteMes ?? 0).toLocaleString("pt-BR"), icon: Brain,   color: "text-purple-400", bg: "bg-purple-500/10" },

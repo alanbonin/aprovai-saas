@@ -1,17 +1,18 @@
-import { getAccessLevel } from "@/lib/access";
-import { UpgradeUI } from "@/components/upgrade-ui";
-import { ArenaLobby } from "./arena-client";
+import { ComingSoonUI } from "@/components/coming-soon-ui";
 
-export default async function ArenaPage() {
-  const { hasArena } = await getAccessLevel();
-  if (!hasArena) {
-    return (
-      <UpgradeUI
-        recurso="Arena de Competição"
-        desc="Compita com outros candidatos em tempo real, suba no ranking e teste seus conhecimentos. Disponível no plano Aprovação ou superior."
-        icon="⚔️"
-      />
-    );
-  }
-  return <ArenaLobby />;
+export default function ArenaPage() {
+  return (
+    <ComingSoonUI
+      recurso="Arena de Competição"
+      icon="⚔️"
+      desc="Compita com outros candidatos em tempo real, teste seus conhecimentos e prove que está pronto para a aprovação."
+      features={[
+        "Duelos em tempo real contra outros candidatos",
+        "Salas temáticas por cargo e matéria",
+        "Sistema de pontuação e ligas",
+        "Torneios semanais com premiação",
+        "Ranking ao vivo durante as partidas",
+      ]}
+    />
+  );
 }

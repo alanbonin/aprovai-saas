@@ -10,7 +10,7 @@ const FAQS = [
     items: [
       {
         q: 'Não consigo fazer login. O que faço?',
-        a: 'Tente redefinir sua senha clicando em "Esqueci minha senha" na tela de login. Se o problema persistir, verifique se o e-mail está correto ou entre em contato conosco pelo e-mail suporte@aprovai360.com.br.',
+        a: 'Tente redefinir sua senha clicando em "Esqueci minha senha" na tela de login. Se o problema persistir, verifique se o e-mail está correto ou entre em contato conosco pelo e-mail contato@aprovai360.com.br.',
       },
       {
         q: 'Posso usar em mais de um dispositivo?',
@@ -92,16 +92,16 @@ const CHANNELS = [
     icon: '📧',
     title: 'E-mail',
     desc: 'Resposta em até 24h úteis',
-    action: 'suporte@aprovai360.com.br',
-    href: 'mailto:suporte@aprovai360.com.br',
+    action: 'contato@aprovai360.com.br',
+    href: 'mailto:contato@aprovai360.com.br',
     label: 'Enviar e-mail',
   },
   {
     icon: '💬',
     title: 'WhatsApp',
     desc: 'Atendimento de seg–sex, 9h–18h',
-    action: '+55 (xx) xxxxx-xxxx',
-    href: 'https://wa.me/55',
+    action: '+55 (71) 98343-4291',
+    href: 'https://wa.me/5571983434291',
     label: 'Abrir WhatsApp',
   },
   {

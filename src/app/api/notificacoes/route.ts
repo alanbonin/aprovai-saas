@@ -245,25 +245,66 @@ export async function PATCH(req: Request) {
   try { current = note?.content ? JSON.parse(note.content) : []; } catch { /* ok */ }
 
   if (body.all) {
-    // Busca IDs de notificações via URL absoluta (NEXT_PUBLIC_APP_URL deve estar configurada)
-    // Fallback: tenta derivar do header Host da requisição para evitar falha em produção
-    const appUrl =
-      process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ||
-      (req.headers.get("x-forwarded-proto") && req.headers.get("host")
-        ? `${req.headers.get("x-forwarded-proto")}://${req.headers.get("host")}`
-        : null);
+    // Coleta IDs diretamente do banco em vez de fazer self-request HTTP
+    const [adminNotes, simuladoNote, profileData, flashcardSets, progressCount] = await Promise.all([
+      db.from("Note").select("id, content").eq("subjectId", ADMIN_PREFIX).order("updatedAt", { ascending: false }).limit(5),
+      db.from("Note").select("id, content").eq("userId", dbUser.id).eq("subjectId", SIMULADO_NOTIF_PREFIX).single(),
+      db.from("StudentProfile").select("streak, xp").eq("userId", dbUser.id).single(),
+      db.from("FlashcardSet").select("cards").eq("userId", dbUser.id),
+      db.from("Progress").select("id", { count: "exact" }).eq("userId", dbUser.id),
+    ]);
 
-    if (appUrl) {
-      const res = await fetch(
-        `${appUrl}/api/notificacoes`,
-        { headers: { cookie: req.headers.get("cookie") ?? "" } }
-      ).catch(() => null);
-      if (res?.ok) {
-        const d = await res.json() as { notifs?: { id: string }[] };
-        const allIds = (d.notifs ?? []).map((n) => n.id);
-        current = [...new Set([...current, ...allIds])];
-      }
+    const allIds: string[] = [];
+
+    // Streak milestone IDs
+    const streak = profileData.data?.streak ?? 0;
+    for (const m of [3, 7, 14, 30, 60, 100]) {
+      if (streak >= m) allIds.push(`streak_${m}`);
     }
+
+    // XP level IDs
+    const xp = profileData.data?.xp ?? 0;
+    const XP_LEVELS = [
+      { xp: 200, name: "Estudioso" }, { xp: 600, name: "Comprometido" },
+      { xp: 1200, name: "Dedicado" }, { xp: 2500, name: "Avançado" },
+      { xp: 5000, name: "Expert" }, { xp: 9000, name: "Mestre" },
+      { xp: 15000, name: "Aprovado" },
+    ];
+    for (const lvl of XP_LEVELS) {
+      if (xp >= lvl.xp) allIds.push(`level_${lvl.name}`);
+    }
+
+    // Flashcard due IDs
+    const nowMs = Date.now();
+    let totalDue = 0;
+    for (const set of flashcardSets.data ?? []) {
+      const cards = (set.cards as { nextReview?: string }[]) ?? [];
+      totalDue += cards.filter(c => !c.nextReview || new Date(c.nextReview).getTime() <= nowMs).length;
+    }
+    for (const threshold of [5, 20, 50]) {
+      if (totalDue >= threshold) allIds.push(`flashcards_due_${threshold}`);
+    }
+
+    // Admin announcement IDs
+    for (const note of adminNotes.data ?? []) {
+      allIds.push(`admin_${note.id}`);
+    }
+
+    // Simulado notif ID
+    if (simuladoNote.data?.id) {
+      try {
+        const payload = JSON.parse(simuladoNote.data.content as string);
+        if (payload.type) allIds.push(`simulado_${simuladoNote.data.id}`);
+      } catch { /* skip */ }
+    }
+
+    // Progress milestone IDs
+    const total = (progressCount.count as number | null) ?? 0;
+    for (const milestone of [10, 50, 100, 500, 1000]) {
+      if (total >= milestone) allIds.push(`progress_${milestone}`);
+    }
+
+    current = [...new Set([...current, ...allIds])];
   } else if (body.ids?.length) {
     current = [...new Set([...current, ...body.ids])];
   }

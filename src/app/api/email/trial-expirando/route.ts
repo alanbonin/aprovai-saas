@@ -14,9 +14,14 @@ function checkAuth(req: Request): boolean {
 }
 
 // Mantida para compatibilidade, mas não é mais usada no envio principal
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function buildTrialHtml({ name, daysLeft }: { name: string; daysLeft: number }) {
   const isUrgent = daysLeft <= 1;
   const dayLabel = daysLeft === 1 ? "1 dia" : `${daysLeft} dias`;
+  const safeName = escapeHtml(name);
 
   return `<!DOCTYPE html>
 <html>
@@ -28,7 +33,7 @@ function buildTrialHtml({ name, daysLeft }: { name: string; daysLeft: number }) 
       <div style="text-align:center;margin-bottom:24px">
         <span style="font-size:36px">${isUrgent ? "⚠️" : "⏰"}</span>
         <h1 style="color:#fff;font-size:20px;font-weight:700;margin:10px 0 4px">
-          ${name}, seu trial expira em ${dayLabel}!
+          ${safeName}, seu trial expira em ${dayLabel}!
         </h1>
         <p style="color:#6b7280;font-size:13px;margin:0">
           ${isUrgent

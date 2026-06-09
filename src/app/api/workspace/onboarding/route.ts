@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { chatLimiter } from "@/lib/rate-limit";
 import { resolveCargoId } from "@/lib/cargos";
 import { getMateriasParaCargo } from "@/lib/materias-por-cargo";
 
@@ -229,6 +230,9 @@ export async function POST(req: Request) {
 
     const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).single();
     if (!dbUser) return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 });
+
+    const rl = await chatLimiter.check(dbUser.id);
+    if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
     const body = await req.json();
     const { message, history = [], maxConcursos = 1, userName = "", modalidade = "CONCURSO_PUBLICO" } = body as {

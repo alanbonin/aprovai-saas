@@ -154,7 +154,7 @@ function LockedSection({ recurso, desc, onUpgrade }: { recurso: string; desc: st
 // ── Modal de upgrade (Trial) ──────────────────────────────────────────────────
 function UpgradeModal({ recurso, onClose }: { recurso: string; onClose: () => void }) {
   const beneficios = [
-    "Questões ilimitadas (Trial: 20/dia)",
+    "Questões ilimitadas (Trial: 30/dia)",
     "Simulados com gabarito comentado",
     "Relatório avançado de desempenho",
     "Artigos e materiais completos",
@@ -610,7 +610,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               {/* ── Meta do dia ── */}
               {(() => {
                 const today = homeStats?.todayCount ?? 0;
-                const limit = 20;
+                const limit = 30;
                 const pct = Math.min(100, (today / limit) * 100);
                 const atLimit = !isPremium && today >= limit;
                 return (
@@ -948,28 +948,6 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
           {/* ───── ESTUDAR → SUBJECT VIEW ───── */}
           {activeNav === "estudar" && selectedSubject && (
             <div className="flex-1 flex flex-col overflow-hidden">
-              {/* Tabs */}
-              {(() => {
-                const tabs = [
-                  { id: "questoes" as Tab,   label: "Questões",   icon: Target },
-                  { id: "flashcards" as Tab, label: "Flashcards", icon: Layers },
-                  { id: "simulados" as Tab,  label: "Simulados",  icon: ClipboardList },
-                ];
-                return (
-                  <div className="flex border-b border-white/[0.06] bg-[#0a0d14] flex-shrink-0 overflow-x-auto bottom-tabs-scroll">
-                    {tabs.map(({ id, label, icon: Icon }) => (
-                      <button key={id} onClick={() => setActiveTab(id)}
-                        className={cn(
-                          "flex items-center gap-1.5 px-5 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap flex-shrink-0",
-                          activeTab === id ? "border-indigo-500 text-indigo-400" : "border-transparent text-gray-500 hover:text-gray-300"
-                        )}>
-                        <Icon className="w-4 h-4" />
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                );
-              })()}
               <div className="flex-1 overflow-y-auto p-5">
                 {loadingContent ? (
                   <div className="flex items-center justify-center h-full">
@@ -1350,7 +1328,7 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
   onCelebrate?: (msg: string) => void;
   isPremium?: boolean; todayCount?: number;
 }) {
-  const DAILY_LIMIT = 20;
+  const DAILY_LIMIT = 30;
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [showExpl, setShowExpl] = useState(false);
@@ -1564,8 +1542,8 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
           🎯
         </div>
         <h2 className="text-xl font-bold text-white mb-2">Limite diário atingido!</h2>
-        <p className="text-gray-400 text-sm mb-1">Você já respondeu <strong className="text-white">20 questões</strong> hoje.</p>
-        <p className="text-gray-500 text-xs mb-6">No plano Trial, o limite é de 20 questões por dia no total.</p>
+        <p className="text-gray-400 text-sm mb-1">Você já respondeu <strong className="text-white">30 questões</strong> hoje.</p>
+        <p className="text-gray-500 text-xs mb-6">No plano Trial, o limite é de 30 questões por dia no total.</p>
         <div className="w-full max-w-xs space-y-2">
           <a href="/planos"
             className="block w-full py-3.5 rounded-2xl font-bold text-sm text-center transition-all hover:scale-[1.02]"
@@ -1639,6 +1617,14 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
             title={favoritos.has(q.id) ? "Remover dos favoritos" : "Adicionar aos favoritos"}>
             ★
           </button>
+          {/* Reportar */}
+          <button
+            onClick={() => { setReportando(r => r === q.id ? null : q.id); setReportSent(false); }}
+            className={cn("p-1 rounded transition-colors text-xs", reportando === q.id ? "text-red-400" : "text-gray-700 hover:text-red-400")}
+            title="Reportar problema"
+          >
+            🚩
+          </button>
         </div>
       </div>
 
@@ -1648,6 +1634,45 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
           <Clock className="w-3 h-3" />
           <span>{fmtNextReview(q._nextReview)}</span>
           {q._interval && <span className="text-gray-700">· intervalo {q._interval}d</span>}
+        </div>
+      )}
+
+      {/* Formulário de reporte — abre ao clicar no 🚩 do header */}
+      {reportando === q.id && (
+        <div className="mb-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
+          {reportSent ? (
+            <p className="text-xs text-green-400 text-center py-1">✓ Reporte enviado! Obrigado.</p>
+          ) : (
+            <>
+              <p className="text-[11px] text-red-300 font-medium">Reportar problema nesta questão</p>
+              <select
+                value={reportMotivo}
+                onChange={e => setReportMotivo(e.target.value)}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none"
+              >
+                <option value="gabarito_errado">Gabarito errado</option>
+                <option value="enunciado_desatualizado">Enunciado desatualizado</option>
+                <option value="alternativas_incorretas">Alternativas incorretas</option>
+                <option value="questao_duplicada">Questão duplicada</option>
+                <option value="outro">Outro</option>
+              </select>
+              <textarea
+                value={reportDesc}
+                onChange={e => setReportDesc(e.target.value)}
+                placeholder="Descreva o problema (opcional)..."
+                rows={2}
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-gray-300 placeholder-gray-600 focus:outline-none resize-none"
+              />
+              <div className="flex gap-2">
+                <button onClick={() => enviarReporte(q.id)} className="flex-1 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/30 transition-colors">
+                  Enviar reporte
+                </button>
+                <button onClick={() => setReportando(null)} className="px-3 py-1.5 rounded-lg border border-white/10 text-gray-500 text-xs hover:text-white transition-colors">
+                  Cancelar
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -1695,7 +1720,34 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
       {selected && (
         <div className="space-y-3">
-          {/* Explicação — abre automaticamente, colorida por acerto/erro */}
+          {/* Botões de ação — logo após as opções, sempre visível */}
+          <div>
+            {selected !== q.answer ? (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-red-500/10 border border-red-500/20">
+                  <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
+                  <p className="text-xs text-red-400 font-medium">Adicionada ao caderno de erros para revisão</p>
+                </div>
+                <button
+                  onClick={() => { setCurrent(c => c + 1); setSelected(null); setShowExpl(false); setActiveTermo(null); setAutoAdvancing(false); }}
+                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                >
+                  Próxima questão <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-gray-600 mb-2">Como foi? (define próxima revisão)</p>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button onClick={() => handleQuality("hard")} className="py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors">Difícil</button>
+                  <button onClick={() => handleQuality("ok")} className="py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors">Boa</button>
+                  <button onClick={() => handleQuality("easy")} className="py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors">Fácil</button>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Explicação — abaixo dos botões */}
           {q.explanation && (
             <div className={cn(
               "p-3 rounded-xl border",
@@ -1725,84 +1777,6 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
                 <p className="text-xs text-amber-300/80 leading-relaxed">{q.dicaBanca}</p>
               </div>
             </div>
-          )}
-          <div>
-            {selected && selected !== q.answer ? (
-              // Resposta errada — botão Próxima para o aluno avançar quando quiser
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 py-2 px-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                  <div className="w-2 h-2 rounded-full bg-red-500 flex-shrink-0" />
-                  <p className="text-xs text-red-400 font-medium">Adicionada ao caderno de erros para revisão</p>
-                </div>
-                <button
-                  onClick={() => { setCurrent(c => c + 1); setSelected(null); setShowExpl(false); setActiveTermo(null); setAutoAdvancing(false); }}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
-                >
-                  Próxima questão <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="text-xs text-gray-600 mb-2">Como foi? (define próxima revisão)</p>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button onClick={() => handleQuality("hard")} className="py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-400 text-xs font-medium hover:bg-orange-500/30 transition-colors">Difícil</button>
-                  <button onClick={() => handleQuality("ok")} className="py-2 rounded-lg bg-blue-500/20 border border-blue-500/30 text-blue-400 text-xs font-medium hover:bg-blue-500/30 transition-colors">Boa</button>
-                  <button onClick={() => handleQuality("easy")} className="py-2 rounded-lg bg-green-500/20 border border-green-500/30 text-green-400 text-xs font-medium hover:bg-green-500/30 transition-colors">Fácil</button>
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* Botão de reporte */}
-          {reportando === q.id ? (
-            <div className="mt-3 rounded-xl border border-red-500/20 bg-red-500/5 p-3 space-y-2">
-              {reportSent ? (
-                <p className="text-xs text-green-400 text-center py-1">✓ Reporte enviado! Obrigado.</p>
-              ) : (
-                <>
-                  <p className="text-[11px] text-red-300 font-medium">Reportar problema nesta questão</p>
-                  <select
-                    value={reportMotivo}
-                    onChange={e => setReportMotivo(e.target.value)}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-gray-300 focus:outline-none"
-                  >
-                    <option value="gabarito_errado">Gabarito errado</option>
-                    <option value="enunciado_desatualizado">Enunciado desatualizado</option>
-                    <option value="alternativas_incorretas">Alternativas incorretas</option>
-                    <option value="questao_duplicada">Questão duplicada</option>
-                    <option value="outro">Outro</option>
-                  </select>
-                  <textarea
-                    value={reportDesc}
-                    onChange={e => setReportDesc(e.target.value)}
-                    placeholder="Descreva o problema (opcional)..."
-                    rows={2}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-xs text-gray-300 placeholder-gray-600 focus:outline-none resize-none"
-                  />
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => enviarReporte(q.id)}
-                      className="flex-1 py-1.5 rounded-lg bg-red-500/20 border border-red-500/30 text-red-400 text-xs font-medium hover:bg-red-500/30 transition-colors"
-                    >
-                      Enviar reporte
-                    </button>
-                    <button
-                      onClick={() => setReportando(null)}
-                      className="px-3 py-1.5 rounded-lg border border-white/10 text-gray-500 text-xs hover:text-white transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ) : (
-            <button
-              onClick={() => { setReportando(q.id); setReportSent(false); }}
-              className="mt-1 text-[10px] text-gray-700 hover:text-red-400 transition-colors flex items-center gap-1"
-            >
-              🚩 Reportar problema com esta questão
-            </button>
           )}
         </div>
       )}

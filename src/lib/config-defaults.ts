@@ -50,6 +50,20 @@ export const CONFIG_DEFAULTS = {
   "ia.max_tokens_mentor": 1024,
   "ia.max_tokens_rapido": 600,
 
+  // Políticas de cortesia
+  "cortesia.colaborador_plano": "elite",
+  "cortesia.colaborador_dias": 36500,
+  "cortesia.beta_plano": "aprovacao",
+  "cortesia.beta_dias": 180,
+  "cortesia.influencer_plano": "aprovacao",
+  "cortesia.influencer_dias": 365,
+  "cortesia.parceria_plano": "focado",
+  "cortesia.parceria_dias": 365,
+  "cortesia.cortesia_plano": "focado",
+  "cortesia.cortesia_dias": 30,
+  "cortesia.brinde_plano": "focado",
+  "cortesia.brinde_dias": 30,
+
   // Geral
   "geral.nome_plataforma": "AprovAI360",
   "geral.email_suporte": "suporte@aprovai360.com.br",

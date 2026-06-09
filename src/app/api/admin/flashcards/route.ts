@@ -45,7 +45,16 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
-  const { id, ...updates } = await req.json();
+  const body = await req.json() as Record<string, unknown>;
+  const { id } = body;
+  if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
+
+  const ALLOWED = ["name", "subjectId", "cards"];
+  const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key];
+  }
+
   const { data, error } = await db.from("FlashcardSet").update(updates).eq("id", id).select().single();
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
   return NextResponse.json(data);

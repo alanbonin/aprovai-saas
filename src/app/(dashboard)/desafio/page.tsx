@@ -165,7 +165,7 @@ export default function DesafioPage() {
       fetch("/api/questoes/progresso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: q.id, correct: false, quality: "errei" }),
+        body: JSON.stringify({ questionId: q.id, resposta: key, quality: "errei" }),
       }).catch(() => {});
       // Mostra botão Próxima imediatamente (aluno lê a explicação e avança quando quiser)
       setQuality("__auto__");
@@ -179,7 +179,7 @@ export default function DesafioPage() {
     fetch("/api/questoes/progresso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: qual }),
+      body: JSON.stringify({ questionId: q.id, resposta: selected ?? "", quality: qual }),
     }).catch(() => {});
     // Não avança automaticamente — botão "Próxima" deixa o usuário avançar no ritmo dele
   }

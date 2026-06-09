@@ -32,25 +32,16 @@ interface Props {
   search: string;
 }
 
-// ── Tabs de grupo ─────────────────────────────────────────────────────────────
-type TabKey = "todos" | "platform" | "admin" | "admins" | "corporativo" | "especiais" | "isentos" | "inativos";
-
-const TABS: { key: TabKey; label: string; icon: React.ReactNode; color: string }[] = [
-  { key: "todos",       label: "Todos",       icon: <Globe className="w-3.5 h-3.5" />,        color: "text-gray-300" },
-  { key: "platform",    label: "Plataforma",  icon: <TrendingUp className="w-3.5 h-3.5" />,   color: "text-indigo-400" },
-  { key: "admin",       label: "Direto",      icon: <Users className="w-3.5 h-3.5" />,         color: "text-blue-400" },
-  { key: "admins",      label: "Admins",      icon: <Shield className="w-3.5 h-3.5" />,        color: "text-red-400" },
-  { key: "corporativo", label: "Corporativo", icon: <Building2 className="w-3.5 h-3.5" />,     color: "text-emerald-400" },
-  { key: "especiais",   label: "Especiais",   icon: <Tag className="w-3.5 h-3.5" />,           color: "text-purple-400" },
-  { key: "isentos",     label: "Isentos",     icon: <Gift className="w-3.5 h-3.5" />,          color: "text-amber-400" },
-  { key: "inativos",    label: "Inativos",    icon: <ClipboardList className="w-3.5 h-3.5" />, color: "text-gray-500" },
-];
+// ── Filtros ────────────────────────────────────────────────────────────────────
+type StatusFilter = "todos" | "ativos" | "isentos" | "sem_plano" | "suspensos" | "admins";
+type OrigemFilter = "todos" | "platform" | "admin" | "partner";
+type GrupoFilter  = "todos" | "corporativo" | "especiais";
 
 // ── Badge origem ──────────────────────────────────────────────────────────────
 function OriginBadge({ origin }: { origin: string }) {
   if (origin === "platform") return (
     <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-      <TrendingUp className="w-2.5 h-2.5" /> Plataforma
+      <TrendingUp className="w-2.5 h-2.5" /> Auto-cadastro
     </span>
   );
   if (origin === "admin") return (
@@ -74,14 +65,14 @@ function OriginBadge({ origin }: { origin: string }) {
 function Modal({ title, onClose, children, wide }: { title: string; onClose: () => void; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className={cn("w-full bg-[#0d1117] border border-white/10 rounded-2xl shadow-2xl", wide ? "max-w-lg" : "max-w-md")}>
-        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5">
+      <div className={cn("w-full bg-[#0d1117] border border-white/10 rounded-2xl shadow-2xl flex flex-col", wide ? "max-w-lg" : "max-w-md", "max-h-[90vh]")}>
+        <div className="flex items-center justify-between px-6 py-4 border-b border-white/5 flex-shrink-0">
           <h2 className="font-semibold text-white">{title}</h2>
           <button onClick={onClose} className="text-gray-500 hover:text-white transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );
@@ -121,8 +112,14 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     router.push(`/admin/alunos${params.toString() ? "?" + params.toString() : ""}`);
   }, [router, search]);
   const [toast, setToast] = useState<{ msg: string; ok: boolean } | null>(null);
-  const [activeTab, setActiveTab] = useState<TabKey>("todos");
-  const [partnerFilter, setPartnerFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter]  = useState<StatusFilter>("todos");
+  const [origemFilter, setOrigemFilter]  = useState<OrigemFilter>("todos");
+  const [grupoFilter,  setGrupoFilter]   = useState<GrupoFilter>("todos");
+  const [planFilter,   setPlanFilter]    = useState<string>("");
+  const [isentoModal, setIsentoModal]    = useState<User | null>(null);
+  const [isentoMotivo, setIsentoMotivo]  = useState("");
+  const [isentoMeses, setIsentoMeses]    = useState(1);
+  const [suspendModal, setSuspendModal]  = useState<User | null>(null);
 
   // Seleção múltipla
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -160,52 +157,78 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     setTimeout(() => setToast(null), 3500);
   }
 
-  // ── Stats por grupo ──────────────────────────────────────────────────────────
-  const stats = useMemo(() => {
-    const total = users.length;
-    const platform = users.filter(u => u.origin === "platform").length;
-    const adminDirect = users.filter(u => u.origin === "admin").length;
-    const admins = users.filter(u => u.role === "ADMIN").length;
-    const corporativo = users.filter(u => u.groupTag?.startsWith("corp:")).length;
-    const especiais = users.filter(u => !!u.groupTag && !u.groupTag.startsWith("corp:")).length;
-    const isentos = users.filter(u => isentoMap[u.id]).length;
-    const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
-    const inativos = users.filter(u => u.role !== "ADMIN" && !subMap[u.id] && u.createdAt < sevenDaysAgo).length;
-    return { total, platform, adminDirect, admins, corporativo, especiais, isentos, inativos };
-  }, [users, isentoMap]);
+  const isSuspended = (u: User) => u.groupTag === "__suspended__";
 
-  // ── Filtro por tab ───────────────────────────────────────────────────────────
-  const tabFiltered = useMemo(() => {
-    let base = users;
-    switch (activeTab) {
-      case "platform":    base = users.filter(u => u.origin === "platform"); break;
-      case "admin":       base = users.filter(u => u.origin === "admin"); break;
-      case "admins":      base = users.filter(u => u.role === "ADMIN"); break;
-      case "corporativo": base = users.filter(u => !!u.groupTag?.startsWith("corp:")); break;
-      case "especiais":   base = users.filter(u => !!u.groupTag && !u.groupTag.startsWith("corp:")); break;
-      case "isentos":     base = users.filter(u => isentoMap[u.id]); break;
-      case "inativos": { const ago = new Date(Date.now() - 7 * 86400000).toISOString(); base = users.filter(u => u.role !== "ADMIN" && !subMap[u.id] && u.createdAt < ago); break; }
-    }
-    return base;
-  }, [users, isentoMap, activeTab]);
+  // ── Stats resumidos ───────────────────────────────────────────────────────────
+  const stats = useMemo(() => ({
+    total:      users.length,
+    ativos:     users.filter(u => !!subMap[u.id] && !isentoMap[u.id] && !isSuspended(u)).length,
+    isentos:    users.filter(u => isentoMap[u.id]).length,
+    sem_plano:  users.filter(u => !subMap[u.id] && u.role !== "ADMIN" && !isSuspended(u)).length,
+    suspensos:  users.filter(u => isSuspended(u)).length,
+    admins:     users.filter(u => u.role === "ADMIN").length,
+    corporativo:users.filter(u => !!u.groupTag?.startsWith("corp:")).length,
+    especiais:  users.filter(u => !!u.groupTag && !u.groupTag.startsWith("corp:") && u.groupTag !== "__suspended__").length,
+  }), [users, subMap, isentoMap]);
 
-  const filtered = useMemo(() =>
-    tabFiltered.filter(u =>
-      u.name.toLowerCase().includes(search.toLowerCase()) ||
-      u.email.toLowerCase().includes(search.toLowerCase())
-    ), [tabFiltered, search]);
+  // ── Filtros combinados ────────────────────────────────────────────────────────
+  const filtered = useMemo(() => {
+    return users.filter(u => {
+      // Busca textual (nome, email, tag, plano)
+      const q = search.toLowerCase();
+      const planName = subMap[u.id] ? planMap[subMap[u.id]]?.toLowerCase() ?? "" : "";
+      const matchSearch = !q ||
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        (u.groupTag ?? "").toLowerCase().includes(q) ||
+        planName.includes(q);
 
-  // Contagem da tab ativa para badge
-  const tabCount = useMemo(() => {
-    const map: Record<TabKey, number> = {
-      todos: stats.total, platform: stats.platform, admin: stats.adminDirect,
-      admins: stats.admins, corporativo: stats.corporativo,
-      especiais: stats.especiais, isentos: stats.isentos, inativos: stats.inativos,
-    };
-    return map;
-  }, [stats]);
+      // Status
+      const sevenDaysAgo = new Date(Date.now() - 7 * 86400000).toISOString();
+      const matchStatus = statusFilter === "todos" ? true
+        : statusFilter === "ativos"    ? (!!subMap[u.id] && !isentoMap[u.id] && !isSuspended(u))
+        : statusFilter === "isentos"   ? !!isentoMap[u.id]
+        : statusFilter === "sem_plano" ? (!subMap[u.id] && u.role !== "ADMIN" && u.createdAt < sevenDaysAgo && !isSuspended(u))
+        : statusFilter === "suspensos" ? isSuspended(u)
+        : statusFilter === "admins"    ? u.role === "ADMIN"
+        : true;
+
+      // Origem
+      const matchOrigem = origemFilter === "todos" ? true : u.origin === origemFilter;
+
+      // Grupo
+      const matchGrupo = grupoFilter === "todos" ? true
+        : grupoFilter === "corporativo" ? !!u.groupTag?.startsWith("corp:")
+        : grupoFilter === "especiais"   ? (!!u.groupTag && !u.groupTag.startsWith("corp:") && u.groupTag !== "__suspended__")
+        : true;
+
+      // Plano
+      const matchPlan = !planFilter ? true
+        : planFilter === "__sem_plano__" ? !subMap[u.id]
+        : subMap[u.id] === planFilter;
+
+      return matchSearch && matchStatus && matchOrigem && matchGrupo && matchPlan;
+    });
+  }, [users, search, statusFilter, origemFilter, grupoFilter, planFilter, subMap, isentoMap, planMap]);
 
   // ── Seleção múltipla ─────────────────────────────────────────────────────────
+  // ── Suspender/reativar ───────────────────────────────────────────────────────
+  async function handleSuspend(u: User, suspend: boolean) {
+    setLoading(true);
+    try {
+      const newTag = suspend ? "__suspended__" : (u.groupTag === "__suspended__" ? "" : u.groupTag ?? "");
+      const res = await fetch("/api/admin/alunos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "editUser", userId: u.id, groupTag: newTag }),
+      });
+      if (!res.ok) { showToast("Erro ao atualizar", false); return; }
+      setUsers(prev => prev.map(x => x.id === u.id ? { ...x, groupTag: newTag || null } : x));
+      setSuspendModal(null);
+      showToast(suspend ? `⚠️ ${u.name} suspenso` : `✓ ${u.name} reativado`);
+    } finally { setLoading(false); }
+  }
+
   const selectableIds = filtered.filter(u => u.role !== "ADMIN").map(u => u.id);
   const allSelected = selectableIds.length > 0 && selectableIds.every(id => selected.has(id));
   const someSelected = selectableIds.some(id => selected.has(id));
@@ -396,6 +419,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
     const currentPlanName = currentPlanId ? planMap[currentPlanId] : null;
     const isChecked = selected.has(u.id);
     const isAdmin = u.role === "ADMIN";
+    const isSuspendedUser = isSuspended(u);
     const partnerName = u.partnerId ? (partnerMap[u.partnerId] ?? null) : null;
     return (
       <tr key={u.id} className={cn("hover:bg-white/[0.02] transition-colors", isChecked && "bg-indigo-500/5")}>
@@ -466,8 +490,14 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             {/* Toggle isenção */}
             {!!subMap[u.id] && !isAdmin && (
               <button
-                onClick={() => handleToggleIsento(u.id, isentoMap[u.id] ?? false)}
-                title={isentoMap[u.id] ? "Remover isenção (cobrar)" : "Isentar (não cobrar)"}
+                onClick={() => {
+                  if (isentoMap[u.id]) {
+                    handleToggleIsento(u.id, true); // remove isenção direto
+                  } else {
+                    setIsentoModal(u); setIsentoMotivo(""); setIsentoMeses(1);
+                  }
+                }}
+                title={isentoMap[u.id] ? "Remover isenção" : "Isentar mensalidade"}
                 className={cn(
                   "p-1.5 rounded-lg text-xs transition-colors",
                   isentoMap[u.id]
@@ -485,6 +515,17 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
               {currentPlanName ? "Mudar plano" : "Atribuir plano"}
               <ChevronDown className="w-3 h-3" />
             </button>
+            {/* Suspender/Reativar */}
+            {!isAdmin && (
+              <button
+                onClick={() => isSuspendedUser ? handleSuspend(u, false) : setSuspendModal(u)}
+                title={isSuspendedUser ? "Reativar usuário" : "Suspender acesso"}
+                className={cn("p-1.5 rounded-lg transition-colors",
+                  isSuspendedUser ? "text-amber-400 hover:text-emerald-400 hover:bg-emerald-500/10" : "text-gray-600 hover:text-orange-400 hover:bg-orange-500/10"
+                )}>
+                {isSuspendedUser ? <CheckCircle2 className="w-3.5 h-3.5" /> : <ShieldAlert className="w-3.5 h-3.5" />}
+              </button>
+            )}
             {/* Excluir */}
             {!isAdmin && (
               <button onClick={() => setDeleteModal(u)}
@@ -527,67 +568,85 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
           </a>
           <button onClick={() => {
             const presets: Partial<typeof form> = { name: "", email: "", password: "", origin: "admin", partnerId: "", groupTag: "" };
-            if (activeTab === "corporativo") presets.groupTag = "corp:";
-            if (activeTab === "especiais") presets.groupTag = "influencer";
-            if (activeTab === "platform") presets.origin = "platform";
-            if (activeTab === "admin") presets.origin = "admin";
-            if (activeTab === "isentos") presets.isento = true;
+            if (grupoFilter === "corporativo") presets.groupTag = "corp:";
+            if (grupoFilter === "especiais") presets.groupTag = "influencer";
+            if (origemFilter === "platform") presets.origin = "platform";
+            if (origemFilter === "admin") presets.origin = "admin";
+            if (statusFilter === "isentos") presets.isento = true;
             setForm(f => ({ ...f, ...presets }));
             setShowCreate(true);
           }}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium transition-colors">
             <UserPlus className="w-4 h-4" />
-            {activeTab === "corporativo" ? "Criar Corp." :
-             activeTab === "especiais" ? "Criar Especial" :
-             activeTab === "isentos" ? "Criar Isento" :
+            {grupoFilter === "corporativo" ? "Criar Corp." :
+             grupoFilter === "especiais" ? "Criar Especial" :
+             statusFilter === "isentos" ? "Criar Isento" :
              "Criar Usuário"}
           </button>
         </div>
       </div>
 
-      {/* ── Cards de stats ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-4 gap-3 mb-6 lg:grid-cols-8">
-        {TABS.map(tab => {
-          const count = tabCount[tab.key];
-          const isActive = activeTab === tab.key;
-          return (
-            <button
-              key={tab.key}
-              onClick={() => { setActiveTab(tab.key); setPartnerFilter(""); }}
-              className={cn(
-                "flex flex-col items-center gap-1 p-3 rounded-xl border text-center transition-all",
-                isActive
-                  ? "bg-indigo-500/15 border-indigo-500/40 shadow-lg shadow-indigo-500/10"
-                  : "bg-black/30 border-white/8 hover:border-white/20 hover:bg-white/5"
-              )}
-            >
-              <span className={cn("transition-colors", isActive ? "text-indigo-400" : tab.color)}>
-                {tab.icon}
-              </span>
-              <span className={cn("text-lg font-bold tabular-nums", isActive ? "text-white" : "text-gray-200")}>
-                {count}
-              </span>
-              <span className={cn("text-[10px] font-medium leading-tight", isActive ? "text-indigo-300" : "text-gray-500")}>
-                {tab.label}
-              </span>
-            </button>
-          );
-        })}
+      {/* ── Stats resumidos ──────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 mb-5">
+        {([
+          { key: "todos",     label: "Todos",        count: stats.total,      color: "text-gray-300",    bg: "bg-white/5 border-white/10" },
+          { key: "ativos",    label: "Ativos (pagos)",count: stats.ativos,    color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" },
+          { key: "isentos",   label: "Isentos",      count: stats.isentos,    color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" },
+          { key: "sem_plano", label: "Sem plano",    count: stats.sem_plano,  color: "text-gray-500",    bg: "bg-white/5 border-white/10" },
+          { key: "suspensos", label: "Suspensos",    count: stats.suspensos,  color: "text-red-400",     bg: "bg-red-500/10 border-red-500/20" },
+          { key: "admins",    label: "Admins",       count: stats.admins,     color: "text-red-400",     bg: "bg-red-500/5 border-red-500/10" },
+        ] as { key: StatusFilter; label: string; count: number; color: string; bg: string }[]).map(s => (
+          <button key={s.key}
+            onClick={() => setStatusFilter(s.key)}
+            className={cn("flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs font-medium transition-all",
+              statusFilter === s.key ? "ring-2 ring-indigo-500 " + s.bg : s.bg + " hover:ring-1 hover:ring-white/20"
+            )}>
+            <span className={s.color}>{s.label}</span>
+            <span className="bg-white/10 rounded-full px-1.5 py-0.5 text-[10px] text-gray-300 font-bold">{s.count}</span>
+          </button>
+        ))}
       </div>
 
-      {/* ── Barra de busca + filtro parceiro ───────────────────────────────── */}
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <form onSubmit={handleSearchSubmit} className="relative flex-1 min-w-[200px] max-w-sm flex gap-2">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Buscar por nome ou e-mail..."
-              className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
-          </div>
-          <button type="submit" className="px-3 py-2 bg-indigo-500/20 border border-indigo-500/30 rounded-lg text-xs text-indigo-300 hover:bg-indigo-500/30 transition-colors">
-            Buscar
+      {/* ── Filtros avançados ─────────────────────────────────────────────────── */}
+      <div className="flex flex-wrap gap-2 mb-4">
+        {/* Busca */}
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Nome, e-mail, tag, plano..."
+            className="w-full pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+        </div>
+        {/* Origem */}
+        <select value={origemFilter} onChange={e => setOrigemFilter(e.target.value as OrigemFilter)}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+          <option value="todos">Todas as origens</option>
+          <option value="platform">Auto-cadastro</option>
+          <option value="admin">Direto (admin)</option>
+          <option value="partner">Parceria</option>
+        </select>
+        {/* Grupo */}
+        <select value={grupoFilter} onChange={e => setGrupoFilter(e.target.value as GrupoFilter)}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-indigo-500">
+          <option value="todos">Todos os grupos</option>
+          <option value="corporativo">Corporativo</option>
+          <option value="especiais">Especiais / Tags</option>
+        </select>
+        {/* Plano */}
+        <select value={planFilter} onChange={e => setPlanFilter(e.target.value)}
+          className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm text-gray-300 focus:outline-none focus:border-indigo-500 min-w-[150px]">
+          <option value="">Todos os planos</option>
+          <option value="__sem_plano__">Sem plano</option>
+          {plans.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+        {/* Limpar */}
+        {(search || statusFilter !== "todos" || origemFilter !== "todos" || grupoFilter !== "todos" || planFilter) && (
+          <button onClick={() => { setSearch(""); setStatusFilter("todos"); setOrigemFilter("todos"); setGrupoFilter("todos"); setPlanFilter(""); }}
+            className="flex items-center gap-1 px-3 py-2 text-xs text-gray-500 hover:text-white border border-white/10 rounded-lg transition-colors">
+            <X className="w-3.5 h-3.5" /> Limpar
           </button>
-        </form>
+        )}
+        {/* Resultado */}
+        <span className="ml-auto self-center text-xs text-gray-600">{filtered.length} usuário(s)</span>
 
         {/* Barra de seleção múltipla */}
         {someSelected && (
@@ -687,7 +746,7 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {activeTab === "corporativo" ? (
+            {grupoFilter === "corporativo" ? (
               (() => {
                 const companies: Record<string, typeof filteredUsers> = {};
                 for (const u of filteredUsers) {
@@ -757,9 +816,9 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
       {showCreate && (
         <Modal title="Criar novo usuário" onClose={() => setShowCreate(false)} wide>
           <form onSubmit={handleCreate} className="space-y-4">
-            {activeTab !== "todos" && activeTab !== "admins" && (
+            {false && (
               <div className="rounded-lg bg-indigo-500/[0.08] border border-indigo-500/20 px-3 py-2 text-xs text-indigo-300 flex items-center gap-2 mb-2">
-                <span className="font-semibold">Aba ativa: {TABS.find(t => t.key === activeTab)?.label}</span>
+                <span className="font-semibold">Aba ativa: {""}</span>
                 — os campos foram pré-preenchidos para esta categoria.
               </div>
             )}
@@ -914,21 +973,71 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
           {/* Configuração de cortesia */}
           <div className="rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20 p-3 mb-4 space-y-3">
             <p className="text-xs font-semibold text-indigo-300">⚙️ Configuração do acesso cortesia</p>
+
+            {/* Glossário dos tipos */}
+            <div className="rounded-lg bg-white/[0.03] border border-white/[0.06] p-2.5 space-y-1.5">
+              <p className="text-[10px] font-semibold text-gray-500 uppercase tracking-wide mb-2">O que significa cada tipo:</p>
+              {[
+                { emoji: "🎁", name: "Cortesia",    desc: "Acesso gratuito por decisão interna, sem contrapartida específica." },
+                { emoji: "🎀", name: "Brinde",      desc: "Dado como presente em promoção, sorteio ou ação de marketing." },
+                { emoji: "🤝", name: "Parceria",    desc: "Acesso em troca de divulgação, indicação ou acordo comercial." },
+                { emoji: "📣", name: "Influencer",  desc: "Criador de conteúdo que divulga a plataforma para seus seguidores." },
+                { emoji: "🧪", name: "Beta-tester", desc: "Usuário que testa funcionalidades novas e envia feedback." },
+                { emoji: "⭐", name: "Colaborador", desc: "Membro da equipe, sócio, investidor ou contribuidor do projeto." },
+              ].map(t => (
+                <div key={t.name} className="flex items-start gap-2">
+                  <span className="text-xs flex-shrink-0">{t.emoji}</span>
+                  <div>
+                    <span className="text-[11px] font-medium text-gray-300">{t.name}</span>
+                    <span className="text-[11px] text-gray-600"> — {t.desc}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] text-gray-500 mb-1">Tipo / Motivo</label>
-                <select value={cortesiaTipo} onChange={e => setCortesiaTipo(e.target.value)}
+                <select value={cortesiaTipo} onChange={e => {
+                  const tipo = e.target.value;
+                  setCortesiaTipo(tipo);
+                  // Busca política configurada no sistema
+                  fetch(`/api/admin/system-config?keys=cortesia.${tipo}_dias`)
+                    .then(r => r.ok ? r.json() : null)
+                    .then(d => {
+                      const dias = d?.[`cortesia.${tipo}_dias`];
+                      if (dias) setCortesiaDias(Number(dias));
+                    })
+                    .catch(() => {});
+                  // Fallback hardcoded enquanto busca
+                  const fallback: Record<string, number> = {
+                    colaborador: 36500, beta: 180, influencer: 365,
+                    parceria: 365, cortesia: 30, brinde: 30,
+                  };
+                  if (fallback[tipo]) setCortesiaDias(fallback[tipo]);
+                }}
                   className="w-full px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-indigo-500">
-                  <option value="cortesia">🎁 Cortesia</option>
-                  <option value="brinde">🎀 Brinde</option>
-                  <option value="parceria">🤝 Parceria</option>
-                  <option value="influencer">📣 Influencer</option>
-                  <option value="beta">🧪 Beta-tester</option>
-                  <option value="colaborador">⭐ Colaborador</option>
+                  <option value="cortesia">🎁 Cortesia — Focado, 30 dias</option>
+                  <option value="brinde">🎀 Brinde — Focado, 30 dias</option>
+                  <option value="parceria">🤝 Parceria — Focado, 1 ano</option>
+                  <option value="influencer">📣 Influencer — Aprovação, 1 ano</option>
+                  <option value="beta">🧪 Beta-tester — Aprovação, 6 meses</option>
+                  <option value="colaborador">⭐ Colaborador — Elite, permanente</option>
                 </select>
               </div>
               <div>
-                <label className="block text-[10px] text-gray-500 mb-1">Duração</label>
+                <label className="block text-[10px] text-gray-500 mb-1">
+                  Duração
+                  {(() => {
+                    const politicaPlano: Record<string, string> = {
+                      colaborador: "elite", beta: "aprovacao", influencer: "aprovacao",
+                      parceria: "focado", cortesia: "focado", brinde: "focado",
+                    };
+                    const slug = politicaPlano[cortesiaTipo];
+                    const pname = plans.find(p => p.slug === slug)?.name;
+                    return pname ? <span className="text-indigo-400 ml-1">→ sugerido: {pname}</span> : null;
+                  })()}
+                </label>
                 <select value={cortesiaDias} onChange={e => setCortesiaDias(Number(e.target.value))}
                   className="w-full px-2 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-gray-200 focus:outline-none focus:border-indigo-500">
                   <option value={30}>30 dias</option>
@@ -990,6 +1099,27 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
         </Modal>
       )}
 
+      {/* ── Modal: Suspender usuário ────────────────────────────────────────── */}
+      {suspendModal && (
+        <Modal title={`Suspender — ${suspendModal.name}`} onClose={() => setSuspendModal(null)}>
+          <div className="rounded-xl bg-orange-500/[0.06] border border-orange-500/20 p-3 mb-4">
+            <p className="text-xs text-orange-300 font-medium mb-1">⚠️ O que significa suspender?</p>
+            <p className="text-xs text-gray-500">O usuário perde acesso imediatamente mas seus dados são mantidos. Você pode reativar a qualquer momento clicando no ícone verde.</p>
+          </div>
+          <p className="text-sm text-gray-300 mb-1">Suspender acesso de:</p>
+          <p className="font-semibold text-white mb-0.5">{suspendModal.name}</p>
+          <p className="text-xs text-gray-500 mb-5">{suspendModal.email}</p>
+          <div className="flex gap-3">
+            <button onClick={() => setSuspendModal(null)}
+              className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors">Cancelar</button>
+            <button onClick={() => handleSuspend(suspendModal, true)} disabled={loading}
+              className="flex-1 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 disabled:opacity-50 text-sm font-medium text-white transition-colors">
+              {loading ? "Suspendendo..." : "Confirmar suspensão"}
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {/* ── Modal: Confirmar exclusão em lote ──────────────────────────────── */}
       {bulkDeleteConfirm && (
         <Modal title="Excluir em lote" onClose={() => setBulkDeleteConfirm(false)}>
@@ -1011,6 +1141,66 @@ export function AlunosClient({ users: initialUsers, plans, partners, planMap, su
               className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 disabled:opacity-50 text-sm font-medium transition-colors flex items-center justify-center gap-2">
               {loading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Removendo...</> : `Remover ${selected.size} usuário(s)`}
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal: Isentar mensalidade ─────────────────────────────────────── */}
+      {isentoModal && (
+        <Modal title={`Isentar — ${isentoModal.name}`} onClose={() => setIsentoModal(null)}>
+          <p className="text-xs text-gray-500 mb-4">{isentoModal.email}</p>
+          <div className="space-y-4">
+            <div className="rounded-xl bg-amber-500/[0.06] border border-amber-500/20 p-3">
+              <p className="text-xs text-amber-300 font-medium mb-1">⚠️ O que significa isentar?</p>
+              <p className="text-xs text-gray-500">O aluno mantém o acesso mas a mensalidade não será cobrada. O plano e duração já foram configurados para cada categoria em Configurações.</p>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-400 mb-2 font-medium">Motivo da isenção <span className="text-red-400">*</span></label>
+              <div className="space-y-2">
+                {[
+                  { value: "dificuldade_financeira", emoji: "💰", label: "Dificuldade financeira" },
+                  { value: "colaborador",            emoji: "⭐", label: "Colaborador interno" },
+                  { value: "influencer",             emoji: "📣", label: "Influencer / divulgação" },
+                  { value: "parceria",               emoji: "🤝", label: "Parceria comercial" },
+                  { value: "beta_tester",            emoji: "🧪", label: "Beta-tester / feedback" },
+                  { value: "cortesia",               emoji: "🎁", label: "Cortesia / brinde" },
+                  { value: "problemas_tecnicos",     emoji: "🔧", label: "Compensação por problemas" },
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setIsentoMotivo(opt.value)}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl border text-left transition-all text-sm",
+                      isentoMotivo === opt.value
+                        ? "border-amber-500/50 bg-amber-500/10 text-amber-300"
+                        : "border-white/10 bg-white/[0.02] text-gray-400 hover:border-white/20 hover:text-white"
+                    )}
+                  >
+                    <span className="text-lg">{opt.emoji}</span>
+                    {opt.label}
+                    {isentoMotivo === opt.value && <Check className="w-4 h-4 ml-auto text-amber-400" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button onClick={() => setIsentoModal(null)}
+                className="flex-1 py-2.5 rounded-xl border border-white/10 text-gray-400 hover:text-white text-sm transition-colors">
+                Cancelar
+              </button>
+              <button
+                onClick={async () => {
+                  if (!isentoMotivo) { showToast("Selecione o motivo", false); return; }
+                  await handleToggleIsento(isentoModal.id, false);
+                  setIsentoModal(null);
+                  showToast(`✓ ${isentoModal.name} isentado`);
+                }}
+                disabled={loading || !isentoMotivo}
+                className="flex-1 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-sm font-medium text-white transition-colors"
+              >
+                {loading ? "Salvando..." : "Confirmar isenção"}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

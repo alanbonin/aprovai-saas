@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { defaultAiLimiter } from "@/lib/rate-limit";
 
 const NOTE_PREFIX = "__ARTIGOS_COBRADOS__";
 const MAX_HISTORY = 10; // máximo de gerações salvas por matéria por aluno
@@ -79,6 +80,9 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const rl = await defaultAiLimiter.check(dbUser.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const { subjectId, subjectName } = await req.json() as { subjectId?: string; subjectName?: string };
   if (!subjectId || !subjectName) {
     return NextResponse.json({ error: "subjectId e subjectName são obrigatórios" }, { status: 400 });
@@ -91,11 +95,18 @@ export async function POST(req: Request) {
     .eq("userId", dbUser.id)
     .maybeSingle();
 
+  const sanitize = (s: string, max = 150) =>
+    s.replace(/[\x00-\x1F\x7F-\x9F]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+
+  // Verifica se a matéria existe no banco e usa o nome verificado
+  const { data: subjectRecord } = await db.from("Subject").select("name").eq("id", subjectId).maybeSingle();
+  const safeSubjectName = subjectRecord ? sanitize(subjectRecord.name, 100) : sanitize(subjectName, 100);
+
   const perfilLine = profile?.cargo
-    ? `\nCargo alvo: ${profile.cargo} | Órgão: ${profile.orgao ?? "N/A"}`
+    ? `\nCargo alvo: ${sanitize(profile.cargo, 80)} | Órgão: ${sanitize(profile.orgao ?? "N/A", 80)}`
     : "";
 
-  const prompt = `Liste os 10 artigos, leis, súmulas e tópicos MAIS COBRADOS em provas de concursos públicos brasileiros para a matéria: ${subjectName}${perfilLine}
+  const prompt = `Liste os 10 artigos, leis, súmulas e tópicos MAIS COBRADOS em provas de concursos públicos brasileiros para a matéria: ${safeSubjectName}${perfilLine}
 
 Para cada item, forneça TODOS estes campos:
 - referencia: identificação precisa (ex: "Art. 37, caput, CF/88", "Súmula 473 STF", "Art. 121 CP")

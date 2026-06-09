@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
+import { log } from "@/lib/logger";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -134,7 +135,8 @@ Retorne APENAS JSON: {"editais": [...]}`;
       const result = extractJSON<{ editais: EditalExtraido[] }>(raw);
       importados.push(...(result.editais ?? []));
     } catch (err) {
-      erros.push(`Erro processando "${termo}": ${String(err)}`);
+      log.error("admin.editais_import_error", { termo }, err);
+      erros.push(`Erro ao processar "${termo}". Verifique os logs.`);
     }
   }
 

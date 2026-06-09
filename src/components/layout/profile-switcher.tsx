@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Plus, Briefcase, Check, Trash2, Pencil, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CargoWizardModal } from "@/components/cargo-wizard-modal";
 
 interface Profile {
   id: string;
@@ -9,6 +11,7 @@ interface Profile {
   cargo: string | null;
   orgao: string | null;
   isDefault: boolean;
+  modalidade?: string | null;
 }
 
 interface ProfilesData {
@@ -19,7 +22,13 @@ interface ProfilesData {
 }
 
 function profileDisplayName(p: Profile): string {
-  return p.label?.trim() || [p.cargo, p.orgao].filter(Boolean).join(" · ") || "Perfil";
+  if (p.label?.trim()) return p.label.trim();
+  const cargoOrgao = [p.cargo, p.orgao].filter(Boolean).join(" · ");
+  if (cargoOrgao) return cargoOrgao;
+  if (p.modalidade === "ENEM") return "ENEM";
+  if (p.modalidade === "OAB") return "OAB";
+  if (p.modalidade) return p.modalidade;
+  return "Perfil";
 }
 
 function profileIcon(p: Profile): string {
@@ -33,16 +42,19 @@ function profileIcon(p: Profile): string {
   return "🎯";
 }
 
-export function ProfileSwitcher() {
+export function ProfileSwitcher({ compact = false }: { compact?: boolean }) {
   const [data, setData] = useState<ProfilesData | null>(null);
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [showEdit, setShowEdit] = useState<Profile | null>(null);
+  const [wizardProfileId, setWizardProfileId] = useState<string | null>(null);
   const [form, setForm] = useState({ label: "", cargo: "", orgao: "", banca: "", dataProva: "" });
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [dropPos, setDropPos] = useState<{ top?: number; bottom?: number; left: number; width: number } | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(() => {
     fetch("/api/perfil/profiles")
@@ -128,14 +140,9 @@ export function ProfileSwitcher() {
   }
 
   function openEdit(p: Profile) {
-    setShowEdit(p);
-    setForm({
-      label: p.label ?? "",
-      cargo: p.cargo ?? "",
-      orgao: p.orgao ?? "",
-      banca: "",
-      dataProva: "",
-    });
+    // Abre o wizard completo de onboarding para editar o perfil
+    setOpen(false);
+    setWizardProfileId(p.id);
     setFormError(null);
     setOpen(false);
   }
@@ -152,15 +159,84 @@ export function ProfileSwitcher() {
 
   if (!data || data.profiles.length === 0) return null;
 
-  // Se tem apenas 1 perfil e não pode criar mais, não exibe o switcher
-  if (data.profiles.length === 1 && !data.canCreate) return null;
+  // Conteúdo do dropdown (reutilizado em portal e inline)
+  const dropdownContent = (
+    <>
+      <div className="p-1">
+        {data.profiles.map(p => {
+          const isActive = p.id === data.activeProfileId;
+          return (
+            <div
+              key={p.id}
+              className={cn(
+                "group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors",
+                isActive ? "bg-indigo-600/15 text-indigo-300" : "text-gray-400 hover:bg-white/[0.05] hover:text-gray-200"
+              )}
+              onClick={() => switchProfile(p.id)}
+            >
+              <span className="text-base flex-shrink-0">{profileIcon(p)}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-medium truncate">{profileDisplayName(p)}</p>
+                {p.orgao && <p className="text-[9px] text-gray-600 truncate">{p.orgao}</p>}
+              </div>
+              {isActive && (
+                <div className="flex items-center gap-1">
+                  <Check className="w-3 h-3 flex-shrink-0 text-indigo-400" />
+                  <button className="p-0.5 rounded hover:text-indigo-300 transition-colors opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); openEdit(p); }}>
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
+              {!isActive && (
+                <div className="hidden group-hover:flex gap-1">
+                  <button className="p-0.5 rounded hover:text-indigo-300 transition-colors" onClick={e => { e.stopPropagation(); openEdit(p); }}>
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  {!p.isDefault && (
+                    <button className="p-0.5 rounded hover:text-red-400 transition-colors" onClick={e => { e.stopPropagation(); void deleteProfile(p.id); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="h-px bg-white/[0.06] mx-2" />
+      {data.canCreate ? (
+        <div className="p-2">
+          <button onClick={openCreate} className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-colors text-[11px] font-semibold">
+            <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+            <span>+ Adicionar novo concurso</span>
+          </button>
+        </div>
+      ) : (
+        <p className="text-[10px] text-gray-600 text-center py-2 px-3">
+          Limite de {data.maxProfiles} perfil(is) atingido.{" "}
+          <a href="/planos" className="text-indigo-400 hover:underline">Fazer upgrade</a>
+        </p>
+      )}
+    </>
+  );
 
   return (
     <>
       <div ref={dropRef} className="relative px-2 pb-2">
         {/* Trigger */}
         <button
-          onClick={() => setOpen(o => !o)}
+          ref={triggerRef}
+          onClick={() => {
+            if (!open && compact && triggerRef.current) {
+              const rect = triggerRef.current.getBoundingClientRect();
+              setDropPos({
+                bottom: window.innerHeight - rect.top + 6,
+                left: rect.left,
+                width: rect.width,
+              });
+            }
+            setOpen(o => !o);
+          }}
           className={cn(
             "w-full flex items-center gap-2 px-3 py-2 rounded-xl border text-left transition-all",
             open
@@ -184,87 +260,23 @@ export function ProfileSwitcher() {
           )}
         </button>
 
-        {/* Dropdown */}
-        {open && (
-          <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-xl border border-white/[0.08] bg-[#0f111a] shadow-2xl overflow-hidden">
-            {/* Lista de perfis */}
-            <div className="p-1">
-              {data.profiles.map(p => {
-                const isActive = p.id === data.activeProfileId;
-                return (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      "group flex items-center gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition-colors",
-                      isActive ? "bg-indigo-600/15 text-indigo-300" : "text-gray-400 hover:bg-white/[0.05] hover:text-gray-200"
-                    )}
-                    onClick={() => switchProfile(p.id)}
-                  >
-                    <span className="text-base flex-shrink-0">{profileIcon(p)}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-[11px] font-medium truncate">{profileDisplayName(p)}</p>
-                      {p.orgao && <p className="text-[9px] text-gray-600 truncate">{p.orgao}</p>}
-                    </div>
-                    {isActive && <Check className="w-3 h-3 flex-shrink-0 text-indigo-400" />}
-                    {!isActive && !p.isDefault && (
-                      <div className="hidden group-hover:flex gap-1">
-                        <button
-                          className="p-0.5 rounded hover:text-indigo-300 transition-colors"
-                          onClick={e => { e.stopPropagation(); openEdit(p); }}
-                          title="Editar"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                        <button
-                          className="p-0.5 rounded hover:text-red-400 transition-colors"
-                          onClick={e => { e.stopPropagation(); void deleteProfile(p.id); }}
-                          title="Excluir"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                    )}
-                    {!isActive && p.isDefault && (
-                      <button
-                        className="hidden group-hover:block p-0.5 rounded hover:text-indigo-300 transition-colors"
-                        onClick={e => { e.stopPropagation(); openEdit(p); }}
-                        title="Editar"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Botão Novo Perfil */}
-            {data.canCreate && (
-              <>
-                <div className="h-px bg-white/[0.06] mx-2" />
-                <div className="p-2">
-                  <button
-                    onClick={openCreate}
-                    className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-indigo-600/20 border border-indigo-500/30 text-indigo-300 hover:bg-indigo-600/30 transition-colors text-[11px] font-semibold"
-                  >
-                    <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span>+ Adicionar novo concurso</span>
-                  </button>
-                </div>
-              </>
-            )}
-
-            {!data.canCreate && (
-              <>
-                <div className="h-px bg-white/[0.06] mx-2" />
-                <p className="text-[10px] text-gray-600 text-center py-2 px-3">
-                  Limite de {data.maxProfiles} perfil(is) atingido.{" "}
-                  <a href="/planos" className="text-indigo-400 hover:underline">Fazer upgrade</a>
-                </p>
-              </>
-            )}
-          </div>
-        )}
+        {/* Dropdown — portal no mobile (compact) para escapar do overflow:hidden do sheet */}
+        {open && compact && dropPos
+          ? createPortal(
+              <div
+                className="fixed z-[9999] rounded-xl border border-white/[0.08] bg-[#0f111a] shadow-2xl overflow-hidden"
+                style={{ bottom: dropPos.bottom, left: dropPos.left, width: dropPos.width }}
+              >
+                {dropdownContent}
+              </div>,
+              document.body
+            )
+          : open && !compact && (
+              <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-xl border border-white/[0.08] bg-[#0f111a] shadow-2xl overflow-hidden">
+                {dropdownContent}
+              </div>
+            )
+        }
       </div>
 
       {/* Modal criar / editar perfil */}
@@ -368,6 +380,15 @@ export function ProfileSwitcher() {
             </div>
           </div>
         </div>
+      )}
+      {/* Wizard completo de edição de cargo */}
+      {wizardProfileId && (
+        <CargoWizardModal
+          profileId={wizardProfileId}
+          nomeUsuario="você"
+          onClose={() => setWizardProfileId(null)}
+          onDone={() => { setWizardProfileId(null); load(); window.location.reload(); }}
+        />
       )}
     </>
   );

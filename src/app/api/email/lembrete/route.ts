@@ -56,6 +56,10 @@ async function sendPushToUser(userId: string, payload: object): Promise<number> 
 const FROM_EMAIL = process.env.EMAIL_FROM ?? "Aprovai <noreply@aprovai.com.br>";
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.com.br";
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function buildLembreteHtml({
   name, flashcardsDue, daysToProva, cargo, streakRisk,
 }: {
@@ -81,7 +85,7 @@ function buildLembreteHtml({
     <div style="background:#0f1523;border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:32px">
       <div style="text-align:center;margin-bottom:24px">
         <span style="font-size:32px">🎓</span>
-        <h1 style="color:#fff;font-size:20px;font-weight:700;margin:8px 0 4px">Hora de estudar, ${name}!</h1>
+        <h1 style="color:#fff;font-size:20px;font-weight:700;margin:8px 0 4px">Hora de estudar, ${escapeHtml(name)}!</h1>
         <p style="color:#6b7280;font-size:13px;margin:0">Seu lembrete diário do Aprovai</p>
       </div>
 

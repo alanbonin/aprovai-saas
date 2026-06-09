@@ -1256,12 +1256,15 @@ function Pricing() {
             <div ref={tiltTrial} className="price-card">
               <div className="tier">Trial Gratuito</div>
               <div className="price">R$ 0<small>/7 dias</small></div>
-              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Sem cartão. Explore tudo por 7 dias.</p>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>7 dias grátis, sem cartão</p>
               <ul>
-                <li>7 dias grátis, sem cartão</li>
+                <li>1 mentor IA especializado</li>
+                <li>10 mensagens com mentor/semana</li>
                 <li>200 questões por semana</li>
                 <li>200 flashcards por semana</li>
-                <li>1 mentor IA — 10 msgs/semana</li>
+                <li>Até 2 redações/semana</li>
+                <li>Até 2 casos práticos/semana</li>
+                <li>Relatório básico de desempenho</li>
               </ul>
               <Link href="/cadastro" className="lc-btn lc-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>Começar grátis</Link>
             </div>
@@ -1272,14 +1275,18 @@ function Pricing() {
               <div className="tier">Focado</div>
               <div className="price"><sup>R$</sup>{anual ? planos.focado.anual : planos.focado.mensal}<small>/mês</small></div>
               {anual && <p style={{ fontSize: 12, color: '#34d399', margin: '-4px 0 4px' }}>R$ {planos.focado.anual * 12} cobrado anualmente</p>}
-              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>1 concurso, foco total.</p>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>1 concurso em foco total</p>
               <ul>
                 <li>1 concurso-alvo principal</li>
-                <li>1 mentor IA especializado</li>
+                <li>1 mentor IA de área especializado</li>
                 <li>80 mensagens com mentor/semana</li>
                 <li>Questões ilimitadas por matéria</li>
-                <li>Flashcards com repetição espaçada</li>
-                <li>Simulados no estilo da banca</li>
+                <li>Flashcards ilimitados com repetição espaçada (SM-2)</li>
+                <li>Até 7 simulados/semana</li>
+                <li>Redação oficial com correção por IA (7/sem)</li>
+                <li>Estudo de casos práticos (7/sem)</li>
+                <li>Cronograma adaptativo semanal</li>
+                <li>Memória de longo prazo do mentor</li>
               </ul>
               <Link href="/cadastro" className="lc-btn lc-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>Assinar Focado</Link>
             </div>
@@ -1291,15 +1298,21 @@ function Pricing() {
               <div className="tier">Aprovação</div>
               <div className="price"><sup>R$</sup>{anual ? planos.aprovacao.anual : planos.aprovacao.mensal}<small>/mês</small></div>
               {anual && <p style={{ fontSize: 12, color: '#34d399', margin: '-4px 0 4px' }}>R$ {planos.aprovacao.anual * 12} cobrado anualmente</p>}
-              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Dois concursos simultâneos.</p>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Até 2 concursos simultâneos</p>
               <ul>
                 <li>Até 2 concursos simultâneos</li>
-                <li>Mentor de área + Mentor de banca</li>
+                <li>Mentor de área + Mentor de banca (2 IAs)</li>
                 <li>300 mensagens com mentor/semana</li>
-                <li>Questões ilimitadas</li>
-                <li>Correção de redação por IA · 30s</li>
-                <li>Simulados no estilo da banca</li>
+                <li>Questões ilimitadas por matéria</li>
+                <li>Flashcards ilimitados com repetição espaçada avançada</li>
+                <li>Até 21 simulados/semana no estilo da banca</li>
+                <li>Redação e casos práticos (21/sem cada)</li>
+                <li>Biblioteca de PDFs + chat com documentos</li>
+                <li>Arena de competição entre estudantes</li>
+                <li>Modo Adaptativo por IA</li>
                 <li>Cronograma adaptativo semanal</li>
+                <li>Relatório completo + gráficos de evolução</li>
+                <li>Memória de longo prazo do mentor</li>
               </ul>
               <Link href="/cadastro" className="lc-btn lc-btn-primary" style={{ width: '100%', justifyContent: 'center' }}>Assinar Aprovação</Link>
             </div>
@@ -1310,13 +1323,19 @@ function Pricing() {
               <div className="tier">Elite</div>
               <div className="price"><sup>R$</sup>{anual ? planos.elite.anual : planos.elite.mensal}<small>/mês</small></div>
               {anual && <p style={{ fontSize: 12, color: '#34d399', margin: '-4px 0 4px' }}>R$ {planos.elite.anual * 12} cobrado anualmente</p>}
-              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Concursos ilimitados. Sem limites.</p>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Sem limites, máxima performance</p>
               <ul>
-                <li>Concursos ilimitados</li>
-                <li>Até 5 mentores IA simultâneos</li>
-                <li>Mensagens ilimitadas</li>
+                <li>Até 3 concursos simultâneos</li>
+                <li>Até 3 mentores IA simultâneos</li>
+                <li>Mensagens ilimitadas com mentor</li>
+                <li>Questões, flashcards e simulados ilimitados</li>
+                <li>Redação e casos práticos ilimitados</li>
                 <li>Biblioteca de PDFs + chat com documentos</li>
+                <li>Arena de competição entre estudantes</li>
+                <li>Modo Adaptativo avançado por IA</li>
+                <li>Cronograma adaptativo com IA avançada</li>
                 <li>Memória de longo prazo do mentor</li>
+                <li>Grupos de estudo ilimitados</li>
                 <li>Suporte prioritário</li>
               </ul>
               <Link href="/cadastro" className="lc-btn lc-btn-ghost" style={{ width: '100%', justifyContent: 'center' }}>Assinar Elite</Link>

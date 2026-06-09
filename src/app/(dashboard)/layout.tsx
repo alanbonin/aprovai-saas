@@ -4,6 +4,8 @@ import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
 import { PomodoroFloat } from "@/components/layout/pomodoro-float";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
+import { PushAutoPrompt } from "@/components/layout/push-auto-prompt";
+import { SessionGuard } from "@/components/layout/session-guard";
 import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 import { getConfig } from "@/lib/system-config";
 import { getWeekStartStr } from "@/lib/api-utils";
@@ -63,9 +65,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Busca nome do plano
   const planName = sub?.plan?.name ?? "Gratuito";
 
-  // Verifica se é premium (plano pago e não expirado)
+  // Verifica se é premium (plano pago OU cortesia/isento, não expirado, não trial)
   const isExpiredSub = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
-  const isPremium = !isExpiredSub && !!(sub && (sub.plan?.price ?? 0) > 0);
+  const isTrial = (sub as { status?: string } | null)?.status === "TRIAL";
+  const mpId = (sub as { mpPaymentId?: string } | null)?.mpPaymentId ?? "";
+  const isCortesiaOrIsento = mpId.startsWith("CORTESIA:") || mpId === "ISENTO";
+  const isPremium = !isExpiredSub && !isTrial && !!(sub && ((sub.plan?.price ?? 0) > 0 || isCortesiaOrIsento));
 
   // Calcula dias restantes do trial
   let trialDaysLeft: number | null = null;
@@ -108,11 +113,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       )}
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
-      <main className="flex-1 min-w-0 overflow-auto pb-4" style={{ backgroundColor: "var(--bg-base)" }}>
+      <main className="flex-1 min-w-0 overflow-auto pb-4 lg:pb-4 pb-24" style={{ backgroundColor: "var(--bg-base)" }}>
         {children}
       </main>
       <AutoRefresh />
       <PomodoroFloat />
+      <PushAutoPrompt />
+      <SessionGuard />
       </div>
     </div>
     </UpgradeModalProvider>

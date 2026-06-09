@@ -25,6 +25,10 @@ function levelLabel(level: string): string {
   return level === "facil" ? "🟢 Fácil" : level === "medio" ? "🟡 Médio" : "🔴 Difícil";
 }
 
+function escapeHtml(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
 function buildHtml({
   name,
   question,
@@ -48,7 +52,7 @@ function buildHtml({
 
   <!-- Header -->
   <div style="background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:16px;padding:24px;margin-bottom:20px;">
-    <p style="color:#94a3b8;font-size:14px;margin:0 0 6px;">Olá, <strong style="color:#e8eaf0;">${name.split(" ")[0]}</strong>!</p>
+    <p style="color:#94a3b8;font-size:14px;margin:0 0 6px;">Olá, <strong style="color:#e8eaf0;">${escapeHtml(name.split(" ")[0])}</strong>!</p>
     <p style="color:#cbd5e1;font-size:13px;margin:0;line-height:1.6;">
       Chegou a sua <strong style="color:#818cf8;">Questão do Dia</strong>. Teste seus conhecimentos e mantenha o ritmo de estudos!
     </p>

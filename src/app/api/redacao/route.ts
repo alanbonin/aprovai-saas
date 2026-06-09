@@ -179,14 +179,19 @@ Retorne APENAS JSON válido:
     if (fotoBase64.length > MAX_IMAGE_B64) {
       return NextResponse.json({ error: "Imagem muito grande (máx. 5 MB)" }, { status: 400 });
     }
-    if (fotoType && !ALLOWED_IMG_TYPES.includes(fotoType)) {
-      return NextResponse.json({ error: "Formato de imagem inválido" }, { status: 400 });
+    if (!fotoType || !ALLOWED_IMG_TYPES.includes(fotoType)) {
+      return NextResponse.json({ error: "Formato de imagem inválido ou não informado" }, { status: 400 });
     }
   }
 
   const profile = await getProfile(user.id);
-  const cargo = profile?.cargo ?? "";
-  const cargoLine = cargo ? `\nCargo do candidato: ${cargo}` : "";
+  const cargoRaw = profile?.cargo ?? "";
+  const cargoSanitized = cargoRaw
+    .replace(/[\x00-\x1F\x7F-\x9F]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 100);
+  const cargoLine = cargoSanitized ? `\nCargo do candidato: ${cargoSanitized}` : "";
 
   // Critérios adaptados ao tipo de redação
   const tiposDissertativo = ["dissertacao", "argumentacao", "redacao-discursiva", "texto-argumentativo", "dissertativa"];

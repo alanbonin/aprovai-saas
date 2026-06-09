@@ -187,7 +187,7 @@ export function QuestoesInner() {
       fetch("/api/questoes/progresso", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ questionId: q!.id, correct: false, quality: "errei" }),
+        body: JSON.stringify({ questionId: q!.id, resposta: selected ?? "", quality: "errei" }),
       }).catch(() => {});
       // Mostra botão Próxima imediatamente (aluno lê a explicação e avança quando quiser)
       setQuality("__auto__");
@@ -196,12 +196,11 @@ export function QuestoesInner() {
 
   async function handleQuality(q_id: string) {
     setQuality(q_id);
-    // Save progress with SM-2 quality
-    const isCorrect = selected === q.answer;
+    // Save progress with SM-2 quality — gabarito verificado server-side via `resposta`
     await fetch("/api/questoes/progresso", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: q.id, correct: isCorrect, quality: q_id }),
+      body: JSON.stringify({ questionId: q.id, resposta: selected ?? "", quality: q_id }),
     }).catch(() => {});
     // Auto-advance after short delay
     setTimeout(next, 300);

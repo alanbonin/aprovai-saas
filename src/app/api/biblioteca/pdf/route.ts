@@ -35,6 +35,22 @@ export async function GET(req: NextRequest) {
     return new NextResponse("Seu plano não inclui este documento", { status: 403 });
   }
 
+  // Verifica limite semanal de PDFs
+  const { getAccessLevel } = await import("@/lib/access");
+  const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+  const access = await getAccessLevel().catch(() => null);
+  const pdfLimit = access?.maxPdfPerWeek ?? -1;
+  if (pdfLimit === 0) {
+    return new NextResponse("PDFs não disponíveis no seu plano.", { status: 403 });
+  }
+  if (pdfLimit > 0 && pdfLimit < 9999) {
+    const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "pdf").catch(() => 0);
+    if (usedThisWeek >= pdfLimit) {
+      return new NextResponse("Limite semanal de PDFs atingido. Faça upgrade para continuar.", { status: 403 });
+    }
+    void incrementWeeklyResourceUsage(dbUser.id, "pdf").catch(() => {});
+  }
+
   // Baixa o arquivo via service role e faz proxy
   const storageClient = createServiceClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

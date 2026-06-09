@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS, extractJSON } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { questoesGerarLimiter } from "@/lib/rate-limit";
 
 
 async function requireAdmin() {
@@ -16,6 +17,9 @@ async function requireAdmin() {
 export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const rl = await questoesGerarLimiter.check(`admin-flashcards:${admin.id}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const { subjectId, subjectName, qty = 10, agentId, topico } = await req.json();
   if (!subjectId || !subjectName) return NextResponse.json({ error: "subjectId e subjectName são obrigatórios" }, { status: 400 });

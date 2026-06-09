@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { createWithCache, MODELS } from "@/lib/anthropic";
 import { log } from "@/lib/logger";
+import { questoesGerarLimiter } from "@/lib/rate-limit";
 
 const recentTopicsCache = new Map<string, string[]>();
 
@@ -88,7 +89,11 @@ Retorne APENAS JSON válido, sem markdown, sem texto fora do JSON:
 }
 
 export async function POST(req: Request) {
-  if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  const adminUser = await requireAdmin();
+  if (!adminUser) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+
+  const rl = await questoesGerarLimiter.check(`admin-gerar:${adminUser.id ?? "unknown"}`);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
   const body = await req.json();
   const {

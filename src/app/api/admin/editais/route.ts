@@ -31,7 +31,10 @@ export async function GET(req: Request) {
   if (status) query = query.eq("status", status);
   if (area)   query = query.eq("area", area);
   if (source) query = query.eq("source", source);
-  if (search) query = query.or(`titulo.ilike.%${search}%,orgao.ilike.%${search}%,cargo.ilike.%${search}%`);
+  if (search) {
+    const safeSearch = search.replace(/[%_\\]/g, "\\$&").slice(0, 100);
+    query = query.or(`titulo.ilike.%${safeSearch}%,orgao.ilike.%${safeSearch}%,cargo.ilike.%${safeSearch}%`);
+  }
 
   const { data: editais, count, error } = await query.range(offset, offset + limit - 1);
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
@@ -82,13 +85,22 @@ export async function POST(req: Request) {
 export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
-  const body = await req.json();
-  const { id, ...fields } = body;
+  const body = await req.json() as Record<string, unknown>;
+  const { id } = body;
   if (!id) return NextResponse.json({ error: "ID obrigatório" }, { status: 400 });
+
+  const ALLOWED = ["titulo", "orgao", "cargo", "area", "vagas", "salario",
+    "salarioMax", "banca", "estado", "nivel", "escolaridade", "status",
+    "descricao", "dataPublicacao", "dataInscricaoInicio", "dataInscricaoFim",
+    "dataProva", "link", "editalUrl", "active"];
+  const updates: Record<string, unknown> = {};
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key];
+  }
 
   const { error } = await db
     .from("Edital")
-    .update({ ...fields, updatedAt: new Date().toISOString() })
+    .update({ ...updates, updatedAt: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });

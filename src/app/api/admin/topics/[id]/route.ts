@@ -24,9 +24,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "name e slug são obrigatórios" }, { status: 400 });
   }
 
+  const safeOrdem = typeof ordem === "number" ? Math.round(ordem) : null;
   const { data, error } = await db
     .from("Topic")
-    .update({ name, slug, description: description || null, ordem })
+    .update({ name: String(name).slice(0, 200), slug: String(slug).slice(0, 200), description: description ? String(description).slice(0, 1000) : null, ordem: safeOrdem })
     .eq("id", id)
     .select()
     .single();

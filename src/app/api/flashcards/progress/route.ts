@@ -100,12 +100,19 @@ export async function POST(req: Request) {
       srsResult = { interval: srsData.interval, nextReview: srsData.nextReview };
     }
 
-    // Incrementa uso semanal de flashcards
+    // Verifica e incrementa uso semanal de flashcards
     const { getAccessLevel } = await import("@/lib/access");
-    const { incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
+    const { getWeeklyResourceUsage, incrementWeeklyResourceUsage } = await import("@/lib/api-utils");
     const access = await getAccessLevel().catch(() => null);
     const limit = access?.maxFlashcardsPerWeek ?? -1;
+    if (limit === 0) {
+      return NextResponse.json({ error: "Flashcards não disponíveis no seu plano." }, { status: 403 });
+    }
     if (limit > 0 && limit < 9999) {
+      const usedThisWeek = await getWeeklyResourceUsage(dbUser.id, "flashcards").catch(() => 0);
+      if (usedThisWeek >= limit) {
+        return NextResponse.json({ limitReached: true, usedThisWeek, limit }, { status: 200 });
+      }
       void incrementWeeklyResourceUsage(dbUser.id, "flashcards").catch(() => {});
     }
 

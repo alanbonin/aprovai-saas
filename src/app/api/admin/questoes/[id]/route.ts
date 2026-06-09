@@ -31,11 +31,22 @@ export async function PATCH(
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const { id } = await params;
-  const body = await req.json();
+  const body = await req.json() as Record<string, unknown>;
+
+  const ALLOWED = ["statement", "optionA", "optionB", "optionC", "optionD", "optionE",
+    "answer", "explanation", "level", "year", "banca", "subjectId", "aprovado",
+    "artigo", "dicaBanca", "tipo"];
+  const updates: Record<string, unknown> = {};
+  for (const field of ALLOWED) {
+    if (field in body) updates[field] = body[field];
+  }
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "Nenhum campo válido para atualizar" }, { status: 400 });
+  }
 
   const { data, error } = await db
     .from("Question")
-    .update(body)
+    .update(updates)
     .eq("id", parseInt(id, 10))
     .select()
     .single();

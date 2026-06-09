@@ -41,11 +41,12 @@ export async function GET() {
   const activeProfile = await getActiveProfile(dbUser.id);
   const materiasHoje = await getMateriasPlanoHoje(dbUser.id, activeProfile?.id ?? null);
 
-  // Busca matérias do aluno
-  const { data: studentSubjects } = await db
-    .from("StudentSubject")
-    .select("subjectId, Subject(name)")
-    .eq("userId", dbUser.id);
+  // Busca matérias do aluno (filtradas pelo perfil ativo)
+  const profileId = activeProfile?.id ?? null;
+  let ssQ = db.from("StudentSubject").select("subjectId, Subject(name)").eq("userId", dbUser.id);
+  if (profileId) ssQ = ssQ.eq("profileId", profileId);
+  else ssQ = ssQ.is("profileId", null);
+  const { data: studentSubjects } = await ssQ;
 
   let subjectIds: string[];
   if (materiasHoje && materiasHoje.length > 0) {

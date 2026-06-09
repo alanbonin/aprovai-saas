@@ -36,11 +36,17 @@ export async function PATCH(req: Request) {
   if (!await requireAdmin()) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
   const body = await req.json() as { id: string; title?: string; description?: string; planLevel?: string };
-  const { id, ...updates } = body;
+  const { id } = body;
   if (!id) return NextResponse.json({ error: "id obrigatório" }, { status: 400 });
 
+  const ALLOWED = ["title", "description", "planLevel"] as const;
+  const updates: Record<string, unknown> = { updatedAt: new Date().toISOString() };
+  for (const key of ALLOWED) {
+    if (key in body) updates[key] = body[key];
+  }
+
   const { error } = await db.from("PdfDocument")
-    .update({ ...updates, updatedAt: new Date().toISOString() })
+    .update(updates)
     .eq("id", id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

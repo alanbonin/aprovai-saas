@@ -101,8 +101,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).maybeSingle();
+  const { data: dbUser } = await db.from("User").select("id, subscriptionId").eq("supabaseId", user.id).maybeSingle();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
+
+  // Verifica se é plano Trial (para aplicar limite diário)
+  const { data: subData } = await db.from("Subscription").select("status, plan:Plan(slug)").eq("id", dbUser.subscriptionId ?? "").maybeSingle();
+  const isTrial = (subData as { status?: string } | null)?.status === "TRIAL";
 
   // Resolve perfil ativo (multi-perfil)
   const { getActiveProfile } = await import("@/lib/get-active-profile");
@@ -123,26 +127,55 @@ export async function POST(req: Request) {
     if (usedThisWeek >= weeklyLimit) {
       return NextResponse.json({ limitReached: true, usedThisWeek, limit: weeklyLimit }, { status: 200 });
     }
+
+    // ── Limite DIÁRIO apenas para Trial (30/dia) ─────────────────────────
+    if (isTrial) {
+      const DAILY_LIMIT = 30;
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const { count: todayCount } = await db
+        .from("Progress")
+        .select("id", { count: "exact", head: true })
+        .eq("userId", dbUser.id)
+        .gte("reviewedAt", todayStart.toISOString());
+      if ((todayCount ?? 0) >= DAILY_LIMIT) {
+        return NextResponse.json({
+          limitReached: true,
+          dailyLimit: true,
+          todayCount: todayCount ?? 0,
+          limit: DAILY_LIMIT,
+        }, { status: 200 });
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  const { questionId, correct, quality } = await req.json();
+  const { questionId, resposta, quality } = await req.json();
+
+  // ── Verifica gabarito SERVER-SIDE (nunca confia no cliente) ──────────────────
+  // O campo `correct` do body foi removido — agora o backend busca a resposta correta
+  // no banco e compara com a `resposta` enviada pelo aluno.
+  const { data: questionData } = await db
+    .from("Question")
+    .select("answer")
+    .eq("id", questionId)
+    .maybeSingle();
+
+  // Se questão não encontrada, marca como errada (conservador)
+  const isCorrect: boolean = questionData
+    ? (resposta ?? "").toUpperCase() === (questionData.answer as string)
+    : false;
 
   // Mapeia qualidades do frontend para o SM-2
   // "errei"/"nao-lembrei" → "again" | "dificil" → "hard" | "ok"/"lembrei" → "ok" | "facil" → "easy"
-  const rawQ = quality ?? (correct ? "ok" : "again");
+  const rawQ = quality ?? (isCorrect ? "ok" : "again");
   const q = rawQ === "lembrei"      ? "ok"
           : rawQ === "nao-lembrei"  ? "again"
-          : rawQ === "errei"        ? "again"   // "Errei" = again no SM-2
+          : rawQ === "errei"        ? "again"
           : rawQ === "dificil"      ? "hard"
           : rawQ === "facil"        ? "easy"
           : rawQ;
-
-  // isCorrect vem do body (se o usuário acertou a alternativa certa)
-  // — independente de como ele avaliou a dificuldade
-  const isCorrect: boolean = typeof correct === "boolean"
-    ? correct
-    : q !== "again";
 
   // Busca progresso existente APENAS para este perfil (nunca misturar legados)
   const existingQuery = db

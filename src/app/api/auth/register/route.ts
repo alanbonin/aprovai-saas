@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
 import { log, LogEvent, mask } from "@/lib/logger";
+
+// Cliente admin com service role — usado para verificar usuários sem sessão ativa
+const supabaseAdmin = createSupabaseAdmin(
+  process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
 
 const RegisterSchema = z.object({
   supabaseId: z.string().uuid(),
@@ -59,21 +66,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: rl.error }, { status: 429 });
   }
 
-  // Verificar sessão ativa — supabaseId DEVE pertencer ao usuário autenticado
-  const supabase = await createClient();
-  const { data: { user: sessionUser } } = await supabase.auth.getUser();
-  if (!sessionUser) {
-    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-  }
-
   const body = await req.json();
   const parseResult = RegisterSchema.safeParse(body);
   if (!parseResult.success) {
     return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
   }
-  const { name, email } = parseResult.data;
-  // Sempre usa o supabaseId da sessão — ignora o que veio no body
-  const supabaseId = sessionUser.id;
+  const { name, email, supabaseId } = parseResult.data;
+
+  // Verifica via admin que o supabaseId realmente existe no Supabase Auth.
+  // Isso cobre dois casos:
+  //   1) Sessão ativa (login imediato) — usuário existe e está autenticado
+  //   2) E-mail pendente de confirmação — usuário existe mas session é null
+  const { data: authUser, error: authErr } = await supabaseAdmin.auth.admin.getUserById(supabaseId);
+  if (authErr || !authUser?.user) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
+  // Garante que o e-mail bate com o cadastrado no Supabase Auth (evita spoofing)
+  if (authUser.user.email?.toLowerCase() !== email.toLowerCase()) {
+    return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
+  }
 
   const now = new Date().toISOString();
 

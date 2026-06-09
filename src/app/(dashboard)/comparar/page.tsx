@@ -1,20 +1,18 @@
-import { getAccessLevel } from "@/lib/access";
-import { UpgradeUI } from "@/components/upgrade-ui";
-import { CompararInner } from "./page-content";
+import { ComingSoonUI } from "@/components/coming-soon-ui";
 
-const PLANS_WITH_ACCESS = ["aprovacao", "aprovacao-anual", "elite", "elite-anual"];
-
-export default async function Page() {
-  const { planSlug } = await getAccessLevel();
-  const hasAccess = planSlug ? PLANS_WITH_ACCESS.includes(planSlug) : false;
-  if (!hasAccess) {
-    return (
-      <UpgradeUI
-        recurso="Comparar com a Média"
-        desc="Veja como você se compara com outros candidatos por banca e matéria. Disponível nos planos Aprovação ou Elite."
-        icon="📊"
-      />
-    );
-  }
-  return <CompararInner />;
+export default function Page() {
+  return (
+    <ComingSoonUI
+      recurso="Vs. Média"
+      icon="📊"
+      desc="Veja como você se compara com outros candidatos por matéria, banca e cargo — saiba exatamente onde melhorar."
+      features={[
+        "Comparativo de acerto por matéria vs. média geral",
+        "Desempenho por banca em relação aos outros candidatos",
+        "Gráfico de evolução semanal comparada",
+        "Identificação das matérias com maior gap",
+        "Filtro por cargo e concurso específico",
+      ]}
+    />
+  );
 }

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -20,6 +21,8 @@ async function handleSignOut() {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include", signal: ctrl.signal });
     clearTimeout(tid);
   } catch { /* ignora timeout/rede — redireciona de qualquer forma */ }
+  // Limpa flag de sessão — logout voluntário não mostra aviso
+  try { localStorage.removeItem("was_logged_in"); localStorage.removeItem("kicked_out"); } catch {}
   window.location.href = "/login";
 }
 
@@ -81,7 +84,7 @@ const SECTIONS_STUDENT: NavSection[] = [
       { href: "/resumo-semanal",  label: "Resumo Semanal", icon: "📋" },
       { href: "/diagnostico",     label: "Diagnóstico",    icon: "🩺" },
       { href: "/nivel",           label: "Por Nível",      icon: "📶" },
-      { href: "/comparar",        label: "Vs. Média",      icon: "📊" },
+      { href: "/comparar",        label: "Vs. Média",      icon: "📊", comingSoon: true },
     ],
   },
   {
@@ -176,14 +179,48 @@ const BOTTOM_NAV = [
   { href: "/simulado",  label: "Simulado", icon: "🎯" },
 ];
 
-function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobileOpen }: {
+function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobileOpen, usageLimits, isPremium, trialDaysLeft }: {
   pathname: string;
   sections: NavSection[];
   unreadNotifs: number;
   mobileOpen: boolean;
   setMobileOpen: (v: boolean) => void;
+  usageLimits?: UsageLimits;
+  isPremium?: boolean;
+  trialDaysLeft?: number | null;
 }) {
-  return (
+  const { theme, setTheme } = useTheme();
+  const touchStartY = React.useRef<number>(0);
+  const [dragY, setDragY] = React.useState(0);
+  const [dragging, setDragging] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartY.current = e.touches[0].clientY;
+    setDragging(true);
+    setDragY(0);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    const dy = e.touches[0].clientY - touchStartY.current;
+    if (dy > 0) setDragY(dy); // só deixa arrastar para baixo
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    setDragging(false);
+    if (dy > 80) {
+      setDragY(600); // anima para fora
+      setTimeout(() => { setMobileOpen(false); setDragY(0); }, 280);
+    } else {
+      setDragY(0); // volta suavemente
+    }
+  }
+
+  if (!mounted) return null;
+
+  return createPortal(
     <>
       {/* Overlay do menu "Mais" */}
       {mobileOpen && (
@@ -196,22 +233,62 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
       {/* Sheet "Mais" — desliza de baixo */}
       <div
         className={cn(
-          "fixed bottom-16 left-0 right-0 z-[160] lg:hidden transition-all duration-300 ease-out",
-          mobileOpen ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
+          "fixed bottom-16 left-0 right-0 z-[160] lg:hidden",
+          !mobileOpen && "pointer-events-none"
         )}
-        style={{ maxHeight: "70vh" }}
+        style={{
+          maxHeight: "70vh",
+          transform: mobileOpen ? `translateY(${dragY}px)` : "translateY(100%)",
+          transition: dragging ? "none" : "transform 0.3s ease-out, opacity 0.3s ease-out",
+          opacity: mobileOpen ? Math.max(0, 1 - dragY / 300) : 0,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         <div
           className="mx-2 rounded-2xl overflow-hidden border border-white/10"
           style={{ backgroundColor: "var(--bg-surface)" }}
         >
-          {/* Handle */}
-          <div className="flex justify-center pt-3 pb-1">
-            <div className="w-10 h-1 rounded-full bg-white/20" />
+          {/* Handle — arraste para baixo para fechar */}
+          <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+            <div className="w-10 h-1 rounded-full bg-white/30" />
+          </div>
+
+          {/* Banner de upgrade — trial ou sem plano */}
+          {!isPremium && (
+            <Link
+              href="/planos"
+              onClick={() => setMobileOpen(false)}
+              className={cn(
+                "flex items-center gap-3 mx-3 mt-3 mb-1 px-4 py-3 rounded-2xl border text-sm font-semibold transition-all",
+                trialDaysLeft !== null && trialDaysLeft !== undefined
+                  ? trialDaysLeft <= 3
+                    ? "bg-red-500 border-red-600 text-white"
+                    : "bg-amber-500 border-amber-600 text-white"
+                  : "bg-indigo-600 border-indigo-700 text-white"
+              )}
+            >
+              <span className="text-xl">⚡</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold leading-tight">
+                  {trialDaysLeft !== null && trialDaysLeft !== undefined
+                    ? trialDaysLeft === 0 ? "Trial expirado!" : `${trialDaysLeft} dia${trialDaysLeft !== 1 ? "s" : ""} de trial restante${trialDaysLeft !== 1 ? "s" : ""}`
+                    : "Fazer upgrade agora"}
+                </p>
+                <p className="text-[11px] opacity-80 font-normal">Ver planos e assinar →</p>
+              </div>
+              <span className="text-lg">→</span>
+            </Link>
+          )}
+
+          {/* Seletor de Perfil no mobile */}
+          <div className="px-3 pt-1 pb-2 border-b border-white/[0.06]">
+            <ProfileSwitcher compact />
           </div>
 
           {/* Seções do menu */}
-          <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: "calc(70vh - 40px)" }}>
+          <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: "calc(70vh - 80px)" }}>
             {sections.map(section => (
               <div key={section.id}>
                 <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-1.5"
@@ -222,6 +299,9 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                   {section.items.map(item => {
                     const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
                     const hasNotif = item.href === "/notificacoes" && unreadNotifs > 0;
+                    const usageEntry = usageLimits && HREF_RESOURCE[item.href] ? usageLimits[HREF_RESOURCE[item.href]] : null;
+                    const usage = usageEntry ? { used: usageEntry.used, max: usageEntry.total } : null;
+                    const isLocked = !isPremium && TRIAL_LOCKED_HREFS.has(item.href);
                     return (
                       <Link
                         key={item.href}
@@ -229,17 +309,23 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                         onClick={() => setMobileOpen(false)}
                         className={cn(
                           "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-center transition-all relative",
-                          active
-                            ? "bg-indigo-600/25 border-indigo-500/40"
-                            : "bg-white/[0.03] border-white/8 hover:bg-white/8"
+                          active ? "bg-indigo-600/25 border-indigo-500/40" : "bg-white/[0.03] border-white/8 hover:bg-white/8"
                         )}
                       >
                         <span className="text-xl leading-none">{item.icon}</span>
                         <span className={cn("text-[10px] font-medium leading-none", active ? "text-indigo-300" : "text-gray-400")}>
                           {item.label}
                         </span>
-                        {hasNotif && (
-                          <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />
+                        {/* Badge: notif, em breve, contador, locked */}
+                        {hasNotif && <div className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500" />}
+                        {(item as NavItem).comingSoon && (
+                          <span className="text-[8px] font-bold px-1 py-0.5 rounded-full bg-white/10 text-gray-500 border border-white/10 leading-none mt-0.5">em breve</span>
+                        )}
+                        {!isLocked && !((item as NavItem).comingSoon) && usage && (
+                          <span className="text-[8px] text-gray-600 leading-none">{usage.used}/{usage.max}</span>
+                        )}
+                        {isLocked && !((item as NavItem).comingSoon) && (
+                          <span className="text-[8px] text-gray-600 leading-none">🔒</span>
                         )}
                       </Link>
                     );
@@ -248,12 +334,18 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
               </div>
             ))}
 
-            {/* Config + Suporte + Sair */}
-            <div className="grid grid-cols-3 gap-1.5 pt-1 border-t border-white/8">
+            {/* Config + Tema + Suporte + Sair */}
+            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/8">
               <Link href="/configuracoes" onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
                 ⚙️ <span>Config.</span>
               </Link>
+              <button
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400"
+              >
+                {theme === "dark" ? "☀️" : "🌙"} <span>Modo {theme === "dark" ? "Claro" : "Escuro"}</span>
+              </button>
               <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer"
                 onClick={() => setMobileOpen(false)}
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-500/[0.08] border border-green-500/20 text-xs text-green-400">
@@ -299,6 +391,20 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
             );
           })}
 
+          {/* Botão upgrade rápido — só aparece quando não é premium (substitui um slot) */}
+          {!isPremium && (
+            <Link
+              href="/planos"
+              className="flex-1 flex flex-col items-center justify-center gap-0.5 transition-all relative"
+            >
+              <span className="text-xl leading-none">⚡</span>
+              <span className="text-[10px] font-bold text-amber-400">Upgrade</span>
+              {trialDaysLeft !== null && trialDaysLeft !== undefined && trialDaysLeft <= 3 && (
+                <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+              )}
+            </Link>
+          )}
+
           {/* Botão "Mais" */}
           <button
             onClick={() => setMobileOpen(!mobileOpen)}
@@ -319,7 +425,8 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
           </button>
         </div>
       </nav>
-    </>
+    </>,
+    document.body
   );
 }
 
@@ -563,7 +670,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
         className="lg:hidden fixed top-0 left-0 right-0 z-[90] flex items-center justify-between px-4 h-12 border-b"
         style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}
       >
-        <a href="/hoje" className="flex items-center gap-2">
+        <a href={isAdmin ? "/admin" : "/hoje"} className="flex items-center gap-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-icon.svg" alt="AprovAI360" className="w-7 h-7" />
           <p className="font-bold text-sm">
@@ -572,16 +679,41 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
             <span style={{ color: "var(--text-primary)" }}>360</span>
           </p>
         </a>
+        {isAdmin && (
+          <button
+            onClick={() => setMobileOpen(o => !o)}
+            className="p-2 rounded-lg text-gray-400 hover:text-white transition-colors"
+          >
+            <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <rect y="2" width="18" height="2" rx="1" fill="currentColor"/>
+              <rect y="8" width="18" height="2" rx="1" fill="currentColor"/>
+              <rect y="14" width="18" height="2" rx="1" fill="currentColor"/>
+            </svg>
+          </button>
+        )}
       </div>
 
-      {/* ── Bottom Nav mobile ─────────────────────────────────────── */}
-      <MobileBottomNav
-        pathname={pathname}
-        sections={sections}
-        unreadNotifs={unreadNotifs}
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
-      />
+      {/* ── Drawer lateral mobile para Admin ─────────────────────── */}
+      {isAdmin && mobileOpen && (
+        <div
+          className="fixed inset-0 z-[150] bg-black/70 backdrop-blur-sm lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── Bottom Nav mobile (apenas alunos, não admin) ─────────── */}
+      {!isAdmin && (
+        <MobileBottomNav
+          pathname={pathname}
+          sections={sections}
+          unreadNotifs={unreadNotifs}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
+          usageLimits={usageLimits}
+          isPremium={isPremium}
+          trialDaysLeft={trialDaysLeft}
+        />
+      )}
 
       {/* ── Botão toggle quando sidebar fechada (desktop) ─────────── */}
       {!desktopOpen && (
@@ -598,9 +730,12 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
       {/* ── Sidebar — drawer mobile + sticky desktop ──────────────── */}
     <aside
       className={cn(
-        "flex flex-col flex-shrink-0 z-[100]",
-        // Mobile: oculto — usa bottom nav em vez de drawer lateral
-        "hidden",
+        "flex flex-col flex-shrink-0 z-[160]",
+        // Mobile admin: drawer lateral fixo quando aberto
+        isAdmin
+          ? cn("fixed top-0 left-0 h-full w-64 transition-transform duration-300 lg:relative lg:translate-x-0 lg:h-screen lg:sticky lg:top-0",
+              mobileOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0")
+          : "hidden",
         // Desktop: sticky, largura controlada por desktopOpen
         "lg:flex lg:relative lg:translate-x-0 lg:transition-none lg:h-screen lg:sticky lg:top-0",
         desktopOpen ? "lg:w-56" : "lg:w-0 lg:overflow-hidden lg:border-r-0",

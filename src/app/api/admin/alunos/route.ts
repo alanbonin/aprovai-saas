@@ -33,7 +33,8 @@ export async function GET(req: Request) {
     .order("createdAt", { ascending: false });
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+    const safeSearch = search.replace(/[%_\\]/g, "\\$&");
+    query = query.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
   }
 
   const { data, count, error } = await query.range(from, to);

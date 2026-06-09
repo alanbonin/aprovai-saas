@@ -78,8 +78,13 @@ export async function POST(req: Request) {
 
     if (body.action === "add" && body.orgao) {
       const list = await getWatchlist(dbUser.id);
-      const nome = body.orgao.trim().slice(0, 60);
-      if (!list.includes(nome)) {
+      // Sanitiza: remove chars de controle, wildcards SQL e limita tamanho
+      const nome = body.orgao
+        .replace(/[\x00-\x1F\x7F-\x9F%_\\]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 60);
+      if (nome && !list.includes(nome)) {
         list.push(nome);
         await saveWatchlist(dbUser.id, list);
       }
