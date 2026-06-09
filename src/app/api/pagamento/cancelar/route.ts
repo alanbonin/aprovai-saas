@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import MercadoPago, { PreApproval } from "mercadopago";
+import { log, LogEvent } from "@/lib/logger";
 
 function getMp() {
   const token = process.env.MERCADOPAGO_ACCESS_TOKEN;
@@ -35,7 +36,14 @@ export async function POST() {
           id: mpSubId,
           body: { status: "cancelled" },
         });
-      } catch { /* ignora erro do MP — cancela no banco de qualquer forma */ }
+      } catch (mpErr) {
+        // Loga o erro do MP para auditoria; cancela no banco mesmo assim
+        log.error(LogEvent.PAYMENT_FAILED, {
+          stage: "mp_cancel_subscription",
+          mpSubId,
+          userId: dbUser.id,
+        }, mpErr);
+      }
     }
 
     // Cancela no banco — mantém endDate atual (acesso até fim do período)

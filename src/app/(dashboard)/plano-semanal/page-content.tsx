@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import {
   CalendarDays, Sparkles, RefreshCw, Clock, ChevronDown, ChevronUp,
-  CheckCircle, MessageSquare, Send, History, ChevronRight, X, RotateCcw,
+  CheckCircle, MessageSquare, Send, History, ChevronRight, X, RotateCcw, CalendarCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AjusteRecord, Cronograma } from "@/app/api/workspace/estrategia/route";
@@ -27,7 +27,7 @@ const PRIORITY_STYLE: Record<string, string> = {
   baixa: "bg-green-500/10 border-green-500/20 text-green-400",
 };
 const PRIORITY_LABEL: Record<string, string> = { alta: "Alta", media: "Média", baixa: "Baixa" };
-const DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo", "Domingo"];
+const DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"];
 
 // ── DayCard ───────────────────────────────────────────────────────────────────
 function DayCard({ day, defaultOpen }: { day: DaySchedule; defaultOpen?: boolean }) {
@@ -145,13 +145,13 @@ function AjustePanel({
   ];
 
   return (
-    <div className="rounded-2xl bg-indigo-950/50 border border-indigo-500/20 p-5 mt-4">
+    <div className="rounded-2xl border border-indigo-500/20 p-5 mt-4" style={{ backgroundColor: "var(--bg-card, #1a1d2e)" }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <MessageSquare className="w-4 h-4 text-indigo-400" />
           <span className="text-sm font-semibold text-indigo-300">Pedir ajuste à IA</span>
         </div>
-        <button onClick={onClose} className="text-gray-600 hover:text-gray-400 transition-colors">
+        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
@@ -167,7 +167,7 @@ function AjustePanel({
           <button
             key={i}
             onClick={() => setMotivo(ex)}
-            className="text-[11px] px-2.5 py-1 rounded-lg border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/10 transition-colors text-left"
+            className="text-[11px] px-2.5 py-1 rounded-lg border border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 transition-colors text-left"
           >
             {ex}
           </button>
@@ -180,13 +180,14 @@ function AjustePanel({
         onChange={e => setMotivo(e.target.value)}
         placeholder="Ex: Tive imprevistos na terça e quarta, preciso redistribuir essas horas..."
         rows={3}
-        className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 resize-none focus:outline-none focus:border-indigo-500 mb-3"
+        className="w-full rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500 mb-3 border border-indigo-500/20"
+        style={{ backgroundColor: "var(--bg-secondary, rgba(255,255,255,0.05))", color: "var(--text-primary, #fff)" }}
       />
 
       <button
         onClick={() => motivo.trim() && onAjustar(motivo.trim())}
         disabled={ajustando || !motivo.trim()}
-        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl text-sm font-semibold transition-colors"
+        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 rounded-xl text-sm font-semibold text-white transition-colors"
       >
         {ajustando ? (
           <><RefreshCw className="w-4 h-4 animate-spin" /> Ajustando plano com IA...</>
@@ -205,17 +206,20 @@ export function PlanoSemanalInner() {
   const [isCurrentWeek, setIsCurrentWeek] = useState(true);
 
   // UI states
-  const [loading, setLoading] = useState(true);         // carregando do servidor
-  const [generating, setGenerating] = useState(false);  // gerando/ajustando
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [applying, setApplying] = useState(false);
+  const [applySuccess, setApplySuccess] = useState(false);
   const [showAjuste, setShowAjuste] = useState(false);
   const [showHistorico, setShowHistorico] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
+  const [showConfirmApply, setShowConfirmApply] = useState(false);
   const [error, setError] = useState("");
   const [resumoAjuste, setResumoAjuste] = useState("");  // feedback pós-ajuste
 
   // Config
   const [horasPorDia, setHorasPorDia] = useState(3);
-  const [diasDisp, setDiasDisp] = useState<string[]>(["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingota", "Quinta", "Sexta", "Sábado"]);
+  const [diasDisp, setDiasDisp] = useState<string[]>(["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]);
 
   // Carrega (e auto-gera se necessário) na montagem
   useEffect(() => {
@@ -275,6 +279,61 @@ export function PlanoSemanalInner() {
     }
   }
 
+  async function applyToCronograma() {
+    if (!cronograma) return;
+    setApplying(true);
+    setError("");
+    try {
+      // Busca matérias do aluno para mapear nome → subjectId
+      const matsRes = await fetch("/api/workspace/materias");
+      const matsData = matsRes.ok ? await matsRes.json() as { subjects: { id: string; name: string }[] } : { subjects: [] };
+      const subjects = matsData.subjects ?? [];
+
+      // Mapa nome normalizado → id
+      const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+      const subjectMap = new Map<string, string>();
+      for (const s of subjects) subjectMap.set(normalize(s.name), s.id);
+
+      // Mapeia dias do Plano IA para abreviações do Cronograma
+      const DIA_MAP: Record<string, string> = {
+        "segunda": "seg", "terça": "ter", "terca": "ter",
+        "quarta": "qua", "quinta": "qui", "sexta": "sex",
+        "sábado": "sab", "sabado": "sab", "domingo": "dom",
+      };
+
+      const HORA_BASE = ["07:00","08:00","09:00","10:00","14:00","15:00","16:00","19:00","20:00"];
+
+      const blocos: { dia: string; hora: string; durMin: number; subjectId: string | null; atividade: string; concluido: boolean }[] = [];
+
+      for (const day of cronograma.semana) {
+        if (day.folga) continue;
+        const diaKey = normalize(day.dia);
+        const diaAbrev = DIA_MAP[diaKey] ?? diaKey.slice(0, 3);
+
+        day.materias.forEach((mat, idx) => {
+          const subjectId = subjectMap.get(normalize(mat.nome)) ?? null;
+          const durMin = Math.round((mat.horas * 60));
+          const hora = HORA_BASE[idx % HORA_BASE.length];
+          const atividade = mat.prioridade === "alta" ? "Questões" : idx % 2 === 0 ? "Flashcards" : "Leitura";
+          blocos.push({ dia: diaAbrev, hora, durMin, subjectId, atividade, concluido: false });
+        });
+      }
+
+      const res = await fetch("/api/plano-estudos", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ blocos }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar cronograma");
+      setApplySuccess(true);
+      setTimeout(() => setApplySuccess(false), 4000);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro ao aplicar");
+    } finally {
+      setApplying(false);
+    }
+  }
+
   async function requestAjuste(motivo: string) {
     setGenerating(true);
     setError("");
@@ -324,34 +383,85 @@ export function PlanoSemanalInner() {
     <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CalendarDays className="w-6 h-6 text-indigo-400" />
+      <div className="mb-5">
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <h1 className="text-xl font-bold flex items-center gap-2">
+            <CalendarDays className="w-5 h-5 text-indigo-400 flex-shrink-0" />
             Plano Semanal IA
           </h1>
-          <p className="text-gray-500 text-sm mt-0.5">
-            Gerado automaticamente toda semana com base no seu perfil
-          </p>
-        </div>
+          {/* Botões compactos no mobile */}
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              onClick={() => setShowConfig(v => !v)}
+              className="p-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+              title="Configurar"
+            >
+              <RotateCcw className="w-3.5 h-3.5 hidden" />
+              <span className="text-xs">⚙️</span>
+            </button>
+            {cronograma && (
+              <>
+                <button
+                  onClick={() => setShowConfirmApply(true)}
+                  disabled={applying}
+                  title="Aplicar ao Cronograma"
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-2 rounded-xl border text-xs font-medium transition-colors disabled:opacity-40",
+                    applySuccess
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
+                      : "border-indigo-500/30 bg-indigo-500/10 text-indigo-300 hover:bg-indigo-500/20"
+                  )}
+                >
+                  <CalendarCheck className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">{applying ? "Aplicando…" : applySuccess ? "Aplicado! ✓" : "Aplicar"}</span>
+                  <span className="sm:hidden">{applying ? "…" : applySuccess ? "✓" : "Aplicar"}</span>
+                </button>
 
-        <div className="flex gap-2 flex-shrink-0">
-          <button
-            onClick={() => setShowConfig(v => !v)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-xs font-medium transition-colors"
-          >
-            ⚙️ Config
-          </button>
-          <button
-            onClick={generate}
-            disabled={generating || loading}
-            title="Regerar plano desta semana"
-            className="flex items-center gap-2 px-3 py-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 text-xs font-medium transition-colors disabled:opacity-40"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Regerar
-          </button>
+                {/* Modal de confirmação — evita sobrescrever cronograma sem querer */}
+                {showConfirmApply && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+                    <div className="bg-[#111827] border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center flex-shrink-0">
+                          <CalendarCheck className="w-5 h-5 text-yellow-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-semibold text-white">Aplicar ao Cronograma?</h3>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Isso vai <span className="text-yellow-400 font-medium">substituir</span> os blocos de estudo da semana atual no seu cronograma. Essa ação não pode ser desfeita.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setShowConfirmApply(false)}
+                          className="flex-1 px-3 py-2 rounded-xl border border-white/10 text-xs text-gray-400 hover:text-white hover:border-white/20 transition-colors"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={() => { setShowConfirmApply(false); applyToCronograma(); }}
+                          className="flex-1 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs text-white font-medium transition-colors"
+                        >
+                          Sim, aplicar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+            <button
+              onClick={generate}
+              disabled={generating || loading}
+              title="Regerar plano"
+              className="p-2 rounded-xl border border-white/10 text-gray-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-40"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
+        <p className="text-gray-500 text-xs">Gerado automaticamente toda semana com base no seu perfil</p>
       </div>
 
       {/* Config panel */}
