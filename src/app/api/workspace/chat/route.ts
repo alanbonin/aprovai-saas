@@ -30,7 +30,43 @@ export async function POST(req: Request) {
     }, { status: 429 });
   }
 
-  const { message, agentIds, subjectId, history } = await req.json();
+  const raw = await req.json();
+
+  // ── Limites de segurança — previne token bomb e prompt injection ────────────
+  const MSG_MAX   = 8_000;   // ~2k tokens — suficiente para qualquer pergunta real
+  const HIST_MAX  = 20;      // máximo de mensagens no histórico
+  const ITEM_MAX  = 4_000;   // caracteres por item do histórico
+  const AGENT_MAX = 5;       // máximo de agentes por chamada
+
+  const message   = typeof raw.message === "string"
+    ? raw.message.slice(0, MSG_MAX)
+    : "";
+  const subjectId = raw.subjectId ?? null;
+
+  // Valida agentIds: array de até AGENT_MAX strings (UUID)
+  const rawAgentIds = Array.isArray(raw.agentIds) ? raw.agentIds : [];
+  const agentIds = rawAgentIds
+    .filter((id: unknown) => typeof id === "string")
+    .slice(0, AGENT_MAX) as string[];
+
+  // Valida history: apenas role "user"|"assistant", limita tamanho por item e total
+  const VALID_ROLES = new Set(["user", "assistant"]);
+  const history = (Array.isArray(raw.history) ? raw.history : [])
+    .filter((m: unknown) =>
+      typeof m === "object" && m !== null &&
+      typeof (m as Record<string, unknown>).role === "string" &&
+      VALID_ROLES.has((m as Record<string, unknown>).role as string) &&  // bloqueia role: "system"
+      typeof (m as Record<string, unknown>).content === "string"
+    )
+    .slice(-HIST_MAX)   // mantém apenas as últimas HIST_MAX mensagens
+    .map((m: { role: string; content: string }) => ({
+      role: m.role as "user" | "assistant",
+      content: m.content.slice(0, ITEM_MAX),  // trunca itens muito longos
+    }));
+
+  if (!message.trim()) {
+    return NextResponse.json({ error: "Mensagem obrigatória" }, { status: 400 });
+  }
 
   const { data: agents } = await db.from("Agent").select("*").in("id", agentIds);
   const { data: subject } = subjectId
@@ -92,12 +128,9 @@ REGRAS:
   }
 
   // Anthropic exige que a primeira mensagem seja "user" — remove assistants iniciais
-  const rawHistory = history.map((m: { role: string; content: string }) => ({
-    role: m.role as "user" | "assistant",
-    content: m.content,
-  }));
-  const firstUserIdx = rawHistory.findIndex((m: { role: string }) => m.role === "user");
-  const filteredHistory = firstUserIdx >= 0 ? rawHistory.slice(firstUserIdx) : [];
+  // (history já foi validado e sanitizado acima)
+  const firstUserIdx = history.findIndex((m: { role: string }) => m.role === "user");
+  const filteredHistory = firstUserIdx >= 0 ? history.slice(firstUserIdx) : [];
 
   const stream = streamWithCache({
     model: MODELS.sonnet,

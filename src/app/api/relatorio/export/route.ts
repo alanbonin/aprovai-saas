@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
 import { log, LogEvent } from "@/lib/logger";
+import { adminExportLimiter } from "@/lib/rate-limit";
 
 /**
  * GET /api/relatorio/export
@@ -19,6 +20,10 @@ export async function GET(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  // Rate limit — export é query pesada (5/hora por usuário)
+  const rl = await adminExportLimiter.check(user.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   // LGPD art. 37 — registro de operações de tratamento de dados pessoais
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   log.security(LogEvent.LGPD_DATA_EXPORT, {
@@ -28,12 +33,15 @@ export async function GET(req: Request) {
     ip,
   });
 
-  // Fetch all progress records
+  // Fetch all progress records — cap: 12 meses / 10k registros para proteger o banco
+  const since = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
   const { data: progress, error } = await db
     .from("Progress")
     .select("questionId, correct, createdAt, nextReview")
     .eq("userId", dbUser.id)
-    .order("createdAt", { ascending: false });
+    .gte("createdAt", since)
+    .order("createdAt", { ascending: false })
+    .limit(10_000);
 
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });
 
