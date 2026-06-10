@@ -31,6 +31,13 @@ function weekKey(dateStr: string): string {
   return `${tmp.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+// Retorna a data de atividade real: reviewedAt quando existe (revisão), senão createdAt (1ª resposta)
+function activityDate(r: { createdAt: string; reviewedAt?: string | null }): string {
+  return r.reviewedAt ?? r.createdAt;
+}
+
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -46,14 +53,15 @@ export async function GET() {
   const activeProfile = await getActiveProfile(dbUser.id);
   const profileId = activeProfile?.id ?? null;
 
-  // Busca paralela de todos os dados — filtro ESTRITO por perfil ativo
+  // BUG FIX 1: inclui reviewedAt nas queries (data real de atividade em revisões)
+  // BUG FIX 4: limit 5000 → 20000 (evita corte em alunos ativos)
   const [progressRes, subjectProgressRes, simuladosRes, flashcardSetsRes] = await Promise.all([
     profileId
-      ? db.from("Progress").select("correct, createdAt, questionId").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", since.toISOString())
-      : db.from("Progress").select("correct, createdAt, questionId").eq("userId", dbUser.id).gte("createdAt", since.toISOString()),
+      ? db.from("Progress").select("correct, createdAt, reviewedAt, questionId").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", since.toISOString())
+      : db.from("Progress").select("correct, createdAt, reviewedAt, questionId").eq("userId", dbUser.id).gte("createdAt", since.toISOString()),
     profileId
-      ? db.from("Progress").select("correct, questionId, createdAt").eq("userId", dbUser.id).eq("profileId", profileId).limit(5000)
-      : db.from("Progress").select("correct, questionId, createdAt").eq("userId", dbUser.id).limit(5000),
+      ? db.from("Progress").select("correct, questionId, createdAt, reviewedAt").eq("userId", dbUser.id).eq("profileId", profileId).limit(20000)
+      : db.from("Progress").select("correct, questionId, createdAt, reviewedAt").eq("userId", dbUser.id).limit(20000),
     profileId
       ? db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).eq("profileId", profileId).order("createdAt", { ascending: false }).limit(50)
       : db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).order("createdAt", { ascending: false }).limit(50),
@@ -64,22 +72,26 @@ export async function GET() {
 
   const profileRes = { data: activeProfile };
 
-  const records = progressRes.data ?? [];
-  const allRecords = subjectProgressRes.data ?? [];
+  const records = (progressRes.data ?? []) as { correct: boolean; createdAt: string; reviewedAt?: string | null; questionId: number }[];
+  const allRecords = (subjectProgressRes.data ?? []) as { correct: boolean; createdAt: string; reviewedAt?: string | null; questionId: number }[];
   const simulados = simuladosRes.data ?? [];
   const flashcardSets = flashcardSetsRes.data ?? [];
   const profile = profileRes.data;
 
-  // ── Heatmap ────────────────────────────────────────────────────────────────
+  // ── Heatmap (usa BRT = UTC-3 para datas) ──────────────────────────────────
+  // BUG FIX 2: usa reviewedAt (data da revisão) em vez de createdAt (data da 1ª resposta)
+  // Isso faz revisões de questões aparecerem no dia correto do heatmap
   const heatmapMap: Record<string, number> = {};
   for (const r of records) {
-    const day = r.createdAt.slice(0, 10);
+    const dateToUse = activityDate(r);
+    const brtDate = new Date(new Date(dateToUse).getTime() - 3 * 60 * 60 * 1000);
+    const day = brtDate.toISOString().slice(0, 10);
     heatmapMap[day] = (heatmapMap[day] ?? 0) + 1;
   }
   const heatmap: { date: string; count: number }[] = [];
   for (let i = 111; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+    const d = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
     heatmap.push({ date: key, count: heatmapMap[key] ?? 0 });
   }
@@ -101,12 +113,16 @@ export async function GET() {
     : 100;
 
   // ── Streak ─────────────────────────────────────────────────────────────────
-  const todayKey = new Date().toISOString().slice(0, 10);
+  // Usa UTC-3 (BRT) para evitar que estudo à noite caia no "dia seguinte" UTC
+  const nowBRT = new Date(Date.now() - 3 * 60 * 60 * 1000);
+  const todayKey = nowBRT.toISOString().slice(0, 10);
   const todayCount = heatmapMap[todayKey] ?? 0;
   let streak = 0;
-  for (let i = 0; i < 365; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
+  // Se não estudou hoje ainda, começa a contar a partir de ontem (mantém streak ativo)
+  const startI = todayCount > 0 ? 0 : 1;
+  for (let i = startI; i < 365; i++) {
+    const d = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    d.setUTCDate(d.getUTCDate() - i);
     const key = d.toISOString().slice(0, 10);
     if ((heatmapMap[key] ?? 0) > 0) streak++;
     else break;
@@ -152,9 +168,10 @@ export async function GET() {
   const overallAccuracy = totalAnswered > 0 ? Math.round((totalCorrect / totalAnswered) * 100) : 0;
 
   // ── Evolução semanal (últimas 8 semanas, questões) ──────────────────────────
+  // BUG FIX 3: usa reviewedAt para agrupar na semana correta (revisões iam para semana errada)
   const weeklyMap: Record<string, { correct: number; total: number }> = {};
   for (const r of allRecords) {
-    const wk = weekKey(r.createdAt);
+    const wk = weekKey(activityDate(r));
     if (!weeklyMap[wk]) weeklyMap[wk] = { correct: 0, total: 0 };
     weeklyMap[wk].total++;
     if (r.correct) weeklyMap[wk].correct++;
@@ -191,14 +208,16 @@ export async function GET() {
   let flashcardTotal = 0;
   let flashcardDueToday = 0;
   let flashcardStudiedThisWeek = 0;
-  const oneWeekAgo = new Date(now.getTime() - 7 * 86400000);
 
   for (const set of flashcardSets) {
     const cards = Array.isArray(set.cards) ? set.cards : [];
     flashcardTotal += cards.length;
-    for (const card of cards as { nextReview?: string; updatedAt?: string }[]) {
+    // BUG FIX 2: conta cards individuais revisados pelo nextReview de cada card
+    // Antes: usava set.updatedAt → inflava contagem (todos os cards do deck se qualquer 1 fosse revisado)
+    // Agora: card estudado = tem nextReview futuro (foi revisado e agendado para o futuro)
+    for (const card of cards as { nextReview?: string }[]) {
       if (!card.nextReview || new Date(card.nextReview) <= now) flashcardDueToday++;
-      if (set.updatedAt && new Date(set.updatedAt) >= oneWeekAgo) flashcardStudiedThisWeek++;
+      if (card.nextReview && new Date(card.nextReview) > now) flashcardStudiedThisWeek++;
     }
   }
 

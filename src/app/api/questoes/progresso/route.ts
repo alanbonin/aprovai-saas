@@ -133,11 +133,13 @@ export async function POST(req: Request) {
       const DAILY_LIMIT = 30;
       const todayStart = new Date();
       todayStart.setHours(0, 0, 0, 0);
+      // BUG FIX 3: registros antigos podem ter reviewedAt=null — usa createdAt como fallback
+      // filtra por OR(reviewedAt >= hoje, createdAt >= hoje AND reviewedAt IS NULL)
       const { count: todayCount } = await db
         .from("Progress")
         .select("id", { count: "exact", head: true })
         .eq("userId", dbUser.id)
-        .gte("reviewedAt", todayStart.toISOString());
+        .or(`reviewedAt.gte.${todayStart.toISOString()},and(createdAt.gte.${todayStart.toISOString()},reviewedAt.is.null)`);
       if ((todayCount ?? 0) >= DAILY_LIMIT) {
         return NextResponse.json({
           limitReached: true,
