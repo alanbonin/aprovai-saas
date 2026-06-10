@@ -20,10 +20,43 @@ export default function CadastroPage() {
   const [confirmEmail, setConfirmEmail] = useState(false);
   const supabase = createClient();
 
+  // ── Validação de senha ──────────────────────────────────────────────────────
+  const SENHAS_COMUNS = new Set([
+    "123456","123456789","12345678","12345","1234567","password","senha","qwerty",
+    "abc123","111111","000000","iloveyou","admin","letmein","monkey","dragon",
+    "master","sunshine","princess","welcome","shadow","superman","michael",
+    "football","baseball","696969","123123","654321","superman","batman",
+    "concurso","aprovai","estudar","passar","aprovado","gabarito",
+  ]);
+
+  function avaliarSenha(s: string): { ok: boolean; forca: 0|1|2|3; erros: string[] } {
+    const erros: string[] = [];
+    if (s.length < 8)           erros.push("Mínimo 8 caracteres");
+    if (!/[a-zA-Z]/.test(s))    erros.push("Pelo menos 1 letra");
+    if (!/[0-9]/.test(s))       erros.push("Pelo menos 1 número");
+    if (SENHAS_COMUNS.has(s.toLowerCase())) erros.push("Senha muito comum — escolha outra");
+
+    const forca: 0|1|2|3 =
+      erros.length === 0 && s.length >= 12 && /[^a-zA-Z0-9]/.test(s) ? 3 :
+      erros.length === 0 && s.length >= 10 ? 2 :
+      erros.length === 0 ? 1 : 0;
+
+    return { ok: erros.length === 0, forca, erros };
+  }
+
+  const senhaInfo = avaliarSenha(password);
+
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Valida senha antes de chamar Supabase
+    if (!senhaInfo.ok) {
+      setError(senhaInfo.erros[0]);
+      setLoading(false);
+      return;
+    }
 
     // redirectTo legado (usado se template Supabase ainda usar {{ .ConfirmationURL }})
     const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
@@ -217,10 +250,41 @@ export default function CadastroPage() {
                 value={password}
                 onChange={e => setPassword(e.target.value)}
                 required
-                minLength={6}
+                minLength={8}
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
-                placeholder="Mínimo 6 caracteres"
+                placeholder="Mínimo 8 caracteres, com letra e número"
               />
+              {/* Indicador de força — aparece assim que o usuário começa a digitar */}
+              {password.length > 0 && (
+                <div className="mt-2 space-y-1.5">
+                  {/* Barra de força */}
+                  <div className="flex gap-1">
+                    {[1,2,3].map(n => (
+                      <div
+                        key={n}
+                        className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                          senhaInfo.forca >= n
+                            ? n === 1 ? "bg-red-400"
+                            : n === 2 ? "bg-yellow-400"
+                            : "bg-emerald-400"
+                            : "bg-white/10"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  {/* Texto de status */}
+                  <p className={`text-xs ${
+                    senhaInfo.forca === 3 ? "text-emerald-400" :
+                    senhaInfo.forca === 2 ? "text-yellow-400" :
+                    senhaInfo.forca === 1 ? "text-orange-400" : "text-red-400"
+                  }`}>
+                    {senhaInfo.forca === 3 ? "✓ Senha forte" :
+                     senhaInfo.forca === 2 ? "Senha boa — adicione símbolos para ficar mais forte" :
+                     senhaInfo.forca === 1 ? "Senha fraca — adicione mais caracteres" :
+                     senhaInfo.erros[0]}
+                  </p>
+                </div>
+              )}
             </div>
 
             {error && <p className="text-red-400 text-sm">{error}</p>}
