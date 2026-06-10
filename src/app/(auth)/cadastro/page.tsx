@@ -140,12 +140,12 @@ export default function CadastroPage() {
             </p>
 
             {/* Aviso sobre spam */}
-            <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl px-4 py-3 mb-5 text-left">
-              <p className="text-amber-300 text-xs font-semibold mb-1">⚠️ Não recebeu o e-mail?</p>
-              <p className="text-amber-200/80 text-xs leading-relaxed">
+            <div className="bg-amber-400/15 border border-amber-400/50 rounded-xl px-4 py-3 mb-5 text-left">
+              <p className="text-amber-400 text-xs font-semibold mb-1">⚠️ Não recebeu o e-mail?</p>
+              <p className="text-amber-300 text-xs leading-relaxed">
                 Verifique sua <strong>caixa de spam</strong> ou <strong>lixo eletrônico</strong> — às vezes nossos e-mails chegam por lá.
               </p>
-              <p className="text-amber-200/80 text-xs leading-relaxed mt-1.5">
+              <p className="text-amber-300 text-xs leading-relaxed mt-1.5">
                 Ao confirmar, <strong>marque o e-mail como &quot;Não é spam&quot;</strong> para que as próximas mensagens cheguem direto na caixa de entrada.
               </p>
             </div>
