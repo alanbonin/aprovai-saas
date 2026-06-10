@@ -8,7 +8,9 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   return NextResponse.json({ error: "Simulado não encontrado" }, { status: 404 });
 }
 
-// ── PATCH — salva resultado final de um SimuladoHistory ──────────────────────
+// ── PATCH — atualiza apenas timeSecs de um SimuladoHistory ───────────────────
+// SEGURANÇA: `correct` foi removido desta rota — score de acertos só pode ser
+// definido via /api/simulado/salvar (que verifica gabaritos server-side).
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -18,7 +20,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   const { id } = await params;
-  const body = await req.json() as { correct?: number; timeSecs?: number };
+  const body = await req.json() as { timeSecs?: number };
 
   // Verifica propriedade do registro
   const { data: existing } = await db
@@ -30,9 +32,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   if (!existing) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  // Apenas timeSecs é atualizável — `correct` e `total` são imutáveis após criação
   const { data, error } = await db
     .from("SimuladoHistory")
-    .update({ correct: body.correct ?? 0, timeSecs: body.timeSecs ?? 0 })
+    .update({ timeSecs: body.timeSecs ?? 0 })
     .eq("id", id)
     .select()
     .single();

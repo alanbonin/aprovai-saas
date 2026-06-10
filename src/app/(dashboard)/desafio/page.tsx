@@ -67,9 +67,9 @@ export default function DesafioPage() {
   const timerRef                  = useRef<ReturnType<typeof setInterval> | null>(null);
   const navigatingRef             = useRef(false); // previne double-call em next()
 
-  // Track answers
-  const answers = useRef<{ questionId: number; correct: boolean }[]>([]);
-  const score   = useRef(0);
+  // Track answers — envia `resposta` (alternativa escolhida); score computado server-side
+  const answers = useRef<{ questionId: number; resposta: string }[]>([]);
+  const score   = useRef(0); // local apenas para display (server recalcula)
   const startTime = useRef<number>(0);
 
   useEffect(() => {
@@ -100,10 +100,9 @@ export default function DesafioPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        score: score.current,
         total: data.questions.length,
         timeSecs: elapsed,
-        answers: answers.current,
+        answers: answers.current, // [{ questionId, resposta }] — score calculado server-side
       }),
     }).catch(() => null);
     if (res?.ok) {
@@ -156,9 +155,9 @@ export default function DesafioPage() {
     if (selected || !data) return;
     setSelected(key);
     const q = data.questions[current];
-    const isCorrect = key === q.answer;
+    const isCorrect = key === q.answer; // local display only (q.answer pode ser undefined)
     if (isCorrect) score.current += 1;
-    answers.current.push({ questionId: q.id, correct: isCorrect });
+    answers.current.push({ questionId: q.id, resposta: key });
 
     if (!isCorrect) {
       // Auto-save como erro no caderno de erros
@@ -439,8 +438,7 @@ export default function DesafioPage() {
               <div key={i} className={cn(
                 "flex-1 h-1 rounded-full",
                 i > current ? "bg-white/10"
-                  : ans?.correct ? "bg-green-500"
-                  : i <= current && ans !== undefined ? "bg-red-500"
+                  : ans !== undefined ? "bg-blue-400"
                   : "bg-yellow-500"
               )} />
             );

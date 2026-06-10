@@ -153,3 +153,9 @@ export const verificarLimiter = createLimiter({ max: 60, window: "1 m", prefix: 
 
 /** Push subscribe — 10/hora por usuário (anti flood no banco) */
 export const pushSubscribeLimiter = createLimiter({ max: 10, window: "1 h", prefix: "push-sub" });
+
+/** Desafio diário — 3 submissões/hora por usuário (anti race-condition + double XP) */
+export const desafioSubmeterLimiter = createLimiter({ max: 3, window: "1 h", prefix: "desafio-sub" });
+
+/** Export admin (questões/alunos) — 5/hora por admin */
+export const adminExportLimiter = createLimiter({ max: 5, window: "1 h", prefix: "admin-export" });

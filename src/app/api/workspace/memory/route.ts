@@ -5,6 +5,11 @@ import { createWithCache, MODELS } from "@/lib/anthropic";
 
 const MEMORY_PREFIX = "__MENTOR_MEMORY__";
 
+/** Escapa caracteres especiais do LIKE do PostgreSQL */
+function escapeLike(s: string): string {
+  return s.replace(/[%_\\]/g, "\\$&");
+}
+
 
 // ── GET — retorna memória do mentor para um agentId ──────────────────────────
 export async function GET(req: Request) {
@@ -24,7 +29,7 @@ export async function GET(req: Request) {
       .from("Note")
       .select("content, updatedAt")
       .eq("userId", dbUser.id)
-      .like("content", `${MEMORY_PREFIX}:${agentId}:%`)
+      .like("content", `${MEMORY_PREFIX}:${escapeLike(agentId)}:%`)
       .order("updatedAt", { ascending: false })
       .limit(1)
       .maybeSingle();
@@ -112,7 +117,7 @@ RESUMO (em português):`,
       .from("Note")
       .select("id")
       .eq("userId", dbUser.id)
-      .like("content", `${MEMORY_PREFIX}:${agentId}:%`)
+      .like("content", `${MEMORY_PREFIX}:${escapeLike(agentId)}:%`)
       .limit(1)
       .maybeSingle();
 

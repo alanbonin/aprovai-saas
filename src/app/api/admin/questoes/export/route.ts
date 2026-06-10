@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { adminExportLimiter } from "@/lib/rate-limit";
 
 async function requireAdmin() {
   const supabase = await createClient();
@@ -25,8 +26,15 @@ function escapeCsv(val: unknown): string {
  * Filtros: ?subjectId=xxx&banca=xxx
  */
 export async function GET(req: Request) {
-  if (!await requireAdmin()) {
+  const admin = await requireAdmin();
+  if (!admin) {
     return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
+  }
+
+  // Rate limit — exportação pesada com gabaritos (5/hora por admin)
+  const rl = await adminExportLimiter.check(admin.id);
+  if (!rl.ok) {
+    return NextResponse.json({ error: rl.error }, { status: 429 });
   }
 
   const { searchParams } = new URL(req.url);
