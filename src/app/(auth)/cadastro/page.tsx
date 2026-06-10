@@ -173,12 +173,12 @@ export default function CadastroPage() {
             </p>
 
             {/* Aviso sobre spam */}
-            <div className="bg-amber-100 border border-amber-400 rounded-xl px-4 py-3 mb-5 text-left">
-              <p className="text-amber-800 text-xs font-bold mb-1">⚠️ Não recebeu o e-mail?</p>
-              <p className="text-amber-900 text-xs leading-relaxed">
+            <div style={{ backgroundColor: "#fef3c7", border: "1px solid #d97706", borderRadius: "12px", padding: "12px 16px", marginBottom: "20px", textAlign: "left" }}>
+              <p style={{ color: "#92400e", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>⚠️ Não recebeu o e-mail?</p>
+              <p style={{ color: "#78350f", fontSize: "12px", lineHeight: "1.6" }}>
                 Verifique sua <strong>caixa de spam</strong> ou <strong>lixo eletrônico</strong> — às vezes nossos e-mails chegam por lá.
               </p>
-              <p className="text-amber-900 text-xs leading-relaxed mt-1.5">
+              <p style={{ color: "#78350f", fontSize: "12px", lineHeight: "1.6", marginTop: "6px" }}>
                 Ao confirmar, <strong>marque o e-mail como &quot;Não é spam&quot;</strong> para que as próximas mensagens cheguem direto na caixa de entrada.
               </p>
             </div>
