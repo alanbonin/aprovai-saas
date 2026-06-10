@@ -1,4 +1,6 @@
-import { cache } from "react";
+// Removido: import { cache } from "react";
+// cache() do React NÃO é por-request em Route Handlers — pode vazar entre requests
+// e cachear maxQuestionsPerWeek:0, bloqueando todos os usuários.
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan } from "@/lib/db";
 
@@ -47,8 +49,20 @@ const TRIAL_DEFAULTS = {
   hasPdfLibrary: false, hasArena: false, hasAdaptativo: false, hasCompanhia: false,
 };
 
+// Fallback para planos PAGOS quando o campo não está definido no banco
+// Usa -1 (ilimitado) para limites de uso, e true para features
+const PAID_DEFAULTS = {
+  aiCreditsPerWeek: -1, maxAgents: 3, maxProfiles: 3,
+  maxQuestionsPerWeek: -1, maxFlashcardsPerWeek: -1,
+  maxSimuladosPerWeek: -1, maxRedacoesPerWeek: -1, maxCasosPerWeek: -1,
+  maxPdfPerWeek: -1,
+  hasGroupStudy: true, hasLongTermMemory: true,
+  hasPdfLibrary: true, hasArena: true, hasAdaptativo: true, hasCompanhia: true,
+};
+
 function planLimits(plan: any, isTrial: boolean) {
-  const def = isTrial ? TRIAL_DEFAULTS : EXPIRED_LIMITS;
+  // Trial → TRIAL_DEFAULTS | Pago sem campo definido → PAID_DEFAULTS (ilimitado) | Expirado → EXPIRED_LIMITS (bloqueado)
+  const def = isTrial ? TRIAL_DEFAULTS : PAID_DEFAULTS;
   return {
     aiCreditsPerWeek:     plan?.aiCreditsPerWeek     ?? def.aiCreditsPerWeek,
     maxAgents:            plan?.maxAgents             ?? def.maxAgents,
@@ -68,7 +82,7 @@ function planLimits(plan: any, isTrial: boolean) {
   };
 }
 
-export const getAccessLevel = cache(async (): Promise<PlanLimits> => {
+export async function getAccessLevel(): Promise<PlanLimits> {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -96,4 +110,4 @@ export const getAccessLevel = cache(async (): Promise<PlanLimits> => {
   } catch {
     return { planSlug: null, planName: null, isPremium: false, ...EXPIRED_LIMITS };
   }
-});
+}

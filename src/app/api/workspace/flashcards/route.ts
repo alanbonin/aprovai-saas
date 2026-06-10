@@ -17,7 +17,8 @@ export async function GET() {
   const profileId = activeProfile?.id ?? null;
 
   let ssQuery = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
-  if (profileId) ssQuery = ssQuery.eq("profileId", profileId);
+  // BUG FIX: inclui dados legados (profileId null)
+  if (profileId) ssQuery = ssQuery.or(`profileId.eq.${profileId},profileId.is.null`);
   const { data: studentSubjects } = await ssQuery;
 
   let subjectIds = (studentSubjects ?? []).map(s => s.subjectId as string);

@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Layers, RotateCcw, Trophy, Zap, ChevronRight, ChevronDown, ArrowLeft, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { FLASHCARDS_STEPS } from "@/components/tour/tour-steps";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Deck {
@@ -251,7 +253,8 @@ export default function FlashcardsPage() {
 
     return (
       <div className="p-4 sm:p-6 max-w-2xl mx-auto text-white">
-        <div className="flex items-center gap-3 mb-6">
+        <TourGuide tourId="flashcards" steps={FLASHCARDS_STEPS} autoStart buttonLabel="Tour: Flashcards" />
+        <div id="tour-flashcards-deck" className="flex items-center gap-3 mb-6">
           <Layers className="w-5 h-5 text-indigo-400" />
           <div>
             <h1 className="text-xl font-bold">Flashcards</h1>

@@ -15,6 +15,8 @@ import { QuestoesAdaptativas } from "@/components/workspace/questoes-adaptativas
 import { PomodoroTimer } from "@/components/workspace/pomodoro-timer";
 import { PushToggle } from "@/components/push-toggle";
 import { CATEGORIAS } from "@/lib/agents";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { WORKSPACE_STEPS } from "@/components/tour/tour-steps";
 
 interface Agent { id: string; name: string; description: string; color: string; area?: string | null; categoria?: string | null; banca?: string | null; isPremium?: boolean; avatar?: string | null; }
 interface Subject { id: string; name: string; slug: string; }
@@ -284,6 +286,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
     progresso: { questoes: number; flashcards: number; simulados: number; casos: number; redacao: number };
   } | null>(null);
   const [editingMetas, setEditingMetas] = useState(false);
+  const [showMetasFloat, setShowMetasFloat] = useState(false);
   const [showSubjectManager, setShowSubjectManager] = useState(false);
   const [allSubjects, setAllSubjects] = useState<{ id: string; name: string; categoria?: string }[]>([]);
   const [activeSubjectIds, setActiveSubjectIds] = useState<Set<string>>(new Set(subjects.map(s => s.id)));
@@ -376,7 +379,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
 
   function fetchStats() {
-    fetch("/api/relatorio")
+    fetch("/api/relatorio", { cache: "no-store" })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!d) return;
@@ -488,10 +491,13 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
           : q
       ),
     }));
+    // Atualiza stats do topo em tempo real após cada resposta
+    fetchStats();
   }
 
   return (
     <div className="flex flex-col min-h-screen text-white overflow-hidden bg-[#080c18]">
+      <TourGuide tourId="workspace" steps={WORKSPACE_STEPS} autoStart buttonLabel="Tour: Workspace" />
 
         {/* ── Banner de expiração ── */}
         {isExpired && (
@@ -573,7 +579,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
             <div className="flex-1 overflow-y-auto">
 
               {/* ── Topo: countdown + stats numa linha só ── */}
-              <div className="mx-4 mt-3 flex gap-2">
+              <div id="tour-workspace-progresso" className="mx-4 mt-3 flex gap-2">
                 {/* Countdown compacto */}
                 {profile.dataProva && (() => {
                   const d = daysUntil(profile.dataProva);
@@ -652,127 +658,33 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 </div>
               )}
 
-              {/* ── Ações rápidas compactas ── */}
-              <div className="mx-4 mt-2 grid grid-cols-4 gap-1.5">
-                {[
-                  { icon: "🎓", label: "Mentor", action: () => setActiveNav("mentor"), color: "#6366f1", locked: false },
-                  { icon: "🎯", label: "Simulado", action: () => tryNav("simulado"), color: "#f59e0b", locked: !isPremium },
-                  { icon: "🔍", label: "Casos", action: () => tryNav("casos"), color: "#06b6d4", locked: !isPremium },
-                  { icon: "✍️", label: "Redação", action: () => tryNav("redacao"), color: "#ec4899", locked: !isPremium },
-                ].map(({ icon, label, action, color, locked }) => (
-                  <button key={label} onClick={action}
-                    className="relative flex flex-col items-center gap-1 py-2.5 rounded-xl border border-white/[0.07] bg-[#0d1117] hover:bg-white/[0.05] transition-all active:scale-95">
-                    <span className="text-xl leading-none">{icon}</span>
-                    <span className="text-[10px] font-medium text-gray-400">{label}</span>
-                    {locked && <Lock size={9} className="absolute top-1.5 right-1.5 text-gray-600" />}
-                  </button>
-                ))}
-              </div>
-
-              {/* ── Estudar Agora ── */}
+              {/* ── Banner "Estudar Agora" — compacto, só quando há pendências ── */}
               {homeStats && (homeStats.flashcardDueToday > 0 || homeStats.pontoCritico.length > 0) && (
-                <div className="mx-5 mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
-                  <p className="text-xs font-bold text-amber-400 uppercase tracking-wider mb-2.5">⚡ Estudar agora</p>
-                  <div className="flex flex-col gap-2">
-                    {homeStats.flashcardDueToday > 0 && (
-                      <button onClick={() => setActiveNav("flash")}
-                        className="flex items-center gap-3 text-left hover:bg-amber-500/10 rounded-xl px-3 py-2 transition-colors">
-                        <span className="text-xl flex-shrink-0">🃏</span>
-                        <div>
-                          <p className="text-sm font-semibold text-white">{homeStats.flashcardDueToday} flashcard{homeStats.flashcardDueToday > 1 ? "s" : ""} vencido{homeStats.flashcardDueToday > 1 ? "s" : ""}</p>
-                          <p className="text-[11px] text-gray-500">Revisar agora para não perder o ritmo</p>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-600 ml-auto flex-shrink-0" />
-                      </button>
-                    )}
-
-                    {homeStats.pontoCritico.slice(0, 2).map(p => {
-                      const subj = subjects.find(s => s.id === p.subjectId);
-                      return (
-                        <button key={p.subjectName}
-                          onClick={() => subj && (setSelectedSubject(subj), setActiveTab("questoes"))}
-                          className="flex items-center gap-3 text-left hover:bg-amber-500/10 rounded-xl px-3 py-2 transition-colors">
-                          <span className="text-xl flex-shrink-0">📉</span>
-                          <div>
-                            <p className="text-sm font-semibold text-white">{p.subjectName}</p>
-                            <p className="text-[11px] text-red-400">{p.accuracy}% de acerto — ponto crítico</p>
-                          </div>
-                          <ChevronRight className="w-4 h-4 text-gray-600 ml-auto flex-shrink-0" />
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* ── Metas da Semana ── */}
-              {metas && (
-                <div className="mx-5 mt-3 rounded-2xl border border-white/[0.06] bg-[#0d1117] p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold text-white uppercase tracking-wider">🎯 Metas da semana</p>
-                    <button onClick={() => setEditingMetas(v => !v)}
-                      className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">
-                      {editingMetas ? "Concluído" : "Editar"}
+                <div className="mx-4 mt-2 rounded-xl border border-amber-500/20 bg-amber-500/[0.06] px-3 py-2 flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-bold text-amber-400 flex-shrink-0">⚡ Pendente:</span>
+                  {homeStats.flashcardDueToday > 0 && (
+                    <button onClick={() => setActiveNav("flash")}
+                      className="flex items-center gap-1 text-xs text-amber-300 hover:text-white transition-colors">
+                      🃏 {homeStats.flashcardDueToday} flashcard{homeStats.flashcardDueToday > 1 ? "s" : ""}
+                      <ChevronRight className="w-3 h-3" />
                     </button>
-                  </div>
-                  {editingMetas ? (
-                    <div className="space-y-3">
-                      {([
-                        { key: "questoesMeta" as const, label: "Questões/semana", icon: "🎯", max: 200 },
-                        { key: "flashcardsMeta" as const, label: "Flashcards/semana", icon: "🃏", max: 100 },
-                        { key: "simuladosMeta" as const, label: "Simulados/semana", icon: "📋", max: 5 },
-                        { key: "casosMeta" as const, label: "Casos/semana", icon: "🔍", max: 20 },
-                        { key: "redacaoMeta" as const, label: "Redações/semana", icon: "✍️", max: 10 },
-                      ]).map(({ key, label, icon, max }) => (
-                        <div key={key} className="flex items-center gap-3">
-                          <span className="text-sm w-5">{icon}</span>
-                          <span className="text-xs text-gray-400 flex-1">{label}</span>
-                          <input type="number" min={1} max={max}
-                            value={metas.metas[key]}
-                            onChange={e => {
-                              const v = Math.max(1, Math.min(max, parseInt(e.target.value) || 1));
-                              const updated = { ...metas.metas, [key]: v };
-                              setMetas(m => m ? { ...m, metas: updated } : m);
-                              fetch("/api/workspace/metas", {
-                                method: "POST", headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ [key]: v }),
-                              }).catch(() => {});
-                            }}
-                            className="w-16 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white text-center focus:outline-none focus:border-indigo-500/50"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-2.5">
-                      {([
-                        { label: "Questões", done: metas.progresso.questoes, meta: metas.metas.questoesMeta, color: "#6366f1" },
-                        { label: "Flashcards", done: metas.progresso.flashcards, meta: metas.metas.flashcardsMeta, color: "#10b981" },
-                        { label: "Simulados", done: metas.progresso.simulados, meta: metas.metas.simuladosMeta, color: "#f59e0b" },
-                        { label: "Casos", done: metas.progresso.casos ?? 0, meta: metas.metas.casosMeta ?? 2, color: "#06b6d4" },
-                        { label: "Redação", done: metas.progresso.redacao ?? 0, meta: metas.metas.redacaoMeta ?? 1, color: "#ec4899" },
-                      ]).map(({ label, done, meta, color }) => {
-                        const pct = Math.min(100, Math.round((done / meta) * 100));
-                        const done_ = pct >= 100;
-                        return (
-                          <div key={label}>
-                            <div className="flex justify-between text-[10px] mb-1">
-                              <span className="text-gray-400">{label}</span>
-                              <span style={{ color: done_ ? "#10b981" : color }} className="font-semibold">{done}/{meta} {done_ ? "✓" : ""}</span>
-                            </div>
-                            <div className="h-1 rounded-full bg-white/8">
-                              <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
                   )}
+                  {homeStats.pontoCritico.slice(0, 1).map(p => {
+                    const subj = subjects.find(s => s.id === p.subjectId);
+                    return (
+                      <button key={p.subjectName}
+                        onClick={() => subj && (setSelectedSubject(subj), setActiveTab("questoes"))}
+                        className="flex items-center gap-1 text-xs text-red-300 hover:text-white transition-colors">
+                        📉 {p.subjectName} ({p.accuracy}%)
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
-              {/* ── Matérias ── */}
-              <div className="px-4 mt-4 pb-24">
+              {/* ── Matérias ── PRIMEIRO, logo visível ── */}
+              <div id="tour-workspace-filtros" className="px-4 mt-3 pb-32">
                 <div className="flex items-center justify-between mb-3">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Suas matérias <span className="text-gray-600 normal-case font-normal">({subjects.length})</span></p>
                   <button onClick={openSubjectManager}
@@ -821,6 +733,95 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   })}
                 </div>
               </div>
+
+              {/* ── Botão flutuante Metas + Painel ── */}
+              {metas && (
+                <>
+                  {/* Botão flutuante 🎯 */}
+                  <button
+                    onClick={() => setShowMetasFloat(v => !v)}
+                    className="fixed bottom-24 right-20 md:bottom-6 md:right-20 z-40 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95"
+                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 20px #10b98155" }}
+                    title="Metas da semana"
+                  >
+                    🎯
+                  </button>
+
+                  {/* Painel de Metas */}
+                  {showMetasFloat && (
+                    <div className="fixed bottom-20 right-16 md:bottom-20 md:right-16 z-40 rounded-2xl shadow-2xl overflow-hidden"
+                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "300px", maxWidth: "calc(100vw - 2rem)" }}>
+                      <div className="flex items-center justify-between px-4 py-2.5"
+                        style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-color)" }}>
+                        <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>🎯 Metas da semana</span>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => setEditingMetas(v => !v)} className="text-[10px] text-gray-500 hover:text-gray-300 transition-colors">
+                            {editingMetas ? "Concluído" : "Editar"}
+                          </button>
+                          <button onClick={() => setShowMetasFloat(false)} className="w-6 h-6 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-gray-400 hover:text-white transition-colors">
+                            ✕
+                          </button>
+                        </div>
+                      </div>
+                      <div className="p-4">
+                        {editingMetas ? (
+                          <div className="space-y-3">
+                            {([
+                              { key: "questoesMeta" as const, label: "Questões/semana", icon: "🎯", max: 200 },
+                              { key: "flashcardsMeta" as const, label: "Flashcards/semana", icon: "🃏", max: 100 },
+                              { key: "simuladosMeta" as const, label: "Simulados/semana", icon: "📋", max: 5 },
+                              { key: "casosMeta" as const, label: "Casos/semana", icon: "🔍", max: 20 },
+                              { key: "redacaoMeta" as const, label: "Redações/semana", icon: "✍️", max: 10 },
+                            ]).map(({ key, label, icon, max }) => (
+                              <div key={key} className="flex items-center gap-2">
+                                <span className="text-sm w-5">{icon}</span>
+                                <span className="text-xs text-gray-400 flex-1">{label}</span>
+                                <input type="number" min={1} max={max}
+                                  value={metas.metas[key]}
+                                  onChange={e => {
+                                    const v = Math.max(1, Math.min(max, parseInt(e.target.value) || 1));
+                                    const updated = { ...metas.metas, [key]: v };
+                                    setMetas(m => m ? { ...m, metas: updated } : m);
+                                    fetch("/api/workspace/metas", {
+                                      method: "POST", headers: { "Content-Type": "application/json" },
+                                      body: JSON.stringify({ [key]: v }),
+                                    }).catch(() => {});
+                                  }}
+                                  className="w-14 bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-xs text-white text-center focus:outline-none focus:border-indigo-500/50"
+                                />
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-2.5">
+                            {([
+                              { label: "Questões", done: metas.progresso.questoes, meta: metas.metas.questoesMeta, color: "#6366f1" },
+                              { label: "Flashcards", done: metas.progresso.flashcards, meta: metas.metas.flashcardsMeta, color: "#10b981" },
+                              { label: "Simulados", done: metas.progresso.simulados, meta: metas.metas.simuladosMeta, color: "#f59e0b" },
+                              { label: "Casos", done: metas.progresso.casos ?? 0, meta: metas.metas.casosMeta ?? 2, color: "#06b6d4" },
+                              { label: "Redação", done: metas.progresso.redacao ?? 0, meta: metas.metas.redacaoMeta ?? 1, color: "#ec4899" },
+                            ]).map(({ label, done, meta, color }) => {
+                              const pct = Math.min(100, Math.round((done / meta) * 100));
+                              const done_ = pct >= 100;
+                              return (
+                                <div key={label}>
+                                  <div className="flex justify-between text-xs mb-1">
+                                    <span className="text-gray-300 font-medium">{label}</span>
+                                    <span style={{ color: done_ ? "#10b981" : color }} className="font-bold">{done}/{meta} {done_ ? "✓" : ""}</span>
+                                  </div>
+                                  <div className="h-1.5 rounded-full bg-white/10">
+                                    <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: color }} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
 
               {/* ── Modal gerenciador de matérias ── */}
               {showSubjectManager && (
@@ -947,7 +948,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
           {/* ───── ESTUDAR → SUBJECT VIEW ───── */}
           {activeNav === "estudar" && selectedSubject && (
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div id="tour-workspace-questao" className="flex-1 flex flex-col overflow-hidden">
               <div className="flex-1 overflow-y-auto p-5">
                 {loadingContent ? (
                   <div className="flex items-center justify-center h-full">
@@ -1278,7 +1279,7 @@ function QuestoesAdaptativasToggle({ subjectId, subjectName, items, onProgressUp
 }) {
   return (
     <div>
-      <QuestoesTab items={items} subjectName={subjectName} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} isPremium={isPremium} todayCount={todayCount} />
+      <QuestoesTab items={items} subjectName={subjectName} subjectId={subjectId} onProgressUpdate={onProgressUpdate} onCelebrate={onCelebrate} isPremium={isPremium} todayCount={todayCount} />
     </div>
   );
 }
@@ -1322,14 +1323,18 @@ const CORRECT_MSGS = [
   "💪 Excelente! +15 XP", "⚡ Perfeito! Ótimo ritmo!", "🏆 Correto! +15 XP",
 ];
 
-function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPremium = true, todayCount = 0 }: {
-  items: Question[]; subjectName: string;
+function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebrate, isPremium = true, todayCount = 0 }: {
+  items: Question[]; subjectName: string; subjectId?: string;
   onProgressUpdate: (id: number, next: string, correct?: boolean) => void;
   onCelebrate?: (msg: string) => void;
   isPremium?: boolean; todayCount?: number;
 }) {
   const DAILY_LIMIT = 30;
-  const [current, setCurrent] = useState(0);
+  const posKey = subjectId ? `estudar:pos:${subjectId}` : null;
+  const [current, setCurrent] = useState(() => {
+    if (!posKey) return 0;
+    try { const v = localStorage.getItem(posKey); return v ? Math.max(0, parseInt(v, 10)) : 0; } catch { return 0; }
+  });
   const [selected, setSelected] = useState<string | null>(null);
   const [showExpl, setShowExpl] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
@@ -1357,6 +1362,11 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     setReportSent(true);
     setTimeout(() => { setReportando(null); setReportSent(false); setReportDesc(""); setReportMotivo("gabarito_errado"); }, 1800);
   }
+
+  // Persiste posição atual no localStorage
+  useEffect(() => {
+    if (posKey) try { localStorage.setItem(posKey, String(current)); } catch { /* ok */ }
+  }, [current, posKey]);
 
   // Carrega favoritos
   useEffect(() => {
@@ -1388,11 +1398,13 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
 
   function resetFilters() {
     setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false); setAutoAdvancing(false);
+    if (posKey) try { localStorage.removeItem(posKey); } catch { /* ok */ }
   }
 
   function restartEmbaralhado() {
     setShuffleSeed(Math.random());
     setCurrent(0); setSelected(null); setScore({ correct: 0, total: 0 }); setShowExpl(false); setAnswered(new Set()); setAutoAdvancing(false);
+    if (posKey) try { localStorage.removeItem(posKey); } catch { /* ok */ }
   }
 
   // Fisher-Yates shuffle determinístico pelo seed
@@ -1486,43 +1498,49 @@ function QuestoesTab({ items, subjectName, onProgressUpdate, onCelebrate, isPrem
     const isCorrect = key === q.answer;
     const newScore = { correct: score.correct + (isCorrect ? 1 : 0), total: score.total + 1 };
     setScore(newScore);
+    // Salva progresso imediatamente passando `key` diretamente (evita race condition do React state)
     if (isCorrect) {
       const msg = CORRECT_MSGS[Math.floor(Math.random() * CORRECT_MSGS.length)];
       onCelebrate?.(msg);
+      handleQualityDirect("ok", key); // salva imediatamente; botões de qualidade apenas ajustam SM-2
     } else {
-      // Resposta errada → salva progresso mas NÃO avança automaticamente
-      // O aluno lê a explicação e clica em "Próxima →" quando quiser
-      handleQualityDirect("again");
+      handleQualityDirect("again", key);
     }
   }
 
-  async function handleQualityDirect(quality: "easy" | "ok" | "hard" | "again") {
+  async function handleQualityDirect(quality: "easy" | "ok" | "hard" | "again", respostaKey?: string) {
     if (!q) return;
     const isCorrect = quality !== "again";
+    const resposta = respostaKey ?? selected; // usa parâmetro direto para evitar stale closure
     const res = await fetch("/api/questoes/progresso", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: q.id, quality }),
+      body: JSON.stringify({ questionId: q.id, quality, resposta }),
     });
     if (res.ok) {
       const data = await res.json();
       if (data.limitReached) { setDailyLimitHit(true); return; }
       onProgressUpdate(q.id, data.nextReview, isCorrect);
       setAnswered(prev => new Set([...prev, q.id]));
+    } else {
+      const errText = await res.text().catch(() => "");
+      console.error("[progresso] API error", res.status, errText);
+      // Alerta temporário de debug — remover após corrigir
+      alert(`DEBUG: API retornou ${res.status}\n${errText.slice(0, 300)}`);
     }
     // Não avança automaticamente — aluno usa o botão "Próxima →"
   }
 
   async function handleQuality(quality: "easy" | "ok" | "hard" | "again") {
     if (!q) return;
-    const isCorrect = quality !== "again";
+    // Botão de qualidade: re-salva com a qualidade escolhida (refina SM-2)
     const res = await fetch("/api/questoes/progresso", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ questionId: q.id, quality }),
+      body: JSON.stringify({ questionId: q.id, quality, resposta: selected }),
     });
     if (res.ok) {
       const data = await res.json();
       if (data.limitReached) { setDailyLimitHit(true); return; }
-      onProgressUpdate(q.id, data.nextReview, isCorrect);
+      onProgressUpdate(q.id, data.nextReview, quality !== "again");
       setAnswered(prev => new Set([...prev, q.id]));
     }
     setCurrent(c => c + 1);

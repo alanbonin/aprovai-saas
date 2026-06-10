@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { QUIZ_STEPS } from "@/components/tour/tour-steps";
 import { Zap, CheckCircle2, XCircle, Clock, RotateCcw, Star, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -266,8 +268,9 @@ export function QuizInner() {
 
   return (
     <div className="min-h-screen text-white p-4 max-w-xl mx-auto">
+      <TourGuide tourId="quiz" steps={QUIZ_STEPS} autoStart buttonLabel="Tour: Quiz" />
       {/* Header */}
-      <div className="flex items-center justify-between mb-4">
+      <div id="tour-quiz-header" className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           {Array.from({ length: QUIZ_SIZE }).map((_, i) => (
             <div key={i} className={cn(
@@ -298,7 +301,7 @@ export function QuizInner() {
       </div>
 
       {/* Questão */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-4">
+      <div id="tour-quiz-questao" className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-4">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-[10px] font-mono text-amber-500">Q{current + 1}/{QUIZ_SIZE}</span>
         </div>

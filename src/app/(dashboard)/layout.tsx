@@ -6,6 +6,7 @@ import { PomodoroFloat } from "@/components/layout/pomodoro-float";
 import { AutoRefresh } from "@/components/layout/auto-refresh";
 import { PushAutoPrompt } from "@/components/layout/push-auto-prompt";
 import { SessionGuard } from "@/components/layout/session-guard";
+import { ThemeWelcome } from "@/components/layout/theme-welcome";
 import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 import { getConfig } from "@/lib/system-config";
 import { getWeekStartStr } from "@/lib/api-utils";
@@ -94,6 +95,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar
         userName={dbUser.name ?? undefined}
         planName={planName}
+        avatarUrl={(dbUser as unknown as { avatarUrl?: string | null }).avatarUrl ?? null}
         aiCreditsLeft={aiCreditsLeft}
         aiCreditsTotal={aiCreditsTotal}
         isPremium={isPremium}
@@ -120,6 +122,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <PomodoroFloat />
       <PushAutoPrompt />
       <SessionGuard />
+      <ThemeWelcome />
       </div>
     </div>
     </UpgradeModalProvider>

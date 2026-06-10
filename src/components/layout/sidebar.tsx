@@ -288,14 +288,14 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
           </div>
 
           {/* Seções do menu */}
-          <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: "calc(70vh - 80px)" }}>
+          <div className="overflow-y-auto p-2.5 space-y-2" style={{ maxHeight: "calc(70vh - 80px)" }}>
             {sections.map(section => (
               <div key={section.id}>
-                <p className="text-[10px] font-bold uppercase tracking-widest px-2 mb-1.5"
+                <p className="text-[9px] font-bold uppercase tracking-widest px-2 mb-1"
                   style={{ color: section.color + "99" }}>
                   {section.title}
                 </p>
-                <div className="grid grid-cols-3 gap-1.5">
+                <div className="grid grid-cols-3 gap-1">
                   {section.items.map(item => {
                     const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href + "/"));
                     const hasNotif = item.href === "/notificacoes" && unreadNotifs > 0;
@@ -308,12 +308,12 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                         href={item.href}
                         onClick={() => setMobileOpen(false)}
                         className={cn(
-                          "flex flex-col items-center gap-1 px-2 py-2.5 rounded-xl border text-center transition-all relative",
+                          "flex flex-col items-center gap-0.5 px-1.5 py-2 rounded-xl border text-center transition-all relative",
                           active ? "bg-indigo-600/25 border-indigo-500/40" : "bg-white/[0.03] border-white/8 hover:bg-white/8"
                         )}
                       >
-                        <span className="text-xl leading-none">{item.icon}</span>
-                        <span className={cn("text-[10px] font-medium leading-none", active ? "text-indigo-300" : "text-gray-400")}>
+                        <span className="text-lg leading-none">{item.icon}</span>
+                        <span className={cn("text-[9px] font-medium leading-none", active ? "text-indigo-300" : "text-gray-400")}>
                           {item.label}
                         </span>
                         {/* Badge: notif, em breve, contador, locked */}
@@ -335,25 +335,34 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
             ))}
 
             {/* Config + Tema + Suporte + Sair */}
-            <div className="grid grid-cols-2 gap-1.5 pt-1 border-t border-white/8">
+            <div className="grid grid-cols-2 gap-1 pt-1 border-t border-white/8">
               <Link href="/configuracoes" onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400">
                 ⚙️ <span>Config.</span>
               </Link>
               <button
                 onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400"
+                className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.03] border border-white/8 text-xs text-gray-400"
               >
-                {theme === "dark" ? "☀️" : "🌙"} <span>Modo {theme === "dark" ? "Claro" : "Escuro"}</span>
+                <span>{theme === "dark" ? "☀️" : "🌙"} Tema</span>
+                <span className={cn(
+                  "relative w-8 h-4 rounded-full transition-all duration-300 ml-2 flex-shrink-0",
+                  theme === "light" ? "bg-amber-400" : "bg-indigo-500"
+                )}>
+                  <span className={cn(
+                    "absolute top-0.5 w-3 h-3 rounded-full bg-white shadow-sm transition-all duration-300",
+                    theme === "light" ? "left-0.5" : "left-[17px]"
+                  )} />
+                </span>
               </button>
               <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer"
                 onClick={() => setMobileOpen(false)}
-                className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-green-500/[0.08] border border-green-500/20 text-xs text-green-400">
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-green-500/[0.08] border border-green-500/20 text-xs text-green-400">
                 💬 <span>Suporte</span>
               </a>
               <button
                 onClick={handleSignOut}
-                className="w-full flex items-center gap-2 px-3 py-2.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
+                className="w-full flex items-center gap-1.5 px-3 py-2 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-xs text-red-400">
                 🚪 <span>Sair</span>
               </button>
             </div>
@@ -489,7 +498,7 @@ function SidebarSection({
                 key={href}
                 href={href}
                 className={cn(
-                  "flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-medium transition-all border",
+                  "flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all border",
                   active
                     ? isAdmin
                       ? "bg-orange-600/20 text-orange-300 border-orange-500/25"
@@ -497,7 +506,7 @@ function SidebarSection({
                     : "text-gray-400 hover:text-white hover:bg-white/[0.05] border-transparent"
                 )}
               >
-                <span className="text-sm leading-none flex-shrink-0">{icon}</span>
+                <span className="text-xs leading-none flex-shrink-0">{icon}</span>
                 <span className="flex-1 truncate">{label}</span>
                 {comingSoon ? (
                   <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0 bg-white/[0.07] text-gray-500 border border-white/10">em breve</span>
@@ -563,14 +572,14 @@ const HREF_RESOURCE: Record<string, string> = {
 };
 
 interface SidebarProps {
-  isAdmin?: boolean; userName?: string; planName?: string;
+  isAdmin?: boolean; userName?: string; planName?: string; avatarUrl?: string | null;
   aiCreditsLeft?: number; aiCreditsTotal?: number; isPremium?: boolean;
   trialDaysLeft?: number | null;
   usageLimits?: UsageLimits;
 }
 
 /* ── Componente principal ───────────────────────────────────────────────── */
-export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium, trialDaysLeft, usageLimits }: SidebarProps) {
+export function Sidebar({ isAdmin, userName, planName, avatarUrl, aiCreditsLeft = 0, aiCreditsTotal = 10, isPremium, trialDaysLeft, usageLimits }: SidebarProps) {
   const pathname = usePathname();
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -745,7 +754,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
     >
 
       {/* ── Logo + Briefing do Dia ──────────────────────────────── */}
-      <div className="px-4 py-4 border-b border-white/[0.06] flex-shrink-0 space-y-2">
+      <div className="px-3 py-3 border-b border-white/[0.06] flex-shrink-0 space-y-1.5">
         <div className="flex items-center justify-between">
         <a href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity flex-1 min-w-0">
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -809,7 +818,7 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
       </nav>
 
       {/* ── Footer ─────────────────────────────────────────────── */}
-      <div className="border-t border-white/[0.06] p-3 space-y-3 flex-shrink-0">
+      <div className="border-t border-white/[0.06] p-2.5 space-y-2 flex-shrink-0">
 
         {/* XP bar + mini stats — apenas alunos */}
         {!isAdmin && (
@@ -904,50 +913,68 @@ export function Sidebar({ isAdmin, userName, planName, aiCreditsLeft = 0, aiCred
           </Link>
         )}
 
-        {/* Toggle dark/light */}
+        {/* Toggle dark/light — dijuntor visual */}
         {mounted && (
-          <button
-            onClick={() => setTheme(theme === "light" ? "dark" : "light")}
-            title={theme === "light" ? "Alternar para modo escuro" : "Alternar para modo claro"}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] text-gray-500 hover:text-gray-300 hover:bg-white/[0.05] transition-all"
-          >
-            {theme === "light"
-              ? <><Sun className="w-3.5 h-3.5 text-amber-400" /><span className="text-amber-400/80">Modo Claro</span></>
-              : <><Moon className="w-3.5 h-3.5 text-indigo-400" /><span className="text-indigo-400/80">Modo Escuro</span></>
-            }
-          </button>
+          <div id="tour-theme-toggle" className="flex items-center justify-between px-2.5 py-1.5 rounded-lg hover:bg-white/[0.05] transition-all">
+            <div className="flex items-center gap-2">
+              {theme === "light"
+                ? <Sun className="w-3.5 h-3.5 text-amber-400" />
+                : <Moon className="w-3.5 h-3.5 text-indigo-400" />
+              }
+              <span className="text-[11px] text-gray-400">
+                {theme === "light" ? "Modo Claro" : "Modo Escuro"}
+              </span>
+            </div>
+            {/* Switch toggle */}
+            <button
+              onClick={() => setTheme(theme === "light" ? "dark" : "light")}
+              title={theme === "light" ? "Mudar para escuro" : "Mudar para claro"}
+              className={cn(
+                "relative w-9 h-5 rounded-full transition-all duration-300 flex-shrink-0",
+                theme === "light" ? "bg-amber-400" : "bg-indigo-500"
+              )}
+            >
+              <span className={cn(
+                "absolute top-0.5 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300",
+                theme === "light" ? "left-0.5" : "left-[18px]"
+              )} />
+            </button>
+          </div>
         )}
 
         {/* User card */}
         <div className="flex items-center gap-1.5 pt-0.5">
           <div className={cn(
-            "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0",
+            "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden",
             isAdmin ? "bg-orange-600/30" : "bg-indigo-600/30"
           )}>
-            <span className={cn("text-xs font-bold", isAdmin ? "text-orange-400" : "text-indigo-400")}>
-              {userName?.charAt(0).toUpperCase() ?? (isAdmin ? "A" : "U")}
-            </span>
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+            ) : (
+              <span className={cn("text-xs font-bold", isAdmin ? "text-orange-400" : "text-indigo-400")}>
+                {userName?.charAt(0).toUpperCase() ?? (isAdmin ? "A" : "U")}
+              </span>
+            )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs text-white truncate font-medium">
+            <p className="text-[11px] text-white truncate font-medium leading-tight">
               {userName ?? (isAdmin ? "Admin" : "Aluno")}
             </p>
             {!isAdmin && (
-              <div className="flex flex-col gap-0.5">
-                <div className="flex gap-2">
-                  <Link href="/configuracoes" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Config.</Link>
-                  <Link href="/planos" className="text-[10px] text-gray-400 hover:text-gray-200 transition-colors">Planos</Link>
-                </div>
-                <div className="flex gap-2 mt-0.5">
-                  <a href="/termos" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Termos</a>
-                  <a href="/privacidade" target="_blank" className="text-[10px] text-gray-600 hover:text-gray-400 transition-colors">Privacidade</a>
-                  <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer" className="text-[10px] text-green-600 hover:text-green-400 transition-colors">💬 Suporte</a>
-                </div>
+              <div className="flex items-center gap-1.5 flex-wrap mt-0.5">
+                <Link href="/configuracoes" className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors">Config.</Link>
+                <span className="text-[9px] text-gray-700">·</span>
+                <Link href="/planos" className="text-[9px] text-gray-500 hover:text-gray-300 transition-colors">Planos</Link>
+                <span className="text-[9px] text-gray-700">·</span>
+                <a href="/termos" target="_blank" className="text-[9px] text-gray-600 hover:text-gray-400 transition-colors">Termos</a>
+                <span className="text-[9px] text-gray-700">·</span>
+                <a href="https://wa.me/5571983434291" target="_blank" rel="noopener noreferrer" className="text-[9px] text-green-700 hover:text-green-500 transition-colors">Suporte</a>
               </div>
             )}
           </div>
           <button onClick={handleSignOut} title="Sair"
-            className="text-gray-600 hover:text-red-400 transition-colors text-xs font-bold px-1">
+            className="text-gray-600 hover:text-red-400 transition-colors text-[10px] font-bold px-1 flex-shrink-0">
             Sair
           </button>
         </div>

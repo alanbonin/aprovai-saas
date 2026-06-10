@@ -2,6 +2,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { CheckCircle, XCircle, ChevronRight, RotateCcw, AlertTriangle, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { REVISAO_STEPS } from "@/components/tour/tour-steps";
 
 interface Question {
   id: number;
@@ -165,6 +167,7 @@ export function RevisaoInner() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
+      <TourGuide tourId="revisao" steps={REVISAO_STEPS} autoStart buttonLabel="Tour: Revisão" />
       {/* XP flash */}
       {xpFlash && (
         <div className="fixed top-6 right-6 z-50 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-indigo-600 text-white text-sm font-bold shadow-lg animate-bounce pointer-events-none">
@@ -173,7 +176,7 @@ export function RevisaoInner() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div id="tour-revisao-header" className="flex items-center justify-between mb-6">
         <div>
           <div className="flex items-center gap-2 mb-0.5">
             <AlertTriangle className="w-5 h-5 text-red-400" />
@@ -220,7 +223,7 @@ export function RevisaoInner() {
 
       {/* Question card */}
       {q && !done && (
-        <div className="rounded-2xl bg-white/3 border border-red-500/10 p-6">
+        <div id="tour-revisao-questao" className="rounded-2xl bg-white/3 border border-red-500/10 p-6">
           <div className="flex items-center gap-2 mb-4">
             <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/10 text-red-400 border border-red-500/20">
               Você errou esta questão

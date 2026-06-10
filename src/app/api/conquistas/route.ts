@@ -64,14 +64,15 @@ export async function GET() {
     flashcardRes,
   ] = await Promise.all([
     db.from("StudentProfile").select("streak").eq("userId", dbUser.id).eq("id", profileId ?? dbUser.id).maybeSingle(),
+    // BUG FIX: inclui dados legados (profileId null)
     profileId
-      ? db.from("Progress").select("correct").eq("userId", dbUser.id).eq("profileId", profileId)
+      ? db.from("Progress").select("correct").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`)
       : db.from("Progress").select("correct").eq("userId", dbUser.id),
     profileId
-      ? db.from("SimuladoHistory").select("id").eq("userId", dbUser.id).eq("profileId", profileId)
+      ? db.from("SimuladoHistory").select("id").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`)
       : db.from("SimuladoHistory").select("id").eq("userId", dbUser.id),
     profileId
-      ? db.from("FlashcardSet").select("cards").eq("userId", dbUser.id).eq("profileId", profileId)
+      ? db.from("FlashcardSet").select("cards").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`)
       : db.from("FlashcardSet").select("cards").eq("userId", dbUser.id),
   ]);
 

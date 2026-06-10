@@ -38,6 +38,23 @@ html.light {
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
+
+/* Aumenta a fonte base no desktop para melhor leitura em telas maiores.
+   Todas as classes Tailwind (text-xs, text-sm, etc.) escalam automaticamente. */
+html {
+  font-size: 16px; /* mobile padrão */
+}
+@media (min-width: 1024px) {
+  html {
+    font-size: 17px; /* desktop: +6% — sutil mas perceptível */
+  }
+}
+@media (min-width: 1440px) {
+  html {
+    font-size: 18px; /* telas grandes/4K: +12% */
+  }
+}
+
 body {
   background-color: var(--bg-base);
   color: var(--text-primary);

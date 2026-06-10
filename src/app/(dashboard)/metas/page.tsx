@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { METAS_STEPS } from "@/components/tour/tour-steps";
 import {
   Target, BookOpen, Clock, Zap, Save,
   CheckCircle, TrendingUp, BarChart2,
@@ -228,8 +230,9 @@ export default function MetasPage() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-4xl mx-auto">
+      <TourGuide tourId="metas" steps={METAS_STEPS} autoStart buttonLabel="Tour: Metas" />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div id="tour-metas-header" className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Target className="w-6 h-6 text-green-400" />
@@ -281,7 +284,7 @@ export default function MetasPage() {
       )}
 
       {/* Weekly overview */}
-      <div className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-6">
+      <div id="tour-metas-progresso" className="rounded-xl bg-white/[0.03] border border-white/[0.06] p-5 mb-6">
         <div className="flex items-center justify-between mb-3">
           <span className="text-sm font-semibold text-gray-300 flex items-center gap-2">
             <BarChart2 className="w-4 h-4 text-green-400" />

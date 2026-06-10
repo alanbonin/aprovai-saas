@@ -15,11 +15,30 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Supabase redireciona com #access_token na URL
-    supabase.auth.getSession().then(({ data }) => {
-      if (!data.session) router.push("/login");
+    // Supabase redireciona com #access_token na URL (hash fragment).
+    // getSession() pode ser chamado antes do cliente processar o hash —
+    // usamos onAuthStateChange para capturar o evento PASSWORD_RECOVERY.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // Sessão pronta — usuário pode digitar a nova senha
+        return;
+      }
+      if (event === "SIGNED_IN" && session) {
+        // Também aceita SIGNED_IN que pode disparar junto com PASSWORD_RECOVERY
+        return;
+      }
     });
-  // supabase e router são estáveis entre renders — sem risco de loop
+
+    // Fallback: após 1.5s se ainda não há sessão, redireciona para login
+    const fallback = setTimeout(async () => {
+      const { data } = await supabase.auth.getSession();
+      if (!data.session) router.push("/login");
+    }, 1500);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallback);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

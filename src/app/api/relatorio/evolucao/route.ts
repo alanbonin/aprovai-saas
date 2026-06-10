@@ -28,7 +28,8 @@ export async function GET() {
     .eq("userId", dbUser.id)
     .gte("createdAt", twelveWeeksAgo.toISOString())
     .order("createdAt", { ascending: true });
-  if (profileId) progressQuery = progressQuery.eq("profileId", profileId);
+  // BUG FIX: inclui dados legados (profileId null)
+  if (profileId) progressQuery = progressQuery.or(`profileId.eq.${profileId},profileId.is.null`);
   const { data: progress } = await progressQuery;
 
   if (!progress?.length) {

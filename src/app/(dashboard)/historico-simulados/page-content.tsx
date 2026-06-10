@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { HISTORICO_STEPS } from "@/components/tour/tour-steps";
 import Link from "next/link";
 import {
   Trophy, Clock, Target, TrendingUp, TrendingDown,
@@ -146,8 +148,9 @@ export function HistoricoSimuladosInner() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-4xl mx-auto">
+      <TourGuide tourId="historico-simulados" steps={HISTORICO_STEPS} autoStart buttonLabel="Tour: Histórico" />
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div id="tour-historico-header" className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BarChart2 className="w-6 h-6 text-indigo-400" />
@@ -233,7 +236,7 @@ export function HistoricoSimuladosInner() {
       )}
 
       {/* Simulados list */}
-      <div className="space-y-3">
+      <div id="tour-historico-tabela" className="space-y-3">
         {simulados.map((s, i) => {
           const isExpanded = expanded === s.id;
           const rank = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : null;

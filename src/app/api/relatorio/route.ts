@@ -55,18 +55,20 @@ export async function GET() {
 
   // BUG FIX 1: inclui reviewedAt nas queries (data real de atividade em revisões)
   // BUG FIX 4: limit 5000 → 20000 (evita corte em alunos ativos)
+  // BUG FIX: inclui dados legados (profileId null) — schema: "null aparece em todos os perfis"
+  const orProfile = profileId ? `profileId.eq.${profileId},profileId.is.null` : null;
   const [progressRes, subjectProgressRes, simuladosRes, flashcardSetsRes] = await Promise.all([
-    profileId
-      ? db.from("Progress").select("correct, createdAt, reviewedAt, questionId").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", since.toISOString())
+    orProfile
+      ? db.from("Progress").select("correct, createdAt, reviewedAt, questionId").eq("userId", dbUser.id).or(orProfile).gte("createdAt", since.toISOString())
       : db.from("Progress").select("correct, createdAt, reviewedAt, questionId").eq("userId", dbUser.id).gte("createdAt", since.toISOString()),
-    profileId
-      ? db.from("Progress").select("correct, questionId, createdAt, reviewedAt").eq("userId", dbUser.id).eq("profileId", profileId).limit(20000)
+    orProfile
+      ? db.from("Progress").select("correct, questionId, createdAt, reviewedAt").eq("userId", dbUser.id).or(orProfile).limit(20000)
       : db.from("Progress").select("correct, questionId, createdAt, reviewedAt").eq("userId", dbUser.id).limit(20000),
-    profileId
-      ? db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).eq("profileId", profileId).order("createdAt", { ascending: false }).limit(50)
+    orProfile
+      ? db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).or(orProfile).order("createdAt", { ascending: false }).limit(50)
       : db.from("SimuladoHistory").select("id, total, correct, timeSecs, createdAt").eq("userId", dbUser.id).order("createdAt", { ascending: false }).limit(50),
-    profileId
-      ? db.from("FlashcardSet").select("id, subjectId, cards, updatedAt").eq("userId", dbUser.id).eq("profileId", profileId)
+    orProfile
+      ? db.from("FlashcardSet").select("id, subjectId, cards, updatedAt").eq("userId", dbUser.id).or(orProfile)
       : db.from("FlashcardSet").select("id, subjectId, cards, updatedAt").eq("userId", dbUser.id),
   ]);
 

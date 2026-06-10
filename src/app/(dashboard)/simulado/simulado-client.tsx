@@ -3,6 +3,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import { Trophy, Clock, CheckCircle2, XCircle, RotateCcw, Play, ChevronRight, BookOpen, ClipboardList, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { SIMULADO_STEPS } from "@/components/tour/tour-steps";
 
 interface Question {
   id: number;
@@ -735,6 +737,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
 
   return (
     <div className="p-6 text-white min-h-screen bg-[#0d1117]">
+      <TourGuide tourId="simulado" steps={SIMULADO_STEPS} autoStart buttonLabel="Tour: Simulado" />
       <div className="max-w-2xl mx-auto">
         <div className="flex items-center gap-3 mb-6">
           <div className="w-10 h-10 rounded-xl bg-yellow-500/10 flex items-center justify-center">
@@ -747,7 +750,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
         </div>
 
         {/* Presets de acesso rápido por modalidade */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+        <div id="tour-simulado-tipos" className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
           {menuPresets.map(p => (
             <button key={p.label} onClick={() => startFromPreset(p)}
               className="p-4 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 hover:bg-indigo-600/20 transition-colors text-left flex items-center gap-3">
@@ -770,7 +773,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
         </div>
 
         {history.length > 0 ? (
-          <div>
+          <div id="tour-simulado-historico">
             <h2 className="text-sm font-medium text-gray-400 mb-3 flex items-center gap-2">
               <BookOpen className="w-4 h-4" /> Histórico
             </h2>

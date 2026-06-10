@@ -52,14 +52,15 @@ export async function GET() {
     profileId
       ? db.from("StudentProfile").select("streak, lastStudyDate, xp, horasEstudo, cargo, orgao, modalidade, id").eq("userId", dbUser.id).eq("id", profileId).maybeSingle()
       : db.from("StudentProfile").select("streak, lastStudyDate, xp, horasEstudo, cargo, orgao, modalidade, id").eq("userId", dbUser.id).maybeSingle(),
+    // BUG FIX: inclui dados legados (profileId null)
     profileId
-      ? db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", todayStart)
+      ? db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`).gte("createdAt", todayStart)
       : db.from("Progress").select("correct", { count: "exact" }).eq("userId", dbUser.id).gte("createdAt", todayStart),
     profileId
-      ? db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).eq("profileId", profileId).lte("nextReview", now.toISOString()).not("nextReview", "is", null)
+      ? db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`).lte("nextReview", now.toISOString()).not("nextReview", "is", null)
       : db.from("Progress").select("questionId, nextReview").eq("userId", dbUser.id).lte("nextReview", now.toISOString()).not("nextReview", "is", null),
     profileId
-      ? db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id).eq("profileId", profileId)
+      ? db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`)
       : db.from("FlashcardSet").select("id, cards, subjectId").eq("userId", dbUser.id),
     profileId
       ? db.from("Note").select("content").eq("userId", dbUser.id).eq("subjectId", "__METAS_SEMANAIS__").eq("profileId", profileId).maybeSingle()

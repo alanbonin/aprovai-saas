@@ -23,7 +23,8 @@ export async function GET() {
 
   let histQuery = db.from("SimuladoHistory").select("id, total, correct, timeSecs, subjectIds, createdAt")
     .eq("userId", dbUser.id).order("createdAt", { ascending: false }).limit(50);
-  if (profileId) histQuery = histQuery.eq("profileId", profileId);
+  // BUG FIX: inclui dados legados (profileId null)
+  if (profileId) histQuery = histQuery.or(`profileId.eq.${profileId},profileId.is.null`);
   const { data: history, error } = await histQuery;
 
   if (error) return NextResponse.json({ error: "Erro interno" }, { status: 500 });

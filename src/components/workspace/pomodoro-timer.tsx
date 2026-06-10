@@ -1,16 +1,17 @@
 "use client";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Play, Pause, RotateCcw, Coffee, Flame, Clock, Trophy, ChevronDown } from "lucide-react";
+import { Play, Pause, RotateCcw, Coffee, Flame, Clock, Trophy, ChevronDown, Settings, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // ── Config presets ────────────────────────────────────────────────────────────
-const MODES = [
-  { id: "work",       label: "Foco",        icon: "🎯", minutes: 25, color: "#6366f1" },
-  { id: "shortBreak", label: "Pausa curta", icon: "☕", minutes: 5,  color: "#10b981" },
-  { id: "longBreak",  label: "Pausa longa", icon: "🌿", minutes: 15, color: "#f59e0b" },
+const DEFAULT_DURATIONS = { work: 25, shortBreak: 5, longBreak: 15 };
+const MODE_META = [
+  { id: "work",        label: "Foco",        icon: "🎯", color: "#6366f1" },
+  { id: "shortBreak",  label: "Pausa curta", icon: "☕", color: "#10b981" },
+  { id: "longBreak",   label: "Pausa longa", icon: "🌿", color: "#f59e0b" },
 ] as const;
 
-type ModeId = typeof MODES[number]["id"];
+type ModeId = typeof MODE_META[number]["id"];
 
 // ── Simple beep using AudioContext ────────────────────────────────────────────
 function playBeep(freq = 880, dur = 0.3) {
@@ -75,9 +76,20 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
   const [cycles, setCycles] = useState(() => parseInt(LS.get("pomo:cycles") ?? "0", 10));
   const [label,       setLabel]     = useState(() => LS.get("pomo:label") ?? "");
   const [showLabel,   setShowLabel] = useState(false);
+  const [showConfig,  setShowConfig] = useState(false);
   const [weekStats,   setWeekStats] = useState<WeekStats | null>(null);
   const [saving,      setSaving]    = useState(false);
 
+  // Durações configuráveis
+  const [durations, setDurations] = useState<Record<ModeId, number>>(() => {
+    try {
+      const saved = LS.get("pomo:durations");
+      return saved ? { ...DEFAULT_DURATIONS, ...JSON.parse(saved) } : DEFAULT_DURATIONS;
+    } catch { return DEFAULT_DURATIONS; }
+  });
+  const [draftDurations, setDraftDurations] = useState(durations);
+
+  const MODES = MODE_META.map(m => ({ ...m, minutes: durations[m.id] }));
   const currentMode = MODES.find(m => m.id === modeId)!;
   const totalSecs = currentMode.minutes * 60;
 
@@ -184,13 +196,26 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
     }
   }, []);
 
+  // ── Salvar configurações ────────────────────────────────────────────────────
+  function saveConfig() {
+    setDurations(draftDurations);
+    LS.set("pomo:durations", JSON.stringify(draftDurations));
+    setShowConfig(false);
+    // Reset timer com nova duração
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    setRunning(false);
+    setSecondsLeft(draftDurations[modeId] * 60);
+    LS.del("pomo:endAt");
+    startedAtRef.current = null;
+    LS.del("pomo:startedAt");
+  }
+
   // ── Change mode manualmente ─────────────────────────────────────────────────
   function switchMode(id: ModeId) {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
     setModeId(id);
-    const mins = MODES.find(m => m.id === id)!.minutes;
-    setSecondsLeft(mins * 60);
+    setSecondsLeft(durations[id] * 60);
     LS.del("pomo:endAt");
     startedAtRef.current = null;
     LS.del("pomo:startedAt");
@@ -262,41 +287,92 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
   const countToday = weekStats?.countToday ?? 0;
 
   return (
-    <div className="flex flex-col h-full overflow-y-auto bg-[#080c18]">
+    <div className="flex flex-col relative" style={{ background: "var(--bg-base)", minHeight: showConfig ? "400px" : undefined }}>
+
+      {/* ── Config panel — overlay sobre o timer ─────────────────────────── */}
+      {showConfig && (
+        <div className="absolute inset-0 z-20 flex flex-col justify-center p-4"
+          style={{ background: "var(--bg-base)" }}>
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>⚙️ Configurar durações</span>
+            <button onClick={() => { setShowConfig(false); setDraftDurations(durations); }}
+              className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="space-y-3">
+            {MODE_META.map(m => (
+              <div key={m.id} className="flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl bg-white/[0.04] border border-white/10">
+                <span className="text-sm text-gray-300 flex items-center gap-2"><span>{m.icon}</span>{m.label}</span>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => setDraftDurations(d => ({ ...d, [m.id]: Math.max(1, d[m.id] - 5) }))}
+                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-base">−</button>
+                  <input
+                    type="number" min={1} max={120}
+                    value={draftDurations[m.id]}
+                    onChange={e => setDraftDurations(d => ({ ...d, [m.id]: Math.max(1, Math.min(120, parseInt(e.target.value) || 1)) }))}
+                    className="w-14 text-center bg-white/[0.06] border border-white/10 rounded-lg py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                  />
+                  <span className="text-xs text-gray-500">min</span>
+                  <button onClick={() => setDraftDurations(d => ({ ...d, [m.id]: Math.min(120, d[m.id] + 5) }))}
+                    className="w-7 h-7 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center font-bold text-base">+</button>
+                </div>
+              </div>
+            ))}
+          </div>
+          <button onClick={saveConfig}
+            className="mt-5 w-full py-2.5 rounded-xl text-sm font-semibold text-white transition-all"
+            style={{ background: "#6366f1" }}>
+            Salvar e aplicar
+          </button>
+          <p className="text-center text-[10px] text-gray-600 mt-2">Máximo 120 min por modo</p>
+        </div>
+      )}
 
       {/* ── Mode selector ────────────────────────────────────────────────── */}
-      <div className="flex gap-1.5 p-3 pb-0 justify-center flex-wrap">
-        {MODES.map(m => (
-          <button key={m.id} onClick={() => switchMode(m.id)}
-            className={cn(
-              "flex items-center gap-1 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap",
-              modeId === m.id
-                ? "text-white shadow-lg"
-                : "text-gray-500 bg-white/[0.04] hover:text-gray-300",
-            )}
-            style={modeId === m.id ? { background: currentMode.color + "33", color: currentMode.color, border: `1px solid ${currentMode.color}55` } : {}}
-          >
-            <span>{m.icon}</span>
-            <span>{m.label}</span>
-            <span className="opacity-60">{m.minutes}min</span>
-          </button>
-        ))}
+      <div className="flex items-center gap-1.5 px-3 pt-2 pb-0">
+        <div className="flex gap-1.5 flex-1 justify-center flex-wrap">
+          {MODES.map(m => (
+            <button key={m.id} onClick={() => switchMode(m.id)}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap",
+                modeId === m.id
+                  ? "text-white shadow-lg"
+                  : "text-gray-500 bg-white/[0.04] hover:text-gray-300",
+              )}
+              style={modeId === m.id ? { background: currentMode.color + "33", color: currentMode.color, border: `1px solid ${currentMode.color}55` } : {}}
+            >
+              <span>{m.icon}</span>
+              <span>{m.label}</span>
+              <span className="opacity-60">{m.minutes}min</span>
+            </button>
+          ))}
+        </div>
+        <button
+          onClick={() => { setShowConfig(v => !v); setDraftDurations(durations); }}
+          title="Configurar durações"
+          className={cn(
+            "w-6 h-6 flex items-center justify-center rounded-full transition-all flex-shrink-0",
+            showConfig ? "bg-indigo-500/30 text-indigo-400" : "bg-white/[0.05] text-gray-500 hover:text-gray-300 hover:bg-white/10"
+          )}>
+          <Settings className="w-3.5 h-3.5" />
+        </button>
       </div>
 
       {/* ── Label / matéria ──────────────────────────────────────────────── */}
-      <div className="px-4 pt-3">
+      <div className="px-4 pt-2">
         {showLabel ? (
           <div className="flex gap-2 items-center">
             {subjects && subjects.length > 0 ? (
               <select value={label} onChange={e => setLabel(e.target.value)}
-                className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-white">
+                className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-lg px-3 py-1.5 text-sm text-white">
                 <option value="">— Sem rótulo —</option>
                 {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
               </select>
             ) : (
               <input value={label} onChange={e => setLabel(e.target.value)}
                 placeholder="Ex: Direito Constitucional..."
-                className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-lg px-3 py-2 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
+                className="flex-1 bg-white/[0.05] border border-white/[0.1] rounded-lg px-3 py-1.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500" />
             )}
             <button onClick={() => setShowLabel(false)}
               className="text-xs text-gray-500 hover:text-gray-300">✕</button>
@@ -311,47 +387,47 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
       </div>
 
       {/* ── Timer ring ───────────────────────────────────────────────────── */}
-      <div className="flex flex-col items-center py-2">
+      <div className="flex flex-col items-center py-1">
         <div className="relative">
-          <CountdownRing progress={progress} color={currentMode.color} size={160} />
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1">
-            <div className="text-5xl font-black tabular-nums tracking-tight"
+          <CountdownRing progress={progress} color={currentMode.color} size={140} />
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+            <div className="text-4xl font-black tabular-nums tracking-tight"
               style={{ color: secondsLeft === 0 ? currentMode.color : undefined }}>
               {formatTime(secondsLeft)}
             </div>
             <div className="text-xs text-gray-500 font-medium">{currentMode.label}</div>
-            {saving && <div className="text-xs text-indigo-400 animate-pulse">salvando…</div>}
+            {saving && <div className="text-[10px] text-indigo-400 animate-pulse">salvando…</div>}
           </div>
         </div>
 
         {/* ── Controls ──────────────────────────────────────────────────── */}
-        <div className="flex items-center gap-4 mt-3">
+        <div className="flex items-center gap-4 mt-2">
           <button onClick={reset}
-            className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all">
+            className="w-9 h-9 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-white hover:bg-white/[0.1] transition-all">
             <RotateCcw className="w-4 h-4" />
           </button>
 
           <button onClick={toggleRun}
-            className="w-16 h-16 rounded-full flex items-center justify-center font-bold text-white shadow-xl transition-all active:scale-95"
+            className="w-14 h-14 rounded-full flex items-center justify-center font-bold text-white shadow-xl transition-all active:scale-95"
             style={{ background: `linear-gradient(135deg, ${currentMode.color}, ${currentMode.color}cc)`, boxShadow: `0 8px 24px ${currentMode.color}55` }}>
             {running
-              ? <Pause className="w-7 h-7" />
-              : <Play  className="w-7 h-7 translate-x-0.5" />}
+              ? <Pause className="w-6 h-6" />
+              : <Play  className="w-6 h-6 translate-x-0.5" />}
           </button>
 
           {modeId === "work" && running && (
             <button onClick={manualSave} title="Salvar sessão e resetar"
-              className="w-10 h-10 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all">
+              className="w-9 h-9 rounded-full bg-white/[0.05] flex items-center justify-center text-gray-400 hover:text-emerald-400 hover:bg-emerald-400/10 transition-all">
               <Trophy className="w-4 h-4" />
             </button>
           )}
           {!(modeId === "work" && running) && (
-            <div className="w-10 h-10" />  // placeholder to keep layout balanced
+            <div className="w-9 h-9" />
           )}
         </div>
 
         {/* ── Cycles indicator ─────────────────────────────────────────── */}
-        <div className="flex items-center gap-1.5 mt-4">
+        <div className="flex items-center gap-1.5 mt-2">
           {Array.from({ length: Math.max(4, cycles + 1) }).map((_, i) => (
             <div key={i}
               className={cn("w-2 h-2 rounded-full transition-all", i < cycles ? "opacity-100" : "opacity-20")}
@@ -362,52 +438,43 @@ export function PomodoroTimer({ subjects }: { subjects?: { id: string; name: str
       </div>
 
       {/* ── Stats this week ──────────────────────────────────────────────── */}
-      <div className="mx-4 mb-4 grid grid-cols-3 gap-3">
+      <div className="mx-3 mb-3 grid grid-cols-3 gap-2">
         {[
-          { icon: <Clock className="w-4 h-4" />,  label: "Esta semana", value: `${totalHrs.toFixed(1)}h`,    color: "#6366f1" },
-          { icon: <Flame className="w-4 h-4" />,  label: "Hoje",        value: `${countToday} 🍅`,            color: "#f97316" },
-          { icon: <Coffee className="w-4 h-4" />, label: "Sessões (sem)", value: `${weekStats?.sessions.length ?? 0}`, color: "#10b981" },
+          { icon: <Clock className="w-3.5 h-3.5" />,  label: "Esta semana", value: `${totalHrs.toFixed(1)}h`,    color: "#6366f1" },
+          { icon: <Flame className="w-3.5 h-3.5" />,  label: "Hoje",        value: `${countToday} 🍅`,            color: "#f97316" },
+          { icon: <Coffee className="w-3.5 h-3.5" />, label: "Sessões",     value: `${weekStats?.sessions.length ?? 0}`, color: "#10b981" },
         ].map(s => (
-          <div key={s.label} className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-3 flex flex-col items-center gap-1">
+          <div key={s.label} className="bg-white/[0.03] border border-white/[0.07] rounded-xl p-2 flex flex-col items-center gap-0.5">
             <div style={{ color: s.color }}>{s.icon}</div>
-            <div className="text-lg font-bold" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-[10px] text-gray-600 text-center">{s.label}</div>
+            <div className="text-base font-bold" style={{ color: s.color }}>{s.value}</div>
+            <div className="text-[9px] text-gray-600 text-center">{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Recent sessions ──────────────────────────────────────────────── */}
+      {/* ── Recent sessions (scrollable, só se tiver) ────────────────────── */}
       {(weekStats?.sessions.length ?? 0) > 0 && (
-        <div className="mx-4 mb-6">
-          <div className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Sessões desta semana</div>
-          <div className="flex flex-col gap-1.5">
+        <div className="mx-3 mb-3 max-h-36 overflow-y-auto">
+          <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider mb-1.5">Sessões desta semana</div>
+          <div className="flex flex-col gap-1">
             {(weekStats?.sessions ?? []).slice(0, 8).map((s, i) => {
               const d = new Date(s.startedAt);
               const dateStr = d.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" });
               const timeStr = d.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
               return (
-                <div key={i} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06]">
-                  <div className="text-base">🍅</div>
+                <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-white/[0.03] border border-white/[0.06]">
+                  <div className="text-sm">🍅</div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm text-gray-300 truncate">{s.label || "Sessão de foco"}</div>
-                    <div className="text-xs text-gray-600">{dateStr} às {timeStr}</div>
+                    <div className="text-xs text-gray-300 truncate">{s.label || "Sessão de foco"}</div>
+                    <div className="text-[10px] text-gray-600">{dateStr} às {timeStr}</div>
                   </div>
-                  <div className="text-sm font-semibold text-indigo-400 flex-shrink-0">{s.durMin}min</div>
+                  <div className="text-xs font-semibold text-indigo-400 flex-shrink-0">{s.durMin}min</div>
                 </div>
               );
             })}
           </div>
         </div>
       )}
-
-      {/* ── Tips ─────────────────────────────────────────────────────────── */}
-      <div className="mx-4 mb-8 p-4 rounded-xl bg-indigo-500/[0.06] border border-indigo-500/20">
-        <div className="text-xs font-semibold text-indigo-400 mb-2">💡 Técnica Pomodoro</div>
-        <div className="text-xs text-gray-500 leading-relaxed">
-          25 min de foco total → 5 min de pausa. A cada 4 pomodoros, faça uma pausa longa de 15 min.
-          Elimine distrações durante o foco!
-        </div>
-      </div>
 
     </div>
   );

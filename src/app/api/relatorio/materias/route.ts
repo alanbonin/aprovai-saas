@@ -22,7 +22,8 @@ export async function GET() {
 
   // Busca progresso do perfil ativo
   let progressQuery = db.from("Progress").select("questionId, correct").eq("userId", dbUser.id);
-  if (profileId) progressQuery = progressQuery.eq("profileId", profileId);
+  // BUG FIX: inclui dados legados (profileId null) — schema: "null aparece em todos os perfis"
+  if (profileId) progressQuery = progressQuery.or(`profileId.eq.${profileId},profileId.is.null`);
   const { data: progress } = await progressQuery;
 
   if (!progress?.length) {

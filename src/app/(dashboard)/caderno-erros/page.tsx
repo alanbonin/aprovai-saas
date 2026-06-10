@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { CADERNO_ERROS_STEPS } from "@/components/tour/tour-steps";
 import Link from "next/link";
 import {
   BookMarked, ChevronDown, ChevronUp, CheckCircle2, Circle,
@@ -172,8 +174,9 @@ export default function CadernoErrosPage() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
+      <TourGuide tourId="caderno-erros" steps={CADERNO_ERROS_STEPS} autoStart buttonLabel="Tour: Caderno" />
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div id="tour-caderno-header" className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <BookMarked className="w-6 h-6 text-rose-400" />
@@ -254,7 +257,7 @@ export default function CadernoErrosPage() {
           )}
 
           {/* Search + filter */}
-          <div className="flex gap-2 mb-4">
+          <div id="tour-caderno-filtros" className="flex gap-2 mb-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" />
               <input
@@ -285,6 +288,7 @@ export default function CadernoErrosPage() {
           </div>
 
           {/* Subject groups */}
+          <div id="tour-caderno-questao" />
           {filteredSubjects.length === 0 ? (
             <div className="text-center py-8 text-gray-600 text-sm">
               <Filter className="w-8 h-8 mx-auto mb-2 opacity-40" />

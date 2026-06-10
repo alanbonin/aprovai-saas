@@ -57,6 +57,7 @@ export async function GET() {
     name: dbUser.name ?? "",
     email: dbUser.email ?? "",
     phone: (dbUser as unknown as { phone?: string | null }).phone ?? "",
+    avatarUrl: (dbUser as unknown as { avatarUrl?: string | null }).avatarUrl ?? null,
     prefs,
   });
 }

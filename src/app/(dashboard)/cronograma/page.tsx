@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { Calendar, Check, Plus, Trash2, RotateCcw, Clock, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { CRONOGRAMA_STEPS } from "@/components/tour/tour-steps";
 
 // ── Tipos ──────────────────────────────────────────────────────────────────────
 interface Bloco {
@@ -151,8 +153,9 @@ export default function CronogramaPage() {
 
   return (
     <div className="p-4 sm:p-6 max-w-2xl mx-auto text-white">
+      <TourGuide tourId="cronograma" steps={CRONOGRAMA_STEPS} autoStart buttonLabel="Tour: Cronograma" />
       {/* Header */}
-      <div className="flex items-center justify-between mb-5">
+      <div id="tour-cronograma-plano" className="flex items-center justify-between mb-5">
         <div className="flex items-center gap-3">
           <Calendar className="w-5 h-5 text-indigo-400" />
           <div>
@@ -169,7 +172,7 @@ export default function CronogramaPage() {
           >
             <Download className="w-3.5 h-3.5" /> Exportar
           </a>
-          <button onClick={resetPlano}
+          <button id="tour-cronograma-ajuste" onClick={resetPlano}
             className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-white transition-colors px-2 py-1.5 rounded-lg hover:bg-white/5">
             <RotateCcw className="w-3.5 h-3.5" /> Resetar
           </button>
@@ -189,7 +192,7 @@ export default function CronogramaPage() {
       </div>
 
       {/* Seletor de dia */}
-      <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
+      <div id="tour-cronograma-semana" className="flex gap-1 mb-5 overflow-x-auto pb-1">
         {DIAS.map(({ key, label }) => {
           const blocos = plano.blocos.filter(b => b.dia === key);
           const isToday = key === TODAY_DIA;

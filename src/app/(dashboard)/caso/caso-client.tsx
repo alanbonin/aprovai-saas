@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { CASO_STEPS } from "@/components/tour/tour-steps";
 import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import {
   BookOpen, Play, Send, RefreshCw, AlertCircle, ChevronDown,
@@ -532,7 +534,8 @@ export function CasoClient() {
 
   return (
     <div className="p-6 text-white max-w-4xl mx-auto">
-      <div className="mb-6">
+      <TourGuide tourId="caso" steps={CASO_STEPS} autoStart buttonLabel="Tour: Casos" />
+      <div id="tour-caso-header" className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <BookOpen className="w-6 h-6 text-purple-400" /> Estudo de Caso
         </h1>
@@ -567,7 +570,7 @@ export function CasoClient() {
         <>
           {/* Seleção de tema */}
           {!cenario && (
-            <div>
+            <div id="tour-caso-tema">
               <label className="block text-sm font-medium text-gray-300 mb-3">
                 Temas sugeridos para seu perfil
               </label>

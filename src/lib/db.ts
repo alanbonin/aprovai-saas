@@ -15,7 +15,7 @@ export async function getUserWithPlan(supabaseId: string) {
   // select explícito — evita expor campos internos em respostas de API
   const { data: user } = await db
     .from("User")
-    .select("id, supabaseId, name, email, role, activeProfileId, phone, createdAt, updatedAt")
+    .select("id, supabaseId, name, email, role, activeProfileId, phone, avatarUrl, createdAt, updatedAt")
     .eq("supabaseId", supabaseId)
     .maybeSingle();
   if (!user) return null;
@@ -30,7 +30,9 @@ export async function getUserWithPlan(supabaseId: string) {
   const subscription = subscriptions?.[0] ?? null;
 
   const isExpired = subscription
-    ? new Date((subscription as { endDate: string }).endDate) < new Date()
+    ? ((subscription as { endDate: string | null }).endDate
+        ? new Date((subscription as { endDate: string }).endDate) < new Date()
+        : false)  // endDate null = sem expiração definida → não expirado
     : true;
 
   return {

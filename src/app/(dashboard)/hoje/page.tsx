@@ -4,6 +4,8 @@ import Link from "next/link";
 import { Sun, Flame, Target, RotateCcw, Zap, Brain, BookOpen, ChevronRight, RefreshCw, TrendingUp, TrendingDown, Minus, CheckCircle2, Trophy, Clock, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CargoWizardModal } from "@/components/cargo-wizard-modal";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { HOJE_STEPS } from "@/components/tour/tour-steps";
 
 interface WeeklyDigestMini {
   emoji: string;
@@ -266,8 +268,10 @@ export default function HojePage() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
+      <TourGuide tourId="hoje" steps={HOJE_STEPS} autoStart buttonLabel="Tour: Início" />
+
       {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+      <div id="tour-hoje-boas-vindas" className="flex items-start justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Sun className="w-6 h-6 text-amber-400" />
@@ -322,7 +326,7 @@ export default function HojePage() {
             <p className="text-xs text-gray-600 mt-0.5">questões respondidas hoje</p>
           </div>
 
-          <div className="flex-shrink-0 text-center">
+          <div id="tour-hoje-streak" className="flex-shrink-0 text-center">
             <div className={cn(
               "flex flex-col items-center gap-1 px-3 py-2 rounded-xl border",
               d.estudouHoje
@@ -359,7 +363,7 @@ export default function HojePage() {
       </div>
 
       {/* Ações do dia — geradas pela IA */}
-      <div className="space-y-2 mb-6">
+      <div id="tour-hoje-acoes" className="space-y-2 mb-6">
         <div className="flex items-center justify-between mb-3">
           <p className="text-xs text-gray-600 font-medium uppercase tracking-wider">
             Ações de hoje
@@ -414,7 +418,7 @@ export default function HojePage() {
 
       {/* Matéria prioritária */}
       {d.prioridade && (
-        <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5">
+        <div id="tour-hoje-prioridade" className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-5 mb-5">
           <div className="flex items-start gap-3 mb-4">
             <BookOpen className="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" />
             <div>

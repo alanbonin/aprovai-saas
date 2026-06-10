@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+// tour
+import { TourGuide } from "@/components/tour/tour-guide";
+import { DESAFIO_STEPS } from "@/components/tour/tour-steps";
 import {
   Zap, Trophy, Clock, CheckCircle, XCircle,
   RotateCcw, Lock, Play, Target,
@@ -390,6 +393,7 @@ export default function DesafioPage() {
 
   return (
     <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
+      <TourGuide tourId="desafio" steps={DESAFIO_STEPS} autoStart buttonLabel="Tour: Desafio" />
       {/* Timer bar */}
       <div className="fixed top-0 left-0 right-0 z-50 h-1">
         <div
@@ -402,12 +406,12 @@ export default function DesafioPage() {
       </div>
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div id="tour-desafio-header" className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-yellow-400" />
           <span className="font-bold text-yellow-400">Desafio Diário</span>
         </div>
-        <div className={cn(
+        <div id="tour-desafio-timer" className={cn(
           "flex items-center gap-1.5 px-3 py-1.5 rounded-full font-mono text-sm font-bold",
           isLowTime
             ? "bg-red-500/20 border border-red-500/30 text-red-400 animate-pulse"
@@ -447,7 +451,7 @@ export default function DesafioPage() {
       </div>
 
       {/* Question card */}
-      <div className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6">
+      <div id="tour-desafio-questao" className="rounded-2xl bg-white/[0.03] border border-white/[0.06] p-6">
         <div className="flex items-center gap-2 mb-4">
           {q.level && (
             <span className={cn("text-xs font-medium",

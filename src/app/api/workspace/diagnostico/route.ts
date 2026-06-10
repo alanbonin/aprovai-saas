@@ -85,12 +85,13 @@ export async function POST() {
     { data: pomodoroNotes },
     { data: profile },
   ] = await Promise.all([
+    // BUG FIX: inclui dados legados (profileId null)
     (profileId
-      ? db.from("Progress").select("id", { count: "exact", head: true }).eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", start).lte("createdAt", end)
+      ? db.from("Progress").select("id", { count: "exact", head: true }).eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`).gte("createdAt", start).lte("createdAt", end)
       : db.from("Progress").select("id", { count: "exact", head: true }).eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end)
     ) as unknown as Promise<{ count: number }>,
     profileId
-      ? db.from("Progress").select("correct, Subject(name)").eq("userId", dbUser.id).eq("profileId", profileId).gte("createdAt", start).lte("createdAt", end)
+      ? db.from("Progress").select("correct, Subject(name)").eq("userId", dbUser.id).or(`profileId.eq.${profileId},profileId.is.null`).gte("createdAt", start).lte("createdAt", end)
       : db.from("Progress").select("correct, Subject(name)").eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end),
     db.from("SimuladoHistory").select("id", { count: "exact", head: true })
       .eq("userId", dbUser.id).gte("createdAt", start).lte("createdAt", end) as unknown as Promise<{ count: number }>,

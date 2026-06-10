@@ -4,6 +4,8 @@ import { Send, AlertCircle, Lock, Plus, X, Check, Users, BookMarked, Loader2, Sp
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import DOMPurify from "isomorphic-dompurify";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { MENTOR_STEPS } from "@/components/tour/tour-steps";
 
 // ── Mapa de action cards [[IR:X]] ────────────────────────────────────────────
 const ACTION_MAP: Record<string, { label: string; icon: string; nav: string; color: string }> = {
@@ -366,9 +368,10 @@ export function MentorChat({
 
   return (
     <div className="flex h-full text-white overflow-hidden">
+      <TourGuide tourId="mentor" steps={MENTOR_STEPS} autoStart buttonLabel="Tour: Mentor" />
 
       {/* ── Painel esquerdo: lista de mentores ── */}
-      <div className={`w-full md:w-72 border-r border-white/5 flex flex-col bg-[#0d1117] flex-shrink-0 ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex`}>
+      <div id="tour-mentor-contexto" className={`w-full md:w-72 border-r border-white/5 flex flex-col bg-[#0d1117] flex-shrink-0 ${mobileView === 'list' ? 'flex' : 'hidden'} md:flex`}>
         {/* Header sidebar */}
         <div className="p-4 border-b border-white/5">
           <div className="flex items-center justify-between mb-1">
@@ -571,7 +574,7 @@ export function MentorChat({
       )}
 
       {/* ── Área do chat ── */}
-      <div className={`flex-1 flex flex-col min-w-0 overflow-hidden ${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex`}>
+      <div id="tour-mentor-chat" className={`flex-1 flex flex-col min-w-0 overflow-hidden ${mobileView === 'chat' ? 'flex' : 'hidden'} md:flex`}>
         {/* Botão voltar — só aparece no mobile quando está no chat */}
         <button
           onClick={() => setMobileView('list')}
@@ -780,7 +783,7 @@ export function MentorChat({
             )}
 
             {/* Input */}
-            <div className="p-4 border-t border-white/5">
+            <div id="tour-mentor-input" className="p-4 border-t border-white/5">
               <form onSubmit={sendMessage} className="flex gap-2.5">
                 {/* Mini avatar do mentor ativo */}
                 {singleAgent && !isCombined && (

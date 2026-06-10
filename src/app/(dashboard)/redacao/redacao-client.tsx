@@ -2,6 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { useUpgradeModal } from "@/components/ui/upgrade-modal-context";
 import { cn } from "@/lib/utils";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { REDACAO_STEPS } from "@/components/tour/tour-steps";
 import {
   FileText, Send, ChevronDown, CheckCircle2, AlertCircle,
   Camera, PenLine, Loader2, X, ImageIcon, Sparkles,
@@ -230,7 +232,8 @@ export function RedacaoClient() {
 
   return (
     <div className="p-6 text-gray-900 dark:text-white max-w-4xl mx-auto">
-      <div className="mb-6">
+      <TourGuide tourId="redacao" steps={REDACAO_STEPS} autoStart buttonLabel="Tour: Redação" />
+      <div id="tour-redacao-header" className="mb-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FileText className="w-6 h-6 text-indigo-400" /> Redação Oficial
         </h1>
@@ -268,7 +271,7 @@ export function RedacaoClient() {
           </div>
 
           {/* Tema */}
-          <div className="mb-4">
+          <div id="tour-redacao-tema" className="mb-4">
             <div className="flex items-center justify-between mb-1">
               <label className="text-sm font-medium text-gray-300">
                 Tema / contexto <span className="text-gray-600 font-normal">(opcional)</span>
@@ -334,6 +337,7 @@ export function RedacaoClient() {
             {inputMode === "texto" ? (
               <>
               <textarea
+                id="tour-redacao-editor"
                 value={texto}
                 onChange={e => setTexto(e.target.value.slice(0, MAX_CHARS))}
                 rows={14}
@@ -408,6 +412,7 @@ export function RedacaoClient() {
           )}
 
           <button
+            id="tour-redacao-enviar"
             type="submit"
             disabled={loading || !podeEnviar || (inputMode === "foto" && fotoTentativas >= 2)}
             className="mt-4 flex items-center gap-2 px-6 py-3 bg-indigo-600 rounded-xl hover:bg-indigo-700 disabled:opacity-50 transition-colors font-medium"

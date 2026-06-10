@@ -1,5 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { TourGuide } from "@/components/tour/tour-guide";
+import { PLANO_SEMANAL_STEPS } from "@/components/tour/tour-steps";
 import {
   CalendarDays, Sparkles, RefreshCw, Clock, ChevronDown, ChevronUp,
   CheckCircle, MessageSquare, Send, History, ChevronRight, X, RotateCcw, CalendarCheck,
@@ -381,9 +383,10 @@ export function PlanoSemanalInner() {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
+      <TourGuide tourId="plano-semanal" steps={PLANO_SEMANAL_STEPS} autoStart buttonLabel="Tour: Plano IA" />
 
       {/* Header */}
-      <div className="mb-5">
+      <div id="tour-plano-header" className="mb-5">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <CalendarDays className="w-5 h-5 text-indigo-400 flex-shrink-0" />
@@ -452,6 +455,7 @@ export function PlanoSemanalInner() {
               </>
             )}
             <button
+              id="tour-plano-ajuste"
               onClick={generate}
               disabled={generating || loading}
               title="Regerar plano"
@@ -590,7 +594,7 @@ export function PlanoSemanalInner() {
           )}
 
           {/* Dias */}
-          <div className="space-y-3 mb-5">
+          <div id="tour-plano-dias" className="space-y-3 mb-5">
             {orderedDays.map((day, i) => (
               <DayCard key={day.dia} day={day} defaultOpen={i === 0} />
             ))}

@@ -23,11 +23,12 @@ export function PomodoroFloat() {
       {/* Painel flutuante */}
       {open && (
         <div
-          className="fixed top-14 bottom-20 right-2 md:top-auto md:bottom-20 md:right-6 z-50 rounded-2xl overflow-hidden shadow-2xl border border-white/10 md:max-h-[calc(100vh-6rem)]"
-          style={{ background: "#080c18", width: "340px", maxWidth: "calc(100vw - 1rem)", overflowY: "auto" }}
+          className="fixed bottom-20 right-2 md:bottom-4 md:right-6 z-50 rounded-2xl overflow-hidden shadow-2xl max-h-[calc(100vh-6rem)] overflow-y-auto"
+          style={{ background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "340px", maxWidth: "calc(100vw - 1rem)" }}
         >
-          <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 sticky top-0 z-10" style={{ background: "#080c18" }}>
-            <span className="text-sm font-semibold text-white">🍅 Pomodoro</span>
+          <div className="flex items-center justify-between px-4 py-2 sticky top-0 z-10"
+            style={{ background: "var(--bg-base)", borderBottom: "1px solid var(--border-color)" }}>
+            <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>🍅 Pomodoro</span>
             <button onClick={() => setOpen(false)} className="w-7 h-7 flex items-center justify-center rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors">
               <X className="w-4 h-4" />
             </button>

@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Lock, Download, Trash2 } from "lucide-react";
+import { Settings, Bell, User, Save, Check, Loader2, Smartphone, Lock, Download, Trash2, Camera, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 
@@ -17,6 +17,7 @@ interface Config {
   name: string;
   email: string;
   phone: string;
+  avatarUrl?: string | null;
   prefs: Prefs;
 }
 
@@ -110,6 +111,10 @@ export default function ConfiguracoesPage() {
   const [loading, setLoading]   = useState(true);
   const [saving, setSaving]     = useState(false);
   const [saved, setSaved]       = useState(false);
+
+  // Avatar
+  const [avatarLoading, setAvatarLoading] = useState(false);
+  const [avatarMsg, setAvatarMsg]         = useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
 
   // Alterar senha
   const [novaSenha, setNovaSenha]           = useState("");
@@ -269,6 +274,40 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function handleAvatarChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAvatarLoading(true);
+    setAvatarMsg(null);
+    try {
+      const form = new FormData();
+      form.append("avatar", file);
+      const res = await fetch("/api/configuracoes/avatar", { method: "POST", body: form });
+      const data = await res.json() as { avatarUrl?: string; error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Erro no upload");
+      setConfig(c => c ? { ...c, avatarUrl: data.avatarUrl } : c);
+      setAvatarMsg({ tipo: "ok", texto: "Foto atualizada!" });
+    } catch (err) {
+      setAvatarMsg({ tipo: "erro", texto: String(err).replace("Error: ", "") });
+    }
+    setAvatarLoading(false);
+    e.target.value = "";
+  }
+
+  async function removerAvatar() {
+    setAvatarLoading(true);
+    setAvatarMsg(null);
+    try {
+      const res = await fetch("/api/configuracoes/avatar", { method: "DELETE" });
+      if (!res.ok) throw new Error("Erro ao remover foto");
+      setConfig(c => c ? { ...c, avatarUrl: null } : c);
+      setAvatarMsg({ tipo: "ok", texto: "Foto removida." });
+    } catch (err) {
+      setAvatarMsg({ tipo: "erro", texto: String(err).replace("Error: ", "") });
+    }
+    setAvatarLoading(false);
+  }
+
   async function save() {
     if (!config) return;
     setSaving(true);
@@ -347,6 +386,54 @@ export default function ConfiguracoesPage() {
             <h2 className="text-sm font-semibold">Perfil</h2>
           </div>
           <div className="p-5 space-y-4">
+            {/* Avatar upload */}
+            <div className="flex items-center gap-5">
+              <div className="relative flex-shrink-0">
+                <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 bg-white/5 flex items-center justify-center">
+                  {config.avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={config.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                  ) : (
+                    <span className="text-3xl font-bold text-gray-400">
+                      {config.name?.charAt(0)?.toUpperCase() ?? "?"}
+                    </span>
+                  )}
+                </div>
+                {/* Camera button overlay */}
+                <label className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-indigo-600 hover:bg-indigo-700 flex items-center justify-center cursor-pointer transition-colors shadow-lg border-2 border-black">
+                  {avatarLoading
+                    ? <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+                    : <Camera className="w-3.5 h-3.5 text-white" />
+                  }
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleAvatarChange}
+                    disabled={avatarLoading}
+                  />
+                </label>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-gray-200 mb-1">Foto de perfil</p>
+                <p className="text-xs text-gray-500 mb-2">JPG, PNG ou WebP · máximo 5 MB</p>
+                {config.avatarUrl && (
+                  <button
+                    onClick={removerAvatar}
+                    disabled={avatarLoading}
+                    className="flex items-center gap-1.5 text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  >
+                    <X className="w-3 h-3" /> Remover foto
+                  </button>
+                )}
+                {avatarMsg && (
+                  <p className={cn("text-xs mt-1", avatarMsg.tipo === "ok" ? "text-green-400" : "text-red-400")}>
+                    {avatarMsg.texto}
+                  </p>
+                )}
+              </div>
+            </div>
+            <hr className="border-white/8" />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-xs text-gray-500 mb-1.5 block">Nome</label>
