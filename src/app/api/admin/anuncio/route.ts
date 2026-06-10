@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
+import { adminAnuncioLimiter } from "@/lib/rate-limit";
+
+// Limites de tamanho para campos de anúncio
+const TITLE_MAX   = 200;  // chars
+const MESSAGE_MAX = 2_000; // chars
 
 const ADMIN_PREFIX = "__ADMIN_NOTIF__";
 
@@ -40,10 +45,18 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
+  // Rate limit — anti spam de anúncios
+  const rl = await adminAnuncioLimiter.check(admin.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const { title, message } = await req.json() as { title?: string; message?: string };
   if (!title?.trim()) return NextResponse.json({ error: "Título obrigatório" }, { status: 400 });
 
-  const content = JSON.stringify({ title: title.trim(), message: message?.trim() ?? "" });
+  // Trunca campos para evitar payloads gigantes no banco
+  const safeTitle   = title.trim().slice(0, TITLE_MAX);
+  const safeMessage = (message ?? "").trim().slice(0, MESSAGE_MAX);
+
+  const content = JSON.stringify({ title: safeTitle, message: safeMessage });
   const now = new Date().toISOString();
   const { data, error } = await db
     .from("Note")

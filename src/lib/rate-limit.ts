@@ -159,3 +159,9 @@ export const desafioSubmeterLimiter = createLimiter({ max: 3, window: "1 h", pre
 
 /** Export admin (questões/alunos) — 5/hora por admin */
 export const adminExportLimiter = createLimiter({ max: 5, window: "1 h", prefix: "admin-export" });
+
+/** Anúncio admin — 20/hora por admin (anti spam no banco) */
+export const adminAnuncioLimiter = createLimiter({ max: 20, window: "1 h", prefix: "admin-anuncio" });
+
+/** Email templates admin — 30/hora por admin */
+export const adminTemplateLimiter = createLimiter({ max: 30, window: "1 h", prefix: "admin-template" });

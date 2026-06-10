@@ -44,22 +44,34 @@ export async function POST(req: Request) {
   const dbUser = await getUserWithPlan(user.id);
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
+  const VALID_ACTIONS = new Set(["save", "remove", "touch"]);
   const body = await req.json() as {
-    action: "save" | "remove" | "touch";
+    action: string;
     id?: string;
     nome?: string;
     code?: string;
   };
 
+  // Allowlist de ações — rejeita strings arbitrárias
+  if (!VALID_ACTIONS.has(body.action)) {
+    return NextResponse.json({ error: "Ação inválida" }, { status: 400 });
+  }
+
   const grupos = await getGrupos(dbUser.id);
 
   if (body.action === "save" && body.nome && body.code) {
-    const exists = grupos.find(g => g.code === body.code);
+    // Sanitiza e limita tamanho dos campos
+    const safeNome = String(body.nome).trim().slice(0, 40);
+    const safeCode = String(body.code).trim().slice(0, 50); // códigos de grupo raramente passam de 10 chars
+    if (!safeNome || !safeCode) {
+      return NextResponse.json({ error: "Nome e código são obrigatórios" }, { status: 400 });
+    }
+    const exists = grupos.find(g => g.code === safeCode);
     if (!exists) {
       grupos.unshift({
         id: crypto.randomUUID(),
-        nome: body.nome.slice(0, 40),
-        code: body.code,
+        nome: safeNome,
+        code: safeCode,
         criadoEm: new Date().toISOString(),
         ultimaSessao: new Date().toISOString(),
         membros: 1,

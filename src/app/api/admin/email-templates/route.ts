@@ -2,6 +2,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/lib/db";
 import { DEFAULT_TEMPLATES, TEMPLATE_NOMES, type EmailTemplate } from "@/lib/email-templates";
+import { adminTemplateLimiter } from "@/lib/rate-limit";
+
+// Limites de tamanho para campos de template de email
+const ASSUNTO_MAX = 300;    // chars — assuntos de email raramente passam de 100
+const HTML_MAX    = 50_000; // chars — ~50KB é suficiente para qualquer email transacional
 
 const TEMPLATE_PREFIX = "__EMAIL_TEMPLATE__:";
 
@@ -61,6 +66,10 @@ export async function POST(req: Request) {
   const admin = await requireAdmin();
   if (!admin) return NextResponse.json({ error: "Sem permissão" }, { status: 403 });
 
+  // Rate limit — anti substituição em loop por admin comprometido
+  const rl = await adminTemplateLimiter.check(admin.id);
+  if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
+
   const { slug, assunto, html } = await req.json() as {
     slug?: string;
     assunto?: string;
@@ -74,11 +83,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Assunto e HTML são obrigatórios" }, { status: 400 });
   }
 
+  // Trunca para evitar templates gigantes que inflam o banco e o payload de email
+  const safeAssunto = assunto.trim().slice(0, ASSUNTO_MAX);
+  const safeHtml    = html.trim().slice(0, HTML_MAX);
+
+  if (safeHtml.length === 0) {
+    return NextResponse.json({ error: "HTML inválido" }, { status: 400 });
+  }
+
   const key = `${TEMPLATE_PREFIX}${slug}`;
   const variaveis = DEFAULT_TEMPLATES[slug].variaveis;
   const content = JSON.stringify({
-    assunto: assunto.trim(),
-    html: html.trim(),
+    assunto: safeAssunto,
+    html: safeHtml,
     variaveis,
     updatedAt: new Date().toISOString(),
   });
