@@ -750,8 +750,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   {/* Painel de Metas */}
                   {showMetasFloat && (
                     <div className="fixed right-16 md:bottom-20 md:right-16 z-40 rounded-2xl shadow-2xl overflow-hidden"
-                      style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
-                      style={{ background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "300px", maxWidth: "calc(100vw - 2rem)" }}>
+                      style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)", background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "300px", maxWidth: "calc(100vw - 2rem)" }}>
                       <div className="flex items-center justify-between px-4 py-2.5"
                         style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-color)" }}>
                         <span className="text-sm font-semibold" style={{ color: "var(--text-primary)" }}>🎯 Metas da semana</span>
