@@ -387,8 +387,8 @@ export default function HojePage() {
           />
         )}
 
-        {/* Cards do plano IA */}
-        {(plano?.tarefas ?? []).map((tarefa) => {
+        {/* Cards do plano IA — deduplica por tipo (IA pode retornar duplicatas) */}
+        {(plano?.tarefas ?? []).filter((t, i, arr) => arr.findIndex(x => x.tipo === t.tipo) === i).map((tarefa) => {
           const cfg = TAREFA_CONFIG[tarefa.tipo];
           if (!cfg) return null;
           const done = cfg.getDone();
@@ -486,7 +486,7 @@ export default function HojePage() {
       )}
 
       {totalPendente === 0 && d.progressoPct < 100 && (
-        <div className="rounded-xl bg-white/[0.02] border border-white/[0.04] p-4 text-center">
+        <div className="rounded-xl p-4 text-center" style={{ background: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
           <p className="text-xs text-gray-600">
             {d.questoesHoje === 0
               ? "Nenhum pendente além da meta de hoje. Bora começar!"

@@ -375,7 +375,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
         className="fixed bottom-0 left-0 right-0 z-[140] lg:hidden border-t border-white/10"
         style={{
           backgroundColor: "var(--bg-surface)",
-          paddingBottom: "env(safe-area-inset-bottom, 0px)", // suporte iPhone
+          paddingBottom: "env(safe-area-inset-bottom, 0px)", // suporte iPhone + Android gesture nav
         }}
       >
         <div className="flex items-stretch h-16">

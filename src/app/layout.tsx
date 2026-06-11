@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], display: "swap" });
 
 export const viewport: Viewport = {
   themeColor: "#0ab5bd",
@@ -11,6 +11,7 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover", // Android gesture nav + iPhone notch
 };
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai.app";
@@ -64,6 +65,14 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR" className="h-full" suppressHydrationWarning>
+      <head>
+        {/* Aplica dark mode ANTES do React hidratar — evita flash branco no Android PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('theme');if(t==='light'){document.documentElement.classList.add('light')}else{document.documentElement.classList.remove('light')}}catch(e){}})()`,
+          }}
+        />
+      </head>
       <body className={`${inter.className} min-h-full antialiased`} style={{ backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}>
         <Providers>{children}</Providers>
       </body>

@@ -115,7 +115,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       )}
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
-      <main className="flex-1 min-w-0 overflow-auto pb-4 lg:pb-4 pb-24" style={{ backgroundColor: "var(--bg-base)" }}>
+      <main className="flex-1 min-w-0 overflow-auto pb-4 lg:pb-4" style={{ backgroundColor: "var(--bg-base)", paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
         {children}
       </main>
       <AutoRefresh />

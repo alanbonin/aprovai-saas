@@ -13,7 +13,8 @@ export function PomodoroFloat() {
         <button
           onClick={() => setOpen(true)}
           title="Pomodoro"
-          className="fixed bottom-24 right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95"
+          className="fixed right-4 md:bottom-6 md:right-6 z-50 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 1rem)" }}
           style={{ background: "linear-gradient(135deg, #6366f1, #4f46e5)", boxShadow: "0 4px 20px #6366f155" }}
         >
           🍅
@@ -23,7 +24,8 @@ export function PomodoroFloat() {
       {/* Painel flutuante */}
       {open && (
         <div
-          className="fixed bottom-20 right-2 md:bottom-4 md:right-6 z-50 rounded-2xl overflow-hidden shadow-2xl max-h-[calc(100vh-6rem)] overflow-y-auto"
+          className="fixed right-2 md:bottom-4 md:right-6 z-50 rounded-2xl overflow-hidden shadow-2xl max-h-[calc(100vh-6rem)] overflow-y-auto"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
           style={{ background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "340px", maxWidth: "calc(100vw - 1rem)" }}
         >
           <div className="flex items-center justify-between px-4 py-2 sticky top-0 z-10"
