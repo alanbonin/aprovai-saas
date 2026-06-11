@@ -54,8 +54,8 @@ export function MentorProativo() {
   return (
     <div
       className="fixed right-5 z-50 max-w-sm w-full lg:bottom-5"
-      style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
       style={{
+        bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)",
         animation: dismissed ? "proativoOut 0.3s ease-in both" : "proativoIn 0.4s cubic-bezier(0.34,1.56,0.64,1) both",
       }}>
       <style>{`
