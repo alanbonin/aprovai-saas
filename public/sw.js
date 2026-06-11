@@ -1,6 +1,6 @@
-// ── AprovAI360 Service Worker v2 — Push + Offline Cache ─────────────────────
-const STATIC_CACHE  = "aprovai-v2-static";
-const DYNAMIC_CACHE = "aprovai-v2-dynamic";
+// ── AprovAI360 Service Worker v3 — Push + Offline Cache ─────────────────────
+const STATIC_CACHE  = "aprovai-v3-static";
+const DYNAMIC_CACHE = "aprovai-v3-dynamic";
 const ALL_CACHES    = [STATIC_CACHE, DYNAMIC_CACHE];
 
 const PRECACHE_ASSETS = ["/offline", "/manifest.json"];

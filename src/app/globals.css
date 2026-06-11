@@ -2,6 +2,7 @@
 
 /* ── Variáveis de tema ────────────────────────────────────────────────────── */
 :root {
+  color-scheme: dark; /* Android: inputs, selects, scrollbar nativos no tema escuro */
   /* Dark theme (padrão) */
   --bg-base:        #080c18;
   --bg-surface:     #0a0d14;
@@ -18,6 +19,7 @@
 }
 
 html.light {
+  color-scheme: light;
   --bg-base:        #f8fafc;
   --bg-surface:     #f1f5f9;
   --bg-card:        #ffffff;

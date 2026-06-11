@@ -166,7 +166,7 @@ export default function CalculadoraPage() {
                   <div className="col-span-2 flex items-center gap-1">
                     <span className="text-gray-600 text-[10px]">Q:</span>
                     <input
-                      type="number" min={1} max={100} value={m.questoes}
+                      type="number" inputMode="numeric" min={1} max={100} value={m.questoes}
                       onChange={e => updateMateria(m.id, "questoes", Number(e.target.value))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white focus:outline-none text-xs text-center"
                     />
@@ -174,7 +174,7 @@ export default function CalculadoraPage() {
                   <div className="col-span-2 flex items-center gap-1">
                     <span className="text-gray-600 text-[10px]">Mín:</span>
                     <input
-                      type="number" min={0} max={m.questoes} value={m.minimo}
+                      type="number" inputMode="numeric" min={0} max={m.questoes} value={m.minimo}
                       onChange={e => updateMateria(m.id, "minimo", Number(e.target.value))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white focus:outline-none text-xs text-center"
                     />
@@ -182,7 +182,7 @@ export default function CalculadoraPage() {
                   <div className="col-span-3 flex items-center gap-1">
                     <span className="text-gray-600 text-[10px]">Acertos:</span>
                     <input
-                      type="number" min={0} max={m.questoes}
+                      type="number" inputMode="numeric" min={0} max={m.questoes}
                       value={acertos[m.id] ?? Math.round((meuDesempenho / 100) * m.questoes)}
                       onChange={e => setAcertos(prev => ({ ...prev, [m.id]: Number(e.target.value) }))}
                       className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-white focus:outline-none text-xs text-center"

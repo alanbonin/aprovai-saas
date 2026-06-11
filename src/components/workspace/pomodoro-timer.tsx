@@ -14,22 +14,30 @@ const MODE_META = [
 type ModeId = typeof MODE_META[number]["id"];
 
 // ── Simple beep using AudioContext ────────────────────────────────────────────
+// Android requer ctx.resume() pois AudioContext começa suspenso sem gesto do usuário
 function playBeep(freq = 880, dur = 0.3) {
   try {
-    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.value = freq;
-    gain.gain.setValueAtTime(0.4, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
-    osc.start();
-    osc.stop(ctx.currentTime + dur);
-    // Play 3 beeps
-    setTimeout(() => playBeep(freq, dur), 400);
-    // Only recurse once more (avoid infinite loop)
+    const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    const ctx = new AudioCtx();
+    const doPlay = () => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.4, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + dur);
+      osc.start();
+      osc.stop(ctx.currentTime + dur);
+      setTimeout(() => playBeep(freq, dur), 400);
+    };
+    // Resume AudioContext se suspenso (necessário no Android)
+    if (ctx.state === "suspended") {
+      ctx.resume().then(doPlay).catch(() => {});
+    } else {
+      doPlay();
+    }
   } catch { /* AudioContext may be unavailable */ }
 }
 

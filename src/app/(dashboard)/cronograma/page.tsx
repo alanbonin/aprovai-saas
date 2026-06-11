@@ -296,7 +296,7 @@ export default function CronogramaPage() {
               </div>
               <div>
                 <label className="text-[10px] text-gray-500 mb-1 block">Duração (min)</label>
-                <input type="number" min={15} max={240} step={15} value={newDurMin} onChange={e => setNewDurMin(Number(e.target.value))}
+                <input type="number" inputMode="numeric" min={15} max={240} step={15} value={newDurMin} onChange={e => setNewDurMin(Number(e.target.value))}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-indigo-500" />
               </div>
             </div>

@@ -414,7 +414,7 @@ export function ArenaSala({ code, isHostParam, qtdQuestoes, materia, publica }: 
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-[#07091a]">
+    <div className="flex flex-col overflow-hidden bg-[#07091a]" style={{ height: "100dvh" }}>
 
       {/* Top bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-b border-white/[0.07] shrink-0 bg-[#080c18]">

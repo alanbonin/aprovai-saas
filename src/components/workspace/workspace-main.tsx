@@ -1720,6 +1720,7 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
           }
           return (
             <button key={key} onClick={() => handleSelect(key)} disabled={!!selected}
+              onContextMenu={(e) => e.preventDefault()}
               className={cn("w-full text-left flex items-center gap-2.5 p-3 rounded-lg border text-xs transition-all", style, !selected && "cursor-pointer")}>
               <span className={cn("w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold flex-shrink-0",
                 selected && isCorrect ? "bg-green-500 border-green-500 text-white" :
@@ -2720,6 +2721,7 @@ function _SimuladosTabLegacy({ simulados, loading }: { simulados: SimuladoItem[]
           }
           return (
             <button key={key} onClick={() => handleSelect(key)} disabled={!!selected}
+              onContextMenu={(e) => e.preventDefault()}
               className={cn("w-full text-left flex items-center gap-2.5 p-3 rounded-lg border text-xs transition-all", style, !selected && "cursor-pointer")}>
               <span className={cn("w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold flex-shrink-0",
                 selected && isCorrect ? "bg-green-500 border-green-500 text-white" :

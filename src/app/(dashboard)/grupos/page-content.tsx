@@ -110,9 +110,22 @@ export function GruposInner() {
   }
 
   function copyCode(code: string) {
-    navigator.clipboard.writeText(code).catch(() => {});
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).catch(() => fallbackCopy(code));
+    } else {
+      fallbackCopy(code);
+    }
     setCopied(code);
     setTimeout(() => setCopied(null), 2000);
+  }
+  function fallbackCopy(text: string) {
+    try {
+      const el = document.createElement("textarea");
+      el.value = text; el.style.position = "fixed"; el.style.opacity = "0";
+      document.body.appendChild(el); el.focus(); el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    } catch { /* silent */ }
   }
 
   if (loading) {

@@ -284,7 +284,7 @@ export default function RelatorioPage() {
             ]).map(({ key, label }) => (
               <div key={key}>
                 <label className="text-xs text-gray-500 mb-1 block">{label}</label>
-                <input type="number" min={0} value={metasDraft[key]}
+                <input type="number" inputMode="numeric" min={0} value={metasDraft[key]}
                   onChange={e => setMetasDraft(d => d ? { ...d, [key]: Number(e.target.value) } : d)}
                   className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
                 />

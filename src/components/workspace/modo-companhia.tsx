@@ -114,7 +114,20 @@ function LobbyView({
   }
 
   function copy() {
-    navigator.clipboard.writeText(code);
+    const doFallback = () => {
+      try {
+        const el = document.createElement("textarea");
+        el.value = code; el.style.position = "fixed"; el.style.opacity = "0";
+        document.body.appendChild(el); el.focus(); el.select();
+        document.execCommand("copy");
+        document.body.removeChild(el);
+      } catch { /* silent */ }
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(code).catch(doFallback);
+    } else {
+      doFallback();
+    }
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
