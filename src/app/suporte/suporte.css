@@ -99,7 +99,7 @@
 }
 .sup-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(48px, 8vw, 88px);
+  font-size: 64px; font-size: clamp(48px, 8vw, 88px);
   line-height: 0.95;
   letter-spacing: 0.02em;
   color: var(--white);
@@ -127,7 +127,7 @@
 }
 .sup-sec-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(32px, 4vw, 52px);
+  font-size: 40px; font-size: clamp(32px, 4vw, 52px);
   color: var(--white);
   margin: 0 0 36px;
   line-height: 1;

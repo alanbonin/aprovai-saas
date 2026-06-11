@@ -3,7 +3,7 @@ import { Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"], display: "swap" });
+const inter = Inter({ subsets: ["latin"], display: "swap", weight: ["400", "500", "600", "700", "900"] });
 
 export const viewport: Viewport = {
   themeColor: "#0ab5bd",

@@ -376,6 +376,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
         style={{
           backgroundColor: "var(--bg-surface)",
           paddingBottom: "env(safe-area-inset-bottom, 0px)", // suporte iPhone + Android gesture nav
+          isolation: "isolate", // evita stacking context quebrado no Android com transform filhos
         }}
       >
         <div className="flex items-stretch h-16">

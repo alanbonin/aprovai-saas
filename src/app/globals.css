@@ -66,6 +66,9 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ── will-change para ícones da nav que animam no toque (Android performance) */
+nav .emoji-icon { will-change: transform; }
+
 /* ── Emojis consistentes no Android ─────────────────────────────────────────
    Android pode renderizar emojis com tamanho/alinhamento diferente do iOS.
    Força font-family com fallback de emoji para consistência entre plataformas.
@@ -269,6 +272,68 @@ body { overflow-x: hidden; }
   .backdrop-blur-lg {
     background-color: rgba(8, 12, 24, 0.92) !important;
   }
+}
+
+/* ── input[type=range] — estilos webkit para Android ────────────────────────
+   accent-color sozinho não funciona em Android < 110.
+   Esses estilos garantem que sliders sejam visíveis e interativos.
+   ─────────────────────────────────────────────────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  background: rgba(255,255,255,0.15);
+}
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.15);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0ab5bd;
+  cursor: pointer;
+  margin-top: -7px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+input[type="range"]::-moz-range-track {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.15);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0ab5bd;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+/* accent-color como fallback para browsers modernos */
+input[type="range"].accent-indigo-500 { accent-color: #6366f1; }
+input[type="range"].accent-rose-500   { accent-color: #f43f5e; }
+input[type="range"].accent-teal-500   { accent-color: #14b8a6; }
+
+/* ── input[type=date] — color-scheme global dark para todos ─────────────────
+   Garante que o picker nativo do Android use tema escuro.
+   ─────────────────────────────────────────────────────────────────────────── */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"] {
+  color-scheme: dark;
+}
+html.light input[type="date"],
+html.light input[type="time"],
+html.light input[type="datetime-local"] {
+  color-scheme: light;
 }
 
 /* ── Fallbacks Android WebView < 111 ─────────────────────────────────────────

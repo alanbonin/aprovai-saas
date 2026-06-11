@@ -91,7 +91,7 @@
 }
 .inst-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(48px, 8vw, 96px);
+  font-size: 64px; font-size: clamp(48px, 8vw, 96px);
   line-height: 0.95;
   letter-spacing: 0.02em;
   color: var(--white);
@@ -119,7 +119,7 @@
 }
 .inst-sec-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(32px, 4vw, 52px);
+  font-size: 40px; font-size: clamp(32px, 4vw, 52px);
   color: var(--white);
   margin: 0 0 40px;
   line-height: 1;
@@ -264,7 +264,7 @@
 .inst-cta-inner { max-width: 560px; }
 .inst-cta-title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(36px, 5vw, 60px);
+  font-size: 48px; font-size: clamp(36px, 5vw, 60px);
   color: var(--white);
   margin: 0 0 12px;
   line-height: 1;

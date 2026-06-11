@@ -87,18 +87,24 @@ export function QuestoesInner() {
 
   // Load subjects once
   useEffect(() => {
-    fetch("/api/workspace/materias")
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    fetch("/api/workspace/materias", { signal: ctrl.signal })
       .then(r => r.json())
       .then(d => setSubjects(d.subjects ?? []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => clearTimeout(tid));
   }, []);
 
   // Load favoritos once
   useEffect(() => {
-    fetch("/api/questoes/favoritos")
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    fetch("/api/questoes/favoritos", { signal: ctrl.signal })
       .then(r => r.json())
       .then(d => setFavoritos(d.favoritos ?? []))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => clearTimeout(tid));
   }, []);
 
   // Busca termos do glossário quando a questão muda (igual ao Estudar)

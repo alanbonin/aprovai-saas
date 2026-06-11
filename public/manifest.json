@@ -5,7 +5,7 @@
   "start_url": "/hoje",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["window-controls-overlay", "standalone"],
+  "display_override": ["window-controls-overlay", "standalone", "browser"],
   "background_color": "#080c18",
   "theme_color": "#0ab5bd",
   "orientation": "portrait-primary",

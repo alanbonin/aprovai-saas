@@ -32,7 +32,9 @@ export function ConquistasInner() {
   const [filter, setFilter]   = useState<"all" | "unlocked" | "locked">("all");
 
   useEffect(() => {
-    fetch("/api/conquistas")
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    fetch("/api/conquistas", { signal: ctrl.signal })
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (d) {
@@ -41,7 +43,8 @@ export function ConquistasInner() {
         }
         setLoading(false);
       })
-      .catch(() => setLoading(false));
+      .catch(() => setLoading(false))
+      .finally(() => clearTimeout(tid));
   }, []);
 
   if (loading) {

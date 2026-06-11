@@ -242,7 +242,7 @@ export default function PerfilPage() {
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Data da prova</label>
               <input type="date" value={dataProva} onChange={e => setDataProva(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500" />
+                className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500 [color-scheme:dark]" />
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">Dificuldades / foco</label>
