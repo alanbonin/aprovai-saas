@@ -101,12 +101,12 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
 
-  const { data: dbUser } = await db.from("User").select("id, subscriptionId").eq("supabaseId", user.id).maybeSingle();
+  const { data: dbUser } = await db.from("User").select("id").eq("supabaseId", user.id).maybeSingle();
   if (!dbUser) return NextResponse.json({ error: "Não encontrado" }, { status: 404 });
 
   // Verifica se é plano Trial (para aplicar limite diário)
-  const { data: subData } = await db.from("Subscription").select("status, plan:Plan(slug)").eq("id", dbUser.subscriptionId ?? "").maybeSingle();
-  const isTrial = (subData as { status?: string } | null)?.status === "TRIAL";
+  const { data: subData } = await db.from("Subscription").select("status, plan:planId(slug)").eq("userId", dbUser.id).not("status", "in", '("CANCELLED","EXPIRED")').order("createdAt", { ascending: false }).limit(1).maybeSingle();
+  const isTrial = !subData || (subData as { status?: string } | null)?.status === "TRIAL";
 
   // Resolve perfil ativo (multi-perfil)
   const { getActiveProfile } = await import("@/lib/get-active-profile");

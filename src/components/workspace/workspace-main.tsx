@@ -1524,8 +1524,6 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
     } else {
       const errText = await res.text().catch(() => "");
       console.error("[progresso] API error", res.status, errText);
-      // Alerta temporário de debug — remover após corrigir
-      alert(`DEBUG: API retornou ${res.status}\n${errText.slice(0, 300)}`);
     }
     // Não avança automaticamente — aluno usa o botão "Próxima →"
   }
