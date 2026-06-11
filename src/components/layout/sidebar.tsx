@@ -390,7 +390,7 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                   active ? "text-[#0ab5bd]" : "text-gray-500 hover:text-gray-300"
                 )}
               >
-                <span className={cn("text-xl leading-none transition-transform", active && "scale-110")}>
+                <span className={cn("text-xl leading-none transition-transform emoji-icon", active && "scale-110")}>
                   {item.icon}
                 </span>
                 <span className={cn("text-[10px] font-medium", active ? "text-[#0ab5bd]" : "text-gray-600")}>

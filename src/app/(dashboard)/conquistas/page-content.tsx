@@ -66,7 +66,7 @@ export function ConquistasInner() {
   const pct = meta ? Math.round((meta.unlockedCount / meta.total) * 100) : 0;
 
   return (
-    <div className="min-h-screen text-white p-6 max-w-4xl mx-auto">
+    <div className="min-h-dvh text-white p-6 max-w-4xl mx-auto">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>

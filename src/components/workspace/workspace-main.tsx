@@ -740,8 +740,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                   {/* Botão flutuante 🎯 */}
                   <button
                     onClick={() => setShowMetasFloat(v => !v)}
-                    className="fixed bottom-24 right-20 md:bottom-6 md:right-20 z-40 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95"
-                    style={{ background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 20px #10b98155" }}
+                    className="fixed right-20 md:bottom-6 md:right-20 z-40 w-12 h-12 rounded-full shadow-2xl flex items-center justify-center text-xl transition-transform hover:scale-110 active:scale-95"
+                    style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 1rem)", background: "linear-gradient(135deg, #10b981, #059669)", boxShadow: "0 4px 20px #10b98155" }}
                     title="Metas da semana"
                   >
                     🎯
@@ -749,7 +749,8 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
 
                   {/* Painel de Metas */}
                   {showMetasFloat && (
-                    <div className="fixed bottom-20 right-16 md:bottom-20 md:right-16 z-40 rounded-2xl shadow-2xl overflow-hidden"
+                    <div className="fixed right-16 md:bottom-20 md:right-16 z-40 rounded-2xl shadow-2xl overflow-hidden"
+                      style={{ bottom: "calc(4rem + env(safe-area-inset-bottom, 0px) + 0.5rem)" }}
                       style={{ background: "var(--bg-base)", border: "1px solid var(--border-color)", width: "300px", maxWidth: "calc(100vw - 2rem)" }}>
                       <div className="flex items-center justify-between px-4 py-2.5"
                         style={{ background: "var(--bg-card)", borderBottom: "1px solid var(--border-color)" }}>

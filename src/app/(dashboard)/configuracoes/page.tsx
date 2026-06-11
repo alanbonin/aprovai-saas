@@ -392,7 +392,7 @@ export default function ConfiguracoesPage() {
                 <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white/10 bg-white/5 flex items-center justify-center">
                   {config.avatarUrl ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={config.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                    <img src={config.avatarUrl} alt="Avatar" className="w-full h-full object-cover" loading="lazy" decoding="async" />
                   ) : (
                     <span className="text-3xl font-bold text-gray-400">
                       {config.name?.charAt(0)?.toUpperCase() ?? "?"}

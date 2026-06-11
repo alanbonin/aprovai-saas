@@ -257,7 +257,7 @@ export function QuestoesInner() {
   if (done && score.total > 0) {
     const pct = Math.round((score.correct / score.total) * 100);
     return (
-      <div className="min-h-screen text-white p-6 max-w-lg mx-auto flex flex-col items-center justify-center">
+      <div className="min-h-dvh text-white p-6 max-w-lg mx-auto flex flex-col items-center justify-center">
         <Trophy className="w-16 h-16 text-yellow-400 mb-4" />
         <h2 className="text-2xl font-bold mb-1">Sessão concluída!</h2>
         <p className="text-gray-400 text-sm mb-6">Você respondeu todas as questões desta sessão</p>
@@ -289,7 +289,7 @@ export function QuestoesInner() {
   }
 
   return (
-    <div className="min-h-screen text-white p-6 max-w-3xl mx-auto">
+    <div className="min-h-dvh text-white p-6 max-w-3xl mx-auto">
       {/* Report sent toast */}
       {reportSent && (
         <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-green-500/20 border border-green-500/30 text-green-300 text-sm font-medium shadow-xl">

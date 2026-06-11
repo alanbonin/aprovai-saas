@@ -174,7 +174,7 @@ export function SimuladoExameInner() {
   // ─── CONFIG ───────────────────────────────────────────────────────────────
   if (phase === "config") {
     return (
-      <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
+      <div className="min-h-dvh text-white p-6 max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <Clock className="w-6 h-6 text-red-400" />
@@ -246,7 +246,7 @@ export function SimuladoExameInner() {
   if (phase === "result") {
     const unanswered = questions.length - Object.keys(answers).length;
     return (
-      <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
+      <div className="min-h-dvh text-white p-6 max-w-2xl mx-auto">
         <div className="text-center py-8">
           <div className="text-5xl mb-4">
             {accuracy >= 80 ? "🏆" : accuracy >= 60 ? "📈" : "💪"}
@@ -335,7 +335,7 @@ export function SimuladoExameInner() {
   // ─── REVIEW ───────────────────────────────────────────────────────────────
   if (phase === "review") {
     return (
-      <div className="min-h-screen text-white p-4 max-w-2xl mx-auto">
+      <div className="min-h-dvh text-white p-4 max-w-2xl mx-auto">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-lg font-bold flex items-center gap-2">
@@ -449,7 +449,7 @@ export function SimuladoExameInner() {
   const opts = OPTS.map(l => ({ l, v: q[`option${l}` as keyof Question] as string | null })).filter(o => o.v);
 
   return (
-    <div className="min-h-screen text-white p-4 max-w-2xl mx-auto">
+    <div className="min-h-dvh text-white p-4 max-w-2xl mx-auto">
       {/* Header bar */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">

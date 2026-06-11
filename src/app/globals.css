@@ -64,6 +64,18 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* ── Emojis consistentes no Android ─────────────────────────────────────────
+   Android pode renderizar emojis com tamanho/alinhamento diferente do iOS.
+   Força font-family com fallback de emoji para consistência entre plataformas.
+   ─────────────────────────────────────────────────────────────────────────── */
+.emoji-icon {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+  font-style: normal;
+  line-height: 1;
+  display: inline-block;
+  text-align: center;
+}
+
 /* ── Light mode — sobrescreve fundos escuros hardcoded ────────────────────── */
 
 /* Fundos muito escuros → branco */
@@ -210,6 +222,52 @@ html.light .border-white\/\[0\.04\]  { border-color: rgba(0,0,0,0.05) !important
 
 /* Overflow horizontal — evita bulgado no Android */
 body { overflow-x: hidden; }
+
+/* ── Anti-zoom Android: inputs com font-size < 16px causam zoom automático ───
+   Força 16px em todos os inputs no mobile para evitar o zoom indesejado.
+   Em desktop mantém o tamanho natural via media query.
+   ─────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 1023px) {
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+}
+
+/* ── 100dvh: evita corte pelo endereço do browser no Android ─────────────────
+   min-h-screen usa 100vh que inclui a barra de URL (some ao rolar).
+   A classe .min-h-dvh usa 100dvh (dynamic) que ajusta automaticamente.
+   ─────────────────────────────────────────────────────────────────────────── */
+.min-h-dvh { min-height: 100dvh; }
+
+/* ── backdrop-filter fallback para Android WebView antigo ────────────────────
+   Adiciona prefixo -webkit- em todos os elementos que usam backdrop-blur.
+   Se backdrop-filter não for suportado, o fundo fica mais opaco como fallback.
+   ─────────────────────────────────────────────────────────────────────────── */
+.backdrop-blur-sm {
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+.backdrop-blur {
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.backdrop-blur-md {
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+.backdrop-blur-lg {
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+/* Fallback: se backdrop-filter não funcionar, usa fundo mais opaco */
+@supports not (backdrop-filter: blur(1px)) {
+  .backdrop-blur-sm,
+  .backdrop-blur,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    background-color: rgba(8, 12, 24, 0.92) !important;
+  }
+}
 
 /* ── Fallbacks Android WebView < 111 ─────────────────────────────────────────
    Versões antigas do Chrome/WebView no Android não suportam a sintaxe moderna

@@ -46,11 +46,11 @@ function FlipCard({ front, back, flipped, onFlip }: {
       onClick={onFlip}
     >
       <div className="absolute inset-0 transition-transform duration-500"
-        style={{ transformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)" }}>
+        style={{ transformStyle: "preserve-3d", WebkitTransformStyle: "preserve-3d", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", WebkitTransform: flipped ? "rotateY(180deg)" : "rotateY(0deg)", willChange: "transform" }}>
         {/* Frente */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-indigo-900/40 to-indigo-800/20
           border border-indigo-500/30 flex flex-col items-center justify-center p-6 text-center"
-          style={{ backfaceVisibility: "hidden" }}>
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden" }}>
           <p className="text-xs text-indigo-400 font-semibold uppercase tracking-wider mb-4">Pergunta</p>
           <p className="text-base text-white leading-relaxed font-medium">{front}</p>
           <p className="text-xs text-gray-600 mt-6">Clique para revelar</p>
@@ -58,7 +58,7 @@ function FlipCard({ front, back, flipped, onFlip }: {
         {/* Verso */}
         <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-emerald-900/40 to-emerald-800/20
           border border-emerald-500/30 flex flex-col items-center justify-center p-6 text-center"
-          style={{ backfaceVisibility: "hidden", transform: "rotateY(180deg)" }}>
+          style={{ backfaceVisibility: "hidden", WebkitBackfaceVisibility: "hidden", transform: "rotateY(180deg)", WebkitTransform: "rotateY(180deg)" }}>
           <p className="text-xs text-emerald-400 font-semibold uppercase tracking-wider mb-4">Resposta</p>
           <p className="text-base text-white leading-relaxed">{back}</p>
         </div>

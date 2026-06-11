@@ -80,7 +80,7 @@ export function SimuladoRevisaoInner() {
 
   if (phase === "config") {
     return (
-      <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
+      <div className="min-h-dvh text-white p-6 max-w-2xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold flex items-center gap-2">
             <RotateCcw className="w-6 h-6 text-rose-400" />
@@ -174,7 +174,7 @@ export function SimuladoRevisaoInner() {
 
   if (phase === "result") {
     return (
-      <div className="min-h-screen text-white p-6 max-w-2xl mx-auto">
+      <div className="min-h-dvh text-white p-6 max-w-2xl mx-auto">
         <div className="text-center py-10">
           <div className="w-20 h-20 rounded-2xl bg-indigo-600/10 border border-indigo-500/20 flex items-center justify-center mx-auto mb-4 text-4xl">
             {accuracy >= 80 ? "🏆" : accuracy >= 60 ? "📈" : "💪"}
@@ -221,7 +221,7 @@ export function SimuladoRevisaoInner() {
   const opts = OPTS.map(l => ({ l, v: q[`option${l}` as keyof Question] as string | null })).filter(o => o.v);
 
   return (
-    <div className="min-h-screen text-white p-4 max-w-2xl mx-auto">
+    <div className="min-h-dvh text-white p-4 max-w-2xl mx-auto">
       {/* Progress */}
       <div className="mb-4">
         <div className="flex justify-between text-xs text-gray-500 mb-1.5">

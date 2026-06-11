@@ -265,7 +265,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
       : (pct >= 70 ? "text-green-400" : pct >= 50 ? "text-yellow-400" : "text-red-400");
 
     return (
-      <div className="min-h-screen bg-[#0d1117] text-white p-6 flex flex-col items-center justify-center">
+      <div className="min-h-dvh bg-[#0d1117] text-white p-6 flex flex-col items-center justify-center">
         <div className="w-full max-w-md text-center">
           {hasThreshold ? (
             approved
@@ -351,7 +351,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
   if (phase === "gabarito" && result) {
     const pct = result.total > 0 ? Math.round((result.correct / result.total) * 100) : 0;
     return (
-      <div className="min-h-screen bg-[#0d1117] text-white p-4 sm:p-6 max-w-3xl mx-auto">
+      <div className="min-h-dvh bg-[#0d1117] text-white p-4 sm:p-6 max-w-3xl mx-auto">
         {/* Header */}
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => setPhase("result")}
@@ -488,7 +488,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
       .filter(o => o.text);
 
     return (
-      <div className="min-h-screen bg-[#0d1117] text-white flex flex-col">
+      <div className="min-h-dvh bg-[#0d1117] text-white flex flex-col">
         {/* Header */}
         <div className="border-b border-white/5 px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -594,7 +594,7 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
     }
 
     return (
-      <div className="min-h-screen bg-[#0d1117] text-white flex flex-col items-center justify-center p-6">
+      <div className="min-h-dvh bg-[#0d1117] text-white flex flex-col items-center justify-center p-6">
         <div className="w-full max-w-md">
           <h2 className="text-xl font-bold mb-6 text-center">Configurar Simulado</h2>
 
