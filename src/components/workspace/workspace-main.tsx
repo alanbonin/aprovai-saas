@@ -72,7 +72,8 @@ function CircularProgress({ pct, color, size = 40, stroke = 4 }: { pct: number; 
 const CONFETTI_COLORS = ["#6366f1","#f59e0b","#10b981","#ef4444","#8b5cf6","#3b82f6","#ec4899","#f97316","#facc15","#14b8a6"];
 function Confetti({ onDone }: { onDone: () => void }) {
   useEffect(() => { const t = setTimeout(onDone, 3200); return () => clearTimeout(t); }, []);
-  const particles = Array.from({ length: 55 }, (_, i) => ({
+  // 30 particles (down from 55) — low-end Android handles CSS animations better
+  const particles = Array.from({ length: 30 }, (_, i) => ({
     left: `${(Math.random() * 100).toFixed(1)}%`,
     color: CONFETTI_COLORS[i % CONFETTI_COLORS.length],
     delay: `${(Math.random() * 0.8).toFixed(2)}s`,
@@ -88,6 +89,7 @@ function Confetti({ onDone }: { onDone: () => void }) {
           borderRadius: p.round === 0 ? "50%" : p.round === 1 ? "2px" : "0",
           background: p.color, left: p.left, top: "-20px",
           animation: `confettiFall ${p.dur} linear ${p.delay} forwards`,
+          willChange: "transform",
         }} />
       ))}
     </div>

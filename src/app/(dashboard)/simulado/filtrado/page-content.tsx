@@ -44,10 +44,13 @@ export function SimuladoFiltradoInner() {
   const [showExp, setShowExp]       = useState<Record<number, boolean>>({});
 
   useEffect(() => {
-    fetch("/api/workspace/materias")
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    fetch("/api/workspace/materias", { signal: ctrl.signal })
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (d) setSubjects(d.subjects ?? []); })
-      .catch(() => {});
+      .then(d => { clearTimeout(tid); if (d) setSubjects(d.subjects ?? []); })
+      .catch(() => { clearTimeout(tid); });
+    return () => { clearTimeout(tid); ctrl.abort(); };
   }, []);
 
   function toggleSubject(id: string) {

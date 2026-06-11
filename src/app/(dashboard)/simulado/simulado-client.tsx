@@ -167,19 +167,22 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
 
   // Carrega bancas e matérias disponíveis ao montar
   useEffect(() => {
-    fetch("/api/relatorio/banca")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => {
-        const bancas = (d?.bancas ?? [])
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 8000);
+    Promise.all([
+      fetch("/api/relatorio/banca", { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch("/api/workspace/materias", { signal: ctrl.signal }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([bancaData, matData]) => {
+      clearTimeout(tid);
+      if (bancaData) {
+        const bancas = (bancaData.bancas ?? [])
           .map((b: { banca: string }) => b.banca)
           .filter((b: string) => b && b !== "Sem banca");
         setAvailableBancas(bancas);
-      })
-      .catch(() => {});
-    fetch("/api/workspace/materias")
-      .then(r => r.ok ? r.json() : null)
-      .then(d => setAvailableSubjects(d?.subjects ?? []))
-      .catch(() => {});
+      }
+      if (matData) setAvailableSubjects(matData.subjects ?? []);
+    }).catch(() => { clearTimeout(tid); });
+    return () => { clearTimeout(tid); ctrl.abort(); };
   }, []);
 
   async function startSimuladoWith(q: number, mins: number, banca: string, level: string, subject: string) {

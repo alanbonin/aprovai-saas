@@ -182,18 +182,18 @@ export function ProfileSwitcher({ compact = false }: { compact?: boolean }) {
               {isActive && (
                 <div className="flex items-center gap-1">
                   <Check className="w-3 h-3 flex-shrink-0 text-indigo-400" />
-                  <button className="p-0.5 rounded hover:text-indigo-300 transition-colors opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); openEdit(p); }}>
+                  <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:text-indigo-300 transition-colors opacity-0 group-hover:opacity-100" onClick={e => { e.stopPropagation(); openEdit(p); }}>
                     <Pencil className="w-3 h-3" />
                   </button>
                 </div>
               )}
               {!isActive && (
-                <div className="hidden group-hover:flex gap-1">
-                  <button className="p-0.5 rounded hover:text-indigo-300 transition-colors" onClick={e => { e.stopPropagation(); openEdit(p); }}>
+                <div className="hidden group-hover:flex gap-0">
+                  <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:text-indigo-300 transition-colors" onClick={e => { e.stopPropagation(); openEdit(p); }}>
                     <Pencil className="w-3 h-3" />
                   </button>
                   {!p.isDefault && (
-                    <button className="p-0.5 rounded hover:text-red-400 transition-colors" onClick={e => { e.stopPropagation(); void deleteProfile(p.id); }}>
+                    <button className="min-w-[44px] min-h-[44px] flex items-center justify-center rounded hover:text-red-400 transition-colors" onClick={e => { e.stopPropagation(); void deleteProfile(p.id); }}>
                       <Trash2 className="w-3 h-3" />
                     </button>
                   )}
