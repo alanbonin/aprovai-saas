@@ -1,5 +1,4 @@
 import { redirect } from "next/navigation";
-import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -12,9 +11,7 @@ import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 import { getConfig } from "@/lib/system-config";
 import { getWeekStartStr } from "@/lib/api-utils";
 import { getAccessLevel } from "@/lib/access";
-
-// Rotas acessíveis mesmo com plano expirado (assinar, ver conta, sair)
-const ALLOWED_EXPIRED = ["/planos", "/configuracoes", "/perfil", "/notificacoes"];
+import { PlanosClient } from "@/app/(dashboard)/planos/planos-client";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -46,7 +43,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   // Paraleliza todas as queries independentes
   const [profileRes, aiUsed, bannerGlobal, modoManutencao,
     usedCasos, usedRedacoes, usedSimulados, usedQuestoes, usedFlashcards, usedPdf,
-    access
+    access, plansForExpired,
   ] = await Promise.all([
     Promise.resolve(db.from("StudentProfile").select("id").eq("userId", dbUser.id).eq("onboardingDone", true).limit(1))
       .then(r => r.data).catch(() => null),
@@ -60,21 +57,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     getWeeklyUsage("flashcards").catch(() => 0),
     getWeeklyUsage("pdf").catch(() => 0),
     getAccessLevel().catch(() => null),
+    // Busca planos sempre (custo mínimo, necessário para tela de expiração)
+    Promise.resolve(db.from("Plan").select("*").eq("active", true).order("price")).then(r => r.data ?? []).catch(() => []),
   ]);
 
   // Verifica onboarding — alunos sem perfil completo vão para /onboarding
   if (profileRes !== null && profileRes.length === 0) redirect("/onboarding");
 
   // ── Guard global de expiração ─────────────────────────────────────────────
-  // Bloqueia QUALQUER rota do dashboard quando assinatura expirada/inexistente.
-  // Exceções: /planos/* (assinar), /configuracoes, /perfil (gerenciar conta).
-  const hdrs = await headers();
-  const pathname = hdrs.get("x-pathname") ?? "";
+  // Se assinatura expirada/inexistente: renderiza a tela de planos DIRETAMENTE
+  // no lugar de {children} — sem redirect (evita tela preta em client navigation)
   const isExpiredSub2 = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
-  const allowedExpired = ALLOWED_EXPIRED.some(p => pathname === p || pathname.startsWith(p + "/"));
-  if (isExpiredSub2 && !allowedExpired) {
-    redirect("/planos?expired=1");
-  }
   // ─────────────────────────────────────────────────────────────────────────
 
   const aiCreditsLeft = aiCreditsTotal >= 9999 ? 9999 : Math.max(0, aiCreditsTotal - (aiUsed as number));
@@ -132,7 +125,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
       )}
       {/* pb-16 no mobile reserva espaço para a barra de navegação inferior */}
       <main className="flex-1 min-w-0 overflow-auto pb-4 lg:pb-4" style={{ backgroundColor: "var(--bg-base)", paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
-        {children}
+        {isExpiredSub2 ? (
+          // Tela de planos diretamente no lugar do conteúdo — sem redirect para evitar tela preta
+          <PlanosClient
+            plans={plansForExpired ?? []}
+            currentPlanId={null}
+            subscriptionEndDate={null}
+            trialExpired={true}
+            paymentError={false}
+          />
+        ) : children}
       </main>
       <AutoRefresh />
       <PomodoroFloat />
