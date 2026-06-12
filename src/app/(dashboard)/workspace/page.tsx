@@ -120,10 +120,6 @@ export default async function WorkspacePage() {
   const sub = dbUser.subscription;
   const isExpired = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
 
-  // ── Bloqueia acesso ao workspace quando assinatura expirada ──────────────
-  // Banner não é suficiente — usuário consegue responder questões sem salvar progresso
-  if (isExpired) redirect("/planos?expired=1");
-
   const weeklyLimit = isExpired ? 0 : (sub?.plan?.aiCreditsPerWeek ?? 5);
   // Mínimo 2 para que qualquer usuário possa combinar mentor de área + mentor de banca
   const maxAgents = isExpired ? 0 : Math.max(2, (sub?.plan as { maxAgents?: number } | null)?.maxAgents ?? 2);

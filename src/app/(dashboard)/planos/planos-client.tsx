@@ -62,14 +62,14 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
   return (
     <div className="min-h-screen text-white p-6 max-w-6xl mx-auto">
 
-      {/* Banner: trial expirado */}
+      {/* Banner: acesso expirado (trial ou plano pago) */}
       {trialExpired && (
-        <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-5 py-4 flex items-start gap-3">
-          <Clock className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+        <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-5 py-4 flex items-start gap-3">
+          <Clock className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="text-sm font-semibold text-amber-300">Seu período de trial gratuito expirou</p>
-            <p className="text-xs text-amber-400/80 mt-0.5">
-              Assine um plano abaixo para continuar estudando sem interrupção. Seu progresso, flashcards e histórico estão salvos.
+            <p className="text-sm font-semibold text-red-300">Seu acesso foi encerrado</p>
+            <p className="text-xs text-red-400/80 mt-0.5">
+              Assine um plano abaixo para retomar seus estudos. Seu progresso, flashcards e histórico estão salvos e aguardando você.
             </p>
           </div>
         </div>

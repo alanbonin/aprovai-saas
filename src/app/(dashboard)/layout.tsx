@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, getWeeklyAiUsage, db } from "@/lib/db";
 import { Sidebar } from "@/components/layout/sidebar";
@@ -11,6 +12,9 @@ import { UpgradeModalProvider } from "@/components/ui/upgrade-modal-context";
 import { getConfig } from "@/lib/system-config";
 import { getWeekStartStr } from "@/lib/api-utils";
 import { getAccessLevel } from "@/lib/access";
+
+// Rotas acessíveis mesmo com plano expirado (assinar, ver conta, sair)
+const ALLOWED_EXPIRED = ["/planos", "/configuracoes", "/perfil", "/notificacoes"];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -60,6 +64,18 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   // Verifica onboarding — alunos sem perfil completo vão para /onboarding
   if (profileRes !== null && profileRes.length === 0) redirect("/onboarding");
+
+  // ── Guard global de expiração ─────────────────────────────────────────────
+  // Bloqueia QUALQUER rota do dashboard quando assinatura expirada/inexistente.
+  // Exceções: /planos/* (assinar), /configuracoes, /perfil (gerenciar conta).
+  const hdrs = await headers();
+  const pathname = hdrs.get("x-pathname") ?? "";
+  const isExpiredSub2 = !sub || (sub.endDate && new Date(sub.endDate) < new Date());
+  const allowedExpired = ALLOWED_EXPIRED.some(p => pathname === p || pathname.startsWith(p + "/"));
+  if (isExpiredSub2 && !allowedExpired) {
+    redirect("/planos?expired=1");
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   const aiCreditsLeft = aiCreditsTotal >= 9999 ? 9999 : Math.max(0, aiCreditsTotal - (aiUsed as number));
 
