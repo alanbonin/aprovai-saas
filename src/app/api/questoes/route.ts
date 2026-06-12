@@ -11,6 +11,13 @@ export async function GET(req: Request) {
   const rl = await questoesLimiter.check(user.id);
   if (!rl.ok) return NextResponse.json({ error: rl.error }, { status: 429 });
 
+  // ── Verificação de acesso (assinatura ativa) ──────────────────────────────
+  const { getAccessLevel } = await import("@/lib/access");
+  const access = await getAccessLevel();
+  if (access.maxQuestionsPerWeek === 0) {
+    return NextResponse.json({ error: "Acesso expirado. Assine um plano para continuar." }, { status: 403 });
+  }
+
   const { searchParams } = new URL(req.url);
   const banca      = searchParams.get("banca");
   const level      = searchParams.get("level");
