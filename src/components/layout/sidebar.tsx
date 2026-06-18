@@ -102,7 +102,7 @@ const SECTIONS_STUDENT: NavSection[] = [
     id: "ferramentas", title: "Ferramentas", color: "#94a3b8", defaultOpen: false,
     items: [
       { href: "/sessao",      label: "Cronômetro", icon: "⏱️" },
-      { href: "/calculadora", label: "Calculadora",icon: "🧮" },
+      { href: "/calculadora", label: "Calculadora",icon: "🧮", comingSoon: true },
       { href: "/diario",      label: "Diário",     icon: "📔" },
       { href: "/notas",       label: "Anotações",  icon: "📓" },
     ],
@@ -173,7 +173,7 @@ const SECTIONS_ADMIN: NavSection[] = [
 /* ── Mobile Bottom Nav ──────────────────────────────────────────────────── */
 // 5 atalhos fixos + botão "Mais" que abre o menu completo
 const BOTTOM_NAV = [
-  { href: "/hoje",      label: "Hoje",     icon: "☀️" },
+  { href: "/hoje",      label: "Briefing",  icon: "☀️" },
   { href: "/semana",    label: "Semana",   icon: "📅" },
   { href: "/workspace", label: "Estudar",  icon: "📚" },
   { href: "/simulado",  label: "Simulado", icon: "🎯" },
@@ -788,8 +788,8 @@ export function Sidebar({ isAdmin, userName, planName, avatarUrl, aiCreditsLeft 
             className={cn(
               "flex items-center gap-2 px-3 py-2 rounded-xl border text-xs font-semibold transition-all",
               pathname === "/hoje"
-                ? "bg-amber-500/20 text-amber-300 border-amber-500/30"
-                : "bg-amber-500/[0.07] text-amber-400/80 border-amber-500/15 hover:bg-amber-500/15 hover:text-amber-300"
+                ? "bg-amber-500/20 text-amber-300 border-amber-500/30 [html.light_&]:text-amber-700 [html.light_&]:bg-amber-100 [html.light_&]:border-amber-300"
+                : "bg-amber-500/[0.07] text-amber-400/80 border-amber-500/15 hover:bg-amber-500/15 hover:text-amber-300 [html.light_&]:text-amber-700 [html.light_&]:bg-amber-50 [html.light_&]:border-amber-200 [html.light_&]:hover:bg-amber-100 [html.light_&]:hover:text-amber-800"
             )}
           >
             <span className="text-sm">☀️</span>
