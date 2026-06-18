@@ -677,7 +677,7 @@ export function Sidebar({ isAdmin, userName, planName, avatarUrl, aiCreditsLeft 
     <>
       {/* ── Header mobile fixo (lg:hidden) ────────────────────────── */}
       <div
-        className="lg:hidden fixed top-0 left-0 right-0 z-[90] flex items-center justify-between px-4 h-12 border-b"
+        className="lg:hidden fixed top-0 left-0 right-0 z-[90] flex items-center justify-between px-4 border-b mobile-header-safe"
         style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}
       >
         <a href={isAdmin ? "/admin" : "/hoje"} className="flex items-center gap-2">

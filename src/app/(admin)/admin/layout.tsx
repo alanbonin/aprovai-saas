@@ -22,7 +22,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         isAdmin
         userName={dbUser.name ?? dbUser.email ?? "Admin"}
       />
-      <main className="flex-1 min-w-0 overflow-auto">
+      <main className="flex-1 min-w-0 overflow-auto" style={{ paddingTop: "var(--mobile-top)" }}>
         {children}
       </main>
     </div>

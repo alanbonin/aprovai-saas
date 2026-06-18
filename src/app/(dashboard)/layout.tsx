@@ -112,7 +112,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         usageLimits={usageLimits}
       />
       {/* pt-12 no mobile reserva espaço para o header fixo do sidebar (lg:hidden, h-12) */}
-      <div className="flex-1 min-w-0 flex flex-col pt-12 lg:pt-0">
+      <div className="flex-1 min-w-0 flex flex-col" style={{ paddingTop: "var(--mobile-top)" }}>
       {modoManutencao && (
         <div className="bg-red-500/20 border-b border-red-500/40 px-4 py-2 text-center text-sm text-red-300 font-medium">
           🔧 Sistema em manutenção. Algumas funcionalidades podem estar indisponíveis.
@@ -128,7 +128,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         {isExpiredSub2 ? (
           // Tela de planos diretamente no lugar do conteúdo — sem redirect para evitar tela preta
           <PlanosClient
-            plans={plansForExpired ?? []}
+            plans={(plansForExpired ?? []).filter((p: { price: number }) => p.price > 0)}
             currentPlanId={null}
             subscriptionEndDate={null}
             trialExpired={true}
