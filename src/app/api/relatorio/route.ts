@@ -136,6 +136,15 @@ export async function GET() {
   let subjectStats: { name: string; correct: number; total: number; accuracy: number; subjectId: string }[] = [];
 
   if (uniqueQIds.length > 0) {
+    // Busca matérias ATIVAS do aluno — só mostra stats de matérias que ainda estão no quadro
+    let activeSubjectsQ = db.from("StudentSubject").select("subjectId").eq("userId", dbUser.id);
+    if (profileId) activeSubjectsQ = activeSubjectsQ.eq("profileId", profileId);
+    else activeSubjectsQ = activeSubjectsQ.is("profileId", null);
+    const { data: activeSubjectRows } = await activeSubjectsQ;
+    const activeSubjectIds = activeSubjectRows && activeSubjectRows.length > 0
+      ? new Set((activeSubjectRows as { subjectId: string }[]).map(r => r.subjectId))
+      : null; // null = sem filtro (nenhuma matéria cadastrada)
+
     const { data: questions } = await db.from("Question").select("id, subjectId").in("id", uniqueQIds);
     const { data: subjects } = await db.from("Subject").select("id, name");
 
@@ -148,6 +157,8 @@ export async function GET() {
       const statsMap: Record<string, { correct: number; total: number; subjectId: string }> = {};
       for (const r of allRecords) {
         const sid = qSubjectMap[r.questionId] ?? "outra";
+        // Ignora questões de matérias que o aluno removeu do seu quadro
+        if (activeSubjectIds && sid !== "outra" && !activeSubjectIds.has(sid)) continue;
         const name = subjectNameMap[sid] ?? "Outra";
         if (!statsMap[name]) statsMap[name] = { correct: 0, total: 0, subjectId: sid };
         statsMap[name].total++;
