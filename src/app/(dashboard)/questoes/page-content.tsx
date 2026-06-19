@@ -638,13 +638,6 @@ export function QuestoesInner() {
                   <p className="text-xs text-amber-300 leading-relaxed">{q.dicaBanca}</p>
                 </div>
               )}
-              {q.artigo && (
-                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
-                  <span className="text-violet-400 font-bold flex-shrink-0">§</span>
-                  <p className="text-xs text-violet-300 leading-relaxed">{q.artigo}</p>
-                </div>
-              )}
-
               {/* SM-2 quality rating — só para acertos */}
               {!quality && selected === q?.answer && (
                 <div>
