@@ -498,7 +498,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
   }
 
   return (
-    <div className="flex flex-col min-h-screen text-white overflow-hidden bg-[#080c18]">
+    <div className="flex flex-col min-h-screen overflow-hidden" style={{ backgroundColor: "var(--bg-base)", color: "var(--text-primary)" }}>
       <TourGuide tourId="workspace" steps={WORKSPACE_STEPS} autoStart buttonLabel="Tour: Workspace" />
 
         {/* ── Banner de expiração ── */}
@@ -519,7 +519,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
         )}
 
         {/* ── Top bar ── */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/[0.06] bg-[#0a0d14] flex-shrink-0">
+        <div className="flex items-center gap-3 px-5 py-3 border-b flex-shrink-0" style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}>
           {selectedSubject && activeNav === "estudar" && (
             <button onClick={() => setSelectedSubject(null)}
               className="p-1.5 rounded-lg hover:bg-white/5 text-gray-500 hover:text-white transition-colors flex-shrink-0">
@@ -601,7 +601,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                 })()}
 
                 {/* Stats row inline */}
-                <div className="flex-1 grid grid-cols-3 rounded-xl border border-white/[0.07] bg-[#0d1117] overflow-hidden">
+                <div className="flex-1 grid grid-cols-3 rounded-xl overflow-hidden" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
                   {[
                     { label: "Questões", value: String(homeStats?.totalAnswered ?? 0), color: "#a78bfa" },
                     { label: "Acerto",   value: homeStats ? `${homeStats.overallAccuracy}%` : "—", color: "#34d399" },
@@ -705,8 +705,10 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
                     return (
                       <button key={s.id}
                         onClick={() => { setSelectedSubject(s); setActiveTab("questoes"); }}
-                        className="flex flex-col p-3 rounded-2xl border border-white/[0.07] bg-[#0d1117] hover:bg-[#131820] hover:border-white/12 transition-all text-left group active:scale-[0.97]"
-                        style={{ transition: "all .15s ease" }}>
+                        className="flex flex-col p-3 rounded-2xl border text-left group active:scale-[0.97]"
+                        style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)", transition: "all .15s ease" }}
+                        onMouseEnter={e => { e.currentTarget.style.backgroundColor = "var(--bg-hover)"; }}
+                        onMouseLeave={e => { e.currentTarget.style.backgroundColor = "var(--bg-card)"; }}>
                         <div className="flex items-start justify-between mb-2">
                           <div className="w-8 h-8 rounded-xl flex items-center justify-center text-[10px] font-black flex-shrink-0"
                             style={{ background: color + "1a", border: `1px solid ${color}30`, color }}>
@@ -1153,7 +1155,7 @@ function getArtigosCobrados(subjectName: string): string[] {
 function PDFViewer({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 bg-black/80 flex flex-col">
-      <div className="flex items-center justify-between px-5 py-3 bg-[#0a0d14] border-b border-white/8 flex-shrink-0">
+      <div className="flex items-center justify-between px-5 py-3 border-b flex-shrink-0" style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}>
         <p className="text-sm font-semibold truncate flex-1 mr-4">{title}</p>
         <div className="flex items-center gap-2">
           <a href={url} target="_blank" rel="noopener noreferrer"
@@ -1166,7 +1168,7 @@ function PDFViewer({ url, title, onClose }: { url: string; title: string; onClos
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden bg-[#1a1f2e]">
+      <div className="flex-1 overflow-hidden" style={{ backgroundColor: "var(--bg-hover)" }}>
         <iframe
           src={url}
           className="w-full h-full border-0"
@@ -1261,7 +1263,7 @@ function HighlightedText({ text, termos, onTermClick }: { text: string; termos: 
 function TermoTooltip({ termo, onClose }: { termo: GlossTermo; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center pb-24 px-4 pointer-events-none">
-      <div className="pointer-events-auto w-full max-w-sm rounded-xl bg-[#1a1f2e] border border-indigo-500/30 shadow-2xl p-4">
+      <div className="pointer-events-auto w-full max-w-sm rounded-xl border border-indigo-500/30 shadow-2xl p-4" style={{ backgroundColor: "var(--bg-card)" }}>
         <div className="flex items-start justify-between gap-2 mb-2">
           <p className="text-sm font-semibold text-indigo-300">📚 {termo.termo}</p>
           <button onClick={onClose} className="text-gray-500 hover:text-white text-lg leading-none">×</button>
@@ -1354,6 +1356,7 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
   const [autoAdvancing, setAutoAdvancing] = useState(false); // countdown ao errar
   const [shuffleSeed, setShuffleSeed] = useState(() => Math.random()); // embaralho por sessão
   const [reportSent, setReportSent] = useState(false);
+  const navigatingRef = useRef(false); // guard contra double-click / double-advance
 
   async function enviarReporte(questionId: number) {
     await fetch("/api/questoes/reportar", {
@@ -1531,7 +1534,8 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
   }
 
   async function handleQuality(quality: "easy" | "ok" | "hard" | "again") {
-    if (!q) return;
+    if (!q || navigatingRef.current) return;
+    navigatingRef.current = true;
     // Botão de qualidade: re-salva com a qualidade escolhida (refina SM-2)
     const res = await fetch("/api/questoes/progresso", {
       method: "POST", headers: { "Content-Type": "application/json" },
@@ -1539,7 +1543,7 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
     });
     if (res.ok) {
       const data = await res.json();
-      if (data.limitReached) { setDailyLimitHit(true); return; }
+      if (data.limitReached) { setDailyLimitHit(true); navigatingRef.current = false; return; }
       onProgressUpdate(q.id, data.nextReview, quality !== "again");
       setAnswered(prev => new Set([...prev, q.id]));
     }
@@ -1547,6 +1551,7 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
     setSelected(null);
     setShowExpl(false);
     setActiveTermo(null);
+    requestAnimationFrame(() => { navigatingRef.current = false; });
   }
 
   const isFinished = current >= filtered.length;
@@ -1737,6 +1742,34 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
         })}
       </div>
 
+      {/* Botão pular — só aparece antes de responder */}
+      {!selected && current < filtered.length - 1 && (
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={() => {
+              if (navigatingRef.current) return;
+              navigatingRef.current = true;
+              setCurrent(c => c + 1);
+              setSelected(null);
+              setShowExpl(false);
+              setActiveTermo(null);
+              setAutoAdvancing(false);
+              requestAnimationFrame(() => { navigatingRef.current = false; });
+            }}
+            className="flex items-center gap-1.5 text-xs font-medium transition-all py-1.5 px-3 rounded-lg border"
+            style={{
+              color: "var(--text-secondary)",
+              borderColor: "var(--border-color)",
+              backgroundColor: "var(--bg-hover)",
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-primary)"; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--bg-card)"; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.color = "var(--text-secondary)"; (e.currentTarget as HTMLButtonElement).style.backgroundColor = "var(--bg-hover)"; }}
+          >
+            Pular questão <ChevronRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
       {selected && (
         <div className="space-y-3">
           {/* Botões de ação — logo após as opções, sempre visível */}
@@ -1748,7 +1781,16 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
                   <p className="text-xs text-red-400 font-medium">Adicionada ao caderno de erros para revisão</p>
                 </div>
                 <button
-                  onClick={() => { setCurrent(c => c + 1); setSelected(null); setShowExpl(false); setActiveTermo(null); setAutoAdvancing(false); }}
+                  onClick={() => {
+                    if (navigatingRef.current) return;
+                    navigatingRef.current = true;
+                    setCurrent(c => c + 1);
+                    setSelected(null);
+                    setShowExpl(false);
+                    setActiveTermo(null);
+                    setAutoAdvancing(false);
+                    requestAnimationFrame(() => { navigatingRef.current = false; });
+                  }}
                   className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
                 >
                   Próxima questão <ChevronRight className="w-4 h-4" />
@@ -1779,13 +1821,7 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
               )}>
                 {selected === q.answer ? "✅ Correto!" : "❌ Incorreto"} — Justificativa
               </p>
-              <p className="text-sm text-gray-100 leading-relaxed">{q.explanation}</p>
-            </div>
-          )}
-          {q.artigo && (
-            <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-              <span className="text-indigo-400 text-xs font-bold flex-shrink-0 mt-0.5">§</span>
-              <p className="text-xs text-indigo-300">{q.artigo}</p>
+              <p className="text-sm text-gray-200 leading-relaxed">{q.explanation}</p>
             </div>
           )}
           {q.dicaBanca && (
@@ -1793,8 +1829,14 @@ function QuestoesTab({ items, subjectName, subjectId, onProgressUpdate, onCelebr
               <span className="text-amber-400 text-sm flex-shrink-0 mt-0.5">⚡</span>
               <div>
                 <p className="text-xs font-semibold text-amber-400 mb-0.5">Dica</p>
-                <p className="text-xs text-amber-300/80 leading-relaxed">{q.dicaBanca}</p>
+                <p className="text-xs text-amber-600 leading-relaxed">{q.dicaBanca}</p>
               </div>
+            </div>
+          )}
+          {q.artigo && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+              <span className="text-violet-400 font-bold flex-shrink-0">§</span>
+              <p className="text-xs text-violet-300 leading-relaxed">{q.artigo}</p>
             </div>
           )}
         </div>
@@ -1920,7 +1962,7 @@ function ArtigosPanel({ subjects }: { subjects: Subject[] }) {
             {(current.artigos ?? []).map((a, i) => {
               const fc = FREQ_CONFIG[a.frequencia] ?? FREQ_CONFIG["media"];
               return (
-                <div key={i} className="rounded-xl border border-white/[0.06] bg-[#0d1117] p-3.5">
+                <div key={i} className="rounded-xl p-3.5" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
                   <div className="flex items-start gap-3">
                     <div className="w-5 h-5 rounded-md bg-indigo-600/15 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-[10px] font-black text-indigo-400">{i + 1}</span>
@@ -2033,7 +2075,7 @@ function FlashNavPanel({
           const showForm = showGenerateFor === s.id;
 
           return (
-            <div key={s.id} className="rounded-xl border border-white/[0.06] bg-[#0d1117] overflow-hidden">
+            <div key={s.id} className="rounded-xl overflow-hidden" style={{ backgroundColor: "var(--bg-card)", border: "1px solid var(--border-color)" }}>
               {/* Subject row */}
               <div className="flex items-center gap-3 p-3">
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black flex-shrink-0"

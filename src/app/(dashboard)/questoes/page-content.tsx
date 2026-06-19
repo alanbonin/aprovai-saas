@@ -23,6 +23,8 @@ interface Question {
   optionE: string | null;
   answer: string;
   explanation: string | null;
+  artigo: string | null;
+  dicaBanca: string | null;
   subjectId: string | null;
 }
 
@@ -77,6 +79,7 @@ export function QuestoesInner() {
   const [glossTermos, setGlossTermos] = useState<GlossTermo[]>([]);
   const [activeTermo, setActiveTermo] = useState<GlossTermo | null>(null);
   const defRef = useRef<HTMLDivElement>(null);
+  const nextingRef = useRef(false); // guard contra double-click / double-advance
 
   // Reporte de questão
   const [reportModal, setReportModal]     = useState<number | null>(null); // questionId
@@ -208,11 +211,13 @@ export function QuestoesInner() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ questionId: q.id, resposta: selected ?? "", quality: q_id }),
     }).catch(() => {});
-    // Auto-advance after short delay
-    setTimeout(next, 300);
+    // NÃO usa setTimeout(next) aqui — causava double-advance se aluno clicasse
+    // "Próxima" antes dos 300ms. O botão "Próxima questão" cuida do avanço.
   }
 
   function next() {
+    if (nextingRef.current) return; // guard contra double-click
+    nextingRef.current = true;
     if (current < questions.length - 1) {
       setCurrent(c => c + 1);
       setSelected(null);
@@ -220,6 +225,8 @@ export function QuestoesInner() {
     } else {
       setDone(true);
     }
+    // Reseta após o render seguinte
+    requestAnimationFrame(() => { nextingRef.current = false; });
   }
 
   async function toggleFav(questionId: number) {
@@ -623,6 +630,18 @@ export function QuestoesInner() {
                     : "bg-red-950/50 border-red-500/40"
                 )}>
                   <p className="text-gray-200 text-sm leading-relaxed">{q.explanation}</p>
+                </div>
+              )}
+              {q.dicaBanca && (
+                <div className="flex items-start gap-2 px-3 py-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <span className="text-amber-400 text-sm flex-shrink-0">⚡</span>
+                  <p className="text-xs text-amber-300 leading-relaxed">{q.dicaBanca}</p>
+                </div>
+              )}
+              {q.artigo && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-violet-500/10 border border-violet-500/20">
+                  <span className="text-violet-400 font-bold flex-shrink-0">§</span>
+                  <p className="text-xs text-violet-300 leading-relaxed">{q.artigo}</p>
                 </div>
               )}
 

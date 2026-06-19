@@ -71,7 +71,7 @@ export async function GET(req: Request) {
 
   // Gabarito (answer/explanation) removido — enviado apenas pela rota /verificar após resposta
   let query = db.from("Question")
-    .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
+    .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,artigo,dicaBanca,source")
     .limit(poolSize);
 
   // Apenas questões aprovadas (favoritos ignoram esse filtro)
@@ -96,7 +96,7 @@ export async function GET(req: Request) {
   // Fallback sem filtro de aprovado se coluna não existe ainda (código PostgREST: 42703)
   if (queryError && (queryError as { code?: string }).code === "42703") {
     const fallbackResult = await db.from("Question")
-      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,artigo,dicaBanca,source")
       .limit(poolSize);
     questions = fallbackResult.data;
     queryError = fallbackResult.error;
@@ -107,7 +107,7 @@ export async function GET(req: Request) {
     // Se esgotou questões não-vistas, retorna sem filtro de seen
     const { data: fallback } = await db
       .from("Question")
-      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,source")
+      .select("id,subjectId,banca,year,level,statement,optionA,optionB,optionC,optionD,optionE,answer,explanation,artigo,dicaBanca,source")
       .eq("aprovado", true)
       .limit(limit);
     const shuffled = (fallback ?? []).sort(() => Math.random() - 0.5).slice(0, limit);
