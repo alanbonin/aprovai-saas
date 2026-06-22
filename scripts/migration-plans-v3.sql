@@ -114,7 +114,7 @@ INSERT INTO "Plan" (
   "hasGroupStudy", "hasLongTermMemory",
   features, active, "createdAt"
 ) VALUES (
-  gen_random_uuid(), 'Focado', 'focado', 49.90, 30,
+  gen_random_uuid(), 'Focado', 'focado', 49.00, 30,
   140, 2, 1,
   350, 350,
   7, 7, 7,
@@ -176,7 +176,7 @@ INSERT INTO "Plan" (
   "hasGroupStudy", "hasLongTermMemory",
   features, active, "createdAt"
 ) VALUES (
-  gen_random_uuid(), 'Aprovação', 'aprovacao', 89.90, 30,
+  gen_random_uuid(), 'Aprovação', 'aprovacao', 69.00, 30,
   500, 4, 2,
   -1, -1,
   21, 21, 21,
@@ -235,7 +235,7 @@ INSERT INTO "Plan" (
   "hasGroupStudy", "hasLongTermMemory",
   features, active, "createdAt"
 ) VALUES (
-  gen_random_uuid(), 'Elite', 'elite', 149.90, 30,
+  gen_random_uuid(), 'Elite', 'elite', 99.00, 30,
   600, 8, 4,
   -1, -1,
   -1, 40, 40,

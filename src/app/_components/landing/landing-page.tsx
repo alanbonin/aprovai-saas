@@ -1220,9 +1220,9 @@ function Pricing() {
   const tiltElite  = useTilt(3);
   const [anual, setAnual] = useState(false);
   const planos = {
-    focado:    { mensal: 69,  anual: 59  },
-    aprovacao: { mensal: 99,  anual: 84  },
-    elite:     { mensal: 149, anual: 127 },
+    focado:    { mensal: 49, anual: 42 },
+    aprovacao: { mensal: 69, anual: 59 },
+    elite:     { mensal: 99, anual: 84 },
   };
   return (
     <section className="lc-pricing-section" id="precos">
