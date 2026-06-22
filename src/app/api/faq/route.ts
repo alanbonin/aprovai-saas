@@ -140,9 +140,11 @@ export async function GET() {
         ? `R$ ${p.price},00/ano (${Math.round(p.price / 12)}x/mês)`
         : `R$ ${p.price},00/mês`,
       ciclo: p.billingCycle === "ANNUAL" ? "Anual" : "Mensal",
-      creditos_ia_semana: p.aiCreditsPerWeek >= 9999 ? "Ilimitado" : p.aiCreditsPerWeek,
+      creditos_ia_semana: p.aiCreditsPerWeek === -1 || p.aiCreditsPerWeek >= 9999 ? "Ilimitado" : p.aiCreditsPerWeek,
       questoes_semana: p.maxQuestionsPerWeek === -1 ? "Ilimitado" : p.maxQuestionsPerWeek,
       simulados_semana: p.maxSimuladosPerWeek === -1 ? "Ilimitado" : p.maxSimuladosPerWeek,
+      redacoes_semana: p.maxRedacoesPerWeek === -1 ? "Ilimitado" : p.maxRedacoesPerWeek,
+      casos_semana: p.maxCasosPerWeek === -1 ? "Ilimitado" : p.maxCasosPerWeek,
       biblioteca_pdf: p.hasPdfLibrary,
       arena: p.hasArena,
       modo_adaptativo: p.hasAdaptativo,

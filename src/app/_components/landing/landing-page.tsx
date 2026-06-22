@@ -1323,13 +1323,13 @@ function Pricing() {
               <div className="tier">Elite</div>
               <div className="price"><sup>R$</sup>{anual ? planos.elite.anual : planos.elite.mensal}<small>/mês</small></div>
               {anual && <p style={{ fontSize: 12, color: '#34d399', margin: '-4px 0 4px' }}>R$ {planos.elite.anual * 12} cobrado anualmente</p>}
-              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Sem limites, máxima performance</p>
+              <p style={{ color: 'var(--text-2)', fontSize: 14, margin: '12px 0 20px' }}>Máxima performance para quem estuda de verdade</p>
               <ul>
                 <li>Até 3 concursos simultâneos</li>
                 <li>Até 3 mentores IA simultâneos</li>
-                <li>Mensagens ilimitadas com mentor</li>
+                <li>600 mensagens com mentor por semana</li>
                 <li>Questões, flashcards e simulados ilimitados</li>
-                <li>Redação e casos práticos ilimitados</li>
+                <li>40 redações e 40 casos práticos por semana</li>
                 <li>Biblioteca de PDFs + chat com documentos</li>
                 <li>Arena de competição entre estudantes</li>
                 <li>Modo Adaptativo avançado por IA</li>

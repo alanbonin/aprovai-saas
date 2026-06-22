@@ -181,17 +181,17 @@ INSERT INTO "Plan" (
   features, active, "createdAt"
 ) VALUES (
   gen_random_uuid(), 'Elite', 'elite', 149.90, 30,
-  -1, 8, 4,
+  600, 8, 4,
   -1, -1,
-  -1, -1, -1,
+  -1, 40, 40,
   true, true, true, true,
   ARRAY[
     'Até 4 concursos simultâneos',
     'Até 8 mentores IA simultâneos (4 área + 4 banca)',
-    'Mensagens ilimitadas com mentor',
+    '600 mensagens com mentor por semana',
     'Chat combinado com múltiplos mentores',
     'Questões, flashcards e simulados ilimitados',
-    'Redação, casos práticos e dissertações ilimitados',
+    '40 redações e 40 casos práticos por semana',
     'Decodificador de edital (PDF → plano de estudos)',
     'Biblioteca de PDFs + chat com documentos',
     'Modo Companhia — grupos de estudo online',
