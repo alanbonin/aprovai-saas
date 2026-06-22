@@ -9,7 +9,7 @@ const SUPABASE_KEY = process.env.SUPABASE_ANON_KEY ?? process.env.NEXT_PUBLIC_SU
 async function getPlans() {
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/Plan?select=name,slug,price,intervalDays,billingCycle,features,aiCreditsPerWeek,maxQuestionsPerWeek,maxSimuladosPerWeek,hasPdfLibrary,hasArena,hasAdaptativo,hasCompanhia&active=eq.true&order=price.asc`,
+      `${SUPABASE_URL}/rest/v1/Plan?select=name,slug,price,intervalDays,billingCycle,features,aiCreditsPerWeek,maxQuestionsPerWeek,maxSimuladosPerWeek,maxRedacoesPerWeek,maxCasosPerWeek,hasPdfLibrary,hasArena,hasAdaptativo,hasCompanhia&active=eq.true&order=price.asc`,
       { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }, next: { revalidate: 300 } }
     );
     return res.ok ? await res.json() : [];
@@ -132,6 +132,7 @@ export async function GET() {
       name: string; slug: string; price: number; intervalDays: number;
       billingCycle: string; features: string[]; aiCreditsPerWeek: number;
       maxQuestionsPerWeek: number; maxSimuladosPerWeek: number;
+      maxRedacoesPerWeek: number; maxCasosPerWeek: number;
       hasPdfLibrary: boolean; hasArena: boolean; hasAdaptativo: boolean; hasCompanhia: boolean;
     }) => ({
       nome: p.name,
