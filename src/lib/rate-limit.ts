@@ -110,7 +110,7 @@ export const signupLimiter = createLimiter({ max: 20, window: "5 m", prefix: "si
 export const loginLimiter = createLimiter({ max: 10, window: "5 m", prefix: "login" });
 
 /** Checkout — 10/hora por usuário */
-export const checkoutLimiter = createLimiter({ max: 10, window: "1 h", prefix: "checkout" });
+export const checkoutLimiter = createLimiter({ max: 30, window: "1 h", prefix: "checkout" });
 
 /** Reset de senha — 3/hora por IP */
 export const resetPasswordLimiter = createLimiter({ max: 3, window: "1 h", prefix: "reset-pw" });
@@ -165,3 +165,15 @@ export const adminAnuncioLimiter = createLimiter({ max: 20, window: "1 h", prefi
 
 /** Email templates admin — 30/hora por admin */
 export const adminTemplateLimiter = createLimiter({ max: 30, window: "1 h", prefix: "admin-template" });
+
+/** Edital decoder (Sonnet — caro) — 5/min por usuário */
+export const editalDecoderLimiter = createLimiter({ max: 5, window: "1 m", prefix: "edital-decoder" });
+
+/** Geração de plano de estudos (Sonnet) — 3/hora por usuário */
+export const planoEstudosLimiter = createLimiter({ max: 3, window: "1 h", prefix: "plano-estudos" });
+
+/** Relatório semanal force-regenerate — 5/hora por usuário */
+export const relatorioSemanalLimiter = createLimiter({ max: 5, window: "1 h", prefix: "rel-semanal" });
+
+/** Memória do mentor (Haiku) — 10/hora por usuário */
+export const memoryLimiter = createLimiter({ max: 10, window: "1 h", prefix: "memory" });
