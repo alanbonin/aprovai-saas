@@ -78,6 +78,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 
+    console.log("[checkout] plan:", plan.id, plan.slug, plan.price, "user:", dbUser.id, "email:", dbUser.email);
+
     const mp = getMp();
 
     // ── Preference (pagamento único) ─────────────────────────────────────────
