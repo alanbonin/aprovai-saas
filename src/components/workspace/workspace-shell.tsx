@@ -28,6 +28,7 @@ interface Props {
   profile: Profile | null;
   subjects: Subject[];
   userId: string;
+  aiCreditsLeft: number;
   aiCreditsTotal: number;
   subscriptionEndDate?: string | null;
   isPremium?: boolean;
@@ -37,7 +38,7 @@ interface Props {
 export function WorkspaceShell({
   agents, allAgents, activeAgentIds, maxAgents,
   profile: initialProfile, subjects: initialSubjects,
-  userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired,
+  userId, aiCreditsLeft, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired,
 }: Props) {
   const [subjects, setSubjects] = useState(initialSubjects);
   // onboarding agora ocorre em /onboarding — workspace só recebe usuários com onboardingDone=true
@@ -70,6 +71,7 @@ export function WorkspaceShell({
         subjects={subjects}
         profile={initialProfile!}
         userId={userId}
+        aiCreditsLeft={aiCreditsLeft}
         aiCreditsTotal={aiCreditsTotal}
         subscriptionEndDate={subscriptionEndDate}
         isPremium={isPremium ?? false}

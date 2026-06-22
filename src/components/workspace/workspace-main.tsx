@@ -32,6 +32,7 @@ interface Props {
   subjects: Subject[];
   profile: Profile;
   userId: string;
+  aiCreditsLeft: number;
   aiCreditsTotal: number;
   subscriptionEndDate?: string | null;
   isPremium: boolean;
@@ -266,7 +267,7 @@ function PushToggleCompact() {
   return <PushToggle compact />;
 }
 
-export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, subjects, profile, userId, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired = false }: Props) {
+export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, subjects, profile, userId, aiCreditsLeft, aiCreditsTotal, subscriptionEndDate, isPremium, isExpired = false }: Props) {
   const [selectedSubject, setSelectedSubject] = useState<Subject | null>(null);
   const [activeNav, setActiveNav] = useState<NavId>("estudar");
   const [activeTab, setActiveTab] = useState<Tab>("questoes");
@@ -1003,7 +1004,7 @@ export function WorkspaceMain({ agents, allAgents, activeAgentIds, maxAgents, su
               <MentorChat
                 agents={allAgents as Parameters<typeof MentorChat>[0]["agents"]}
                 categorias={CATEGORIAS}
-                aiCreditsLeft={aiCreditsTotal}
+                aiCreditsLeft={aiCreditsLeft}
                 aiCreditsTotal={aiCreditsTotal}
                 userId={userId}
                 maxAgents={maxAgents}

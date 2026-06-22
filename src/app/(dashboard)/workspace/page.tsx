@@ -1,7 +1,8 @@
 export const dynamic = "force-dynamic"; // nunca cachear — dados mudam a cada questão respondida
 
 import { createClient } from "@/lib/supabase/server";
-import { getUserWithPlan, db } from "@/lib/db";
+import { getUserWithPlan, db, getWeeklyAiUsage } from "@/lib/db";
+import { getWeekStart } from "@/lib/utils";
 import { getActiveProfile } from "@/lib/get-active-profile";
 import { redirect } from "next/navigation";
 import { WorkspaceShell } from "@/components/workspace/workspace-shell";
@@ -40,10 +41,8 @@ export default async function WorkspacePage() {
   // Primeiro acesso sem onboarding → redireciona para a experiência de onboarding
   if (!profile?.onboardingDone) redirect("/onboarding");
 
-  // Todos os agentes ativos + IDs dos agentes do perfil — em paralelo
-  const userAgentQuery = activeProfile
-    ? db.from("UserAgent").select("agentId").eq("userId", dbUser.id).eq("profileId", activeProfile.id)
-    : db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
+  // Mentores do usuário (globais — profileId não faz parte do unique constraint)
+  const userAgentQuery = db.from("UserAgent").select("agentId").eq("userId", dbUser.id);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [{ data: allAgentsRaw }, { data: userAgentRows }] = await Promise.all([
@@ -69,7 +68,7 @@ export default async function WorkspacePage() {
         if (agentMatch && !activeAgentIds.includes(agentMatch.id)) {
           // Auto-adiciona o mentor
           await db.from("UserAgent").upsert(
-            { id: crypto.randomUUID(), userId: dbUser.id, agentId: agentMatch.id, profileId: activeProfile.id, createdAt: new Date().toISOString() },
+            { id: crypto.randomUUID(), userId: dbUser.id, agentId: agentMatch.id, createdAt: new Date().toISOString() },
             { onConflict: "userId,agentId", ignoreDuplicates: true }
           );
           activeAgentIds = [...activeAgentIds, agentMatch.id];
@@ -125,6 +124,11 @@ export default async function WorkspacePage() {
   const maxAgents = isExpired ? 0 : Math.max(2, (sub?.plan as { maxAgents?: number } | null)?.maxAgents ?? 2);
   const isPremium = !isExpired && !!(sub && sub.status === "ACTIVE" && (sub.plan?.price ?? 0) > 0);
 
+  // Uso real desta semana para exibir saldo correto no contador
+  const weekStart = getWeekStart().toISOString();
+  const weeklyUsed = isExpired ? weeklyLimit : await getWeeklyAiUsage(dbUser.id, weekStart);
+  const aiCreditsLeft = Math.max(0, weeklyLimit - weeklyUsed);
+
   return (
     <WorkspaceShell
       agents={agents ?? []}
@@ -134,6 +138,7 @@ export default async function WorkspacePage() {
       profile={profile}
       subjects={subjects}
       userId={dbUser.id}
+      aiCreditsLeft={aiCreditsLeft}
       aiCreditsTotal={weeklyLimit}
       subscriptionEndDate={sub?.endDate ?? null}
       isPremium={isPremium}
