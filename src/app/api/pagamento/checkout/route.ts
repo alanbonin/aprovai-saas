@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getUserWithPlan, db } from "@/lib/db";
-import MercadoPago, { Preference } from "mercadopago";
+import MercadoPago, { PreApproval, Preference } from "mercadopago";
 import { checkoutLimiter } from "@/lib/rate-limit";
 import { log, LogEvent } from "@/lib/logger";
 
@@ -13,6 +13,11 @@ function getMp() {
   return new MercadoPago({ accessToken: token });
 }
 
+function getFrequency(intervalDays: number): { frequency: number; frequency_type: "months" | "days" } {
+  if (intervalDays >= 360) return { frequency: 12, frequency_type: "months" };
+  if (intervalDays >= 28)  return { frequency: 1,  frequency_type: "months" };
+  return { frequency: intervalDays, frequency_type: "days" };
+}
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +39,6 @@ export async function POST(req: Request) {
 
     // ── Plano Trial/Gratuito: ativa diretamente sem checkout ────────────────
     if (plan.price === 0) {
-      // 1. Verificar email confirmado (evita abuse com emails temporários)
       if (!user.email_confirmed_at) {
         return NextResponse.json(
           { error: "Confirme seu e-mail antes de ativar o período gratuito." },
@@ -42,7 +46,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // 2. Verificar se já teve qualquer subscription anterior (evita re-trial infinito)
       const { data: existingAny } = await db
         .from("Subscription")
         .select("id, status, planId")
@@ -64,7 +67,6 @@ export async function POST(req: Request) {
         );
       }
 
-      // 3. Criar trial apenas para usuários sem histórico de subscription
       const endDate = new Date();
       endDate.setDate(endDate.getDate() + (plan.intervalDays ?? 7));
       const now = new Date().toISOString();
@@ -78,19 +80,52 @@ export async function POST(req: Request) {
       return NextResponse.json({ checkoutUrl: null, activated: true });
     }
 
-    console.log("[checkout] plan:", plan.id, plan.slug, plan.price, "user:", dbUser.id, "email:", dbUser.email);
-
     const mp = getMp();
+    const { frequency, frequency_type } = getFrequency(plan.intervalDays ?? 30);
 
-    // ── Preference (pagamento único) ─────────────────────────────────────────
-    // Usamos Preference em vez de PreApproval (assinatura recorrente) porque
-    // PreApproval exige habilitação especial na conta MP e recusa pagamentos
-    // de todos os usuários quando não está ativada na conta do vendedor.
-    //
-    // Parcelamento: apenas planos anuais (intervalDays >= 360) permitem até 12x.
-    // Planos mensais são sempre à vista (installments: 1).
-    const isAnual = (plan.intervalDays as number) >= 360;
+    // ── PreApproval (assinatura recorrente automática) ───────────────────────
+    try {
+      const preApprovalApi = new PreApproval(mp);
+      const preApproval = await preApprovalApi.create({
+        body: {
+          reason: `AprovAI360 — ${plan.name}`,
+          external_reference: `${dbUser.id}|${plan.id}`,
+          payer_email: dbUser.email ?? undefined,
+          auto_recurring: {
+            frequency,
+            frequency_type,
+            transaction_amount: plan.price,
+            currency_id: "BRL",
+          },
+          back_url: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
+          status: "pending",
+        },
+      });
 
+      if (preApproval.init_point) {
+        if (preApproval.id) {
+          const now = new Date().toISOString();
+          const { data: existing } = await db.from("Subscription").select("id").eq("userId", dbUser.id).maybeSingle();
+          if (existing) {
+            await db.from("Subscription").update({ mpSubscriptionId: String(preApproval.id), updatedAt: now }).eq("id", existing.id);
+          } else {
+            await db.from("Subscription").insert({
+              id: crypto.randomUUID(), userId: dbUser.id, planId,
+              status: "PENDING", startDate: now,
+              endDate: new Date(Date.now() + 86400000).toISOString(),
+              mpSubscriptionId: String(preApproval.id),
+              createdAt: now, updatedAt: now,
+            });
+          }
+        }
+        log.info(LogEvent.PAYMENT_APPROVED, { stage: "preapproval_ok", userId: dbUser.id });
+        return NextResponse.json({ checkoutUrl: preApproval.init_point });
+      }
+    } catch (preApprovalErr) {
+      log.error(LogEvent.PAYMENT_FAILED, { stage: "preapproval_failed" }, preApprovalErr);
+    }
+
+    // ── Fallback: Preference (pagamento único) ───────────────────────────────
     const preference = new Preference(mp);
     const response = await preference.create({
       body: {
@@ -98,7 +133,7 @@ export async function POST(req: Request) {
         payer: { email: dbUser.email, name: dbUser.name },
         payment_methods: {
           excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
-          installments: isAnual ? 12 : 1,
+          installments: 1,
         },
         back_urls: {
           success: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
