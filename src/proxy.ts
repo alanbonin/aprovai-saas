@@ -1,6 +1,44 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+// ── Headers de segurança ──────────────────────────────────────────────────
+// IMPORTANTE: este middleware roda em TODA requisição e tem precedência sobre
+// os headers definidos em next.config.ts — mantenha os dois sincronizados.
+const CSP_HEADER = [
+  "default-src 'self'",
+  // Meta Pixel + GTM precisam carregar scripts externos
+  "script-src 'self' 'unsafe-inline' https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.mercadopago.com https://www.facebook.com https://connect.facebook.net https://www.googletagmanager.com https://www.google-analytics.com https://region1.google-analytics.com https://stats.g.doubleclick.net",
+  "worker-src 'self' blob:",
+  "frame-src https://www.googletagmanager.com",
+  "frame-ancestors 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "upgrade-insecure-requests",
+].join("; ");
+
+const PERMISSIONS_POLICY_HEADER = [
+  "camera=()",
+  "microphone=()",
+  "geolocation=()",
+  "payment=(self)",
+  "usb=()",
+  "serial=()",
+  "hid=()",
+  "bluetooth=()",
+  "display-capture=()",
+  "screen-wake-lock=()",
+  "ambient-light-sensor=()",
+  "accelerometer=()",
+  "gyroscope=()",
+  "magnetometer=()",
+  "midi=()",
+  "picture-in-picture=(self)",
+].join(", ");
+
 // ── Rotas de cron — exigem CRON_SECRET no header Authorization ───────────────
 // Verificado no middleware para bloquear antes de chegar na route handler
 const CRON_PATHS_PREFIX = "/api/cron/";
@@ -31,6 +69,7 @@ const PUBLIC_PATHS = new Set([
   "/api/auth/register",
   "/api/auth/logout",
   "/api/pagamento/webhook",
+  "/api/pagamento/stripe-webhook",
   "/api/icon",
   "/api/og",
   "/api/health",
@@ -85,24 +124,8 @@ export async function proxy(request: NextRequest) {
   supabaseResponse.headers.set("X-Frame-Options", "DENY");
   supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
   supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-  supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
-  supabaseResponse.headers.set(
-    "Content-Security-Policy",
-    [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' https://unpkg.com https://sdk.mercadopago.com https://*.mercadopago.com",
-      "style-src 'self' 'unsafe-inline' https://*.mercadopago.com",
-      "img-src 'self' data: blob: https:",
-      "font-src 'self' data: https://*.mercadopago.com",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.mercadopago.com https://*.mercadopago.com https://unpkg.com",
-      "worker-src 'self' blob: https://unpkg.com",
-      "frame-src 'self' https://*.mercadopago.com",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-      "upgrade-insecure-requests",
-    ].join("; ")
-  );
+  supabaseResponse.headers.set("Permissions-Policy", PERMISSIONS_POLICY_HEADER);
+  supabaseResponse.headers.set("Content-Security-Policy", CSP_HEADER);
   if (process.env.NODE_ENV === "production") {
     supabaseResponse.headers.set(
       "Strict-Transport-Security",
@@ -128,11 +151,8 @@ export async function proxy(request: NextRequest) {
           supabaseResponse.headers.set("X-Frame-Options", "DENY");
           supabaseResponse.headers.set("X-XSS-Protection", "1; mode=block");
           supabaseResponse.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
-          supabaseResponse.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(self)");
-          supabaseResponse.headers.set(
-            "Content-Security-Policy",
-            "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com https://sdk.mercadopago.com https://*.mercadopago.com; style-src 'self' 'unsafe-inline' https://*.mercadopago.com; img-src 'self' data: blob: https:; font-src 'self' data: https://*.mercadopago.com; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://api.mercadopago.com https://*.mercadopago.com https://unpkg.com; worker-src 'self' blob: https://unpkg.com; frame-src 'self' https://*.mercadopago.com; frame-ancestors 'none';"
-          );
+          supabaseResponse.headers.set("Permissions-Policy", PERMISSIONS_POLICY_HEADER);
+          supabaseResponse.headers.set("Content-Security-Policy", CSP_HEADER);
           cookiesToSet.forEach(({ name, value, options }) =>
             supabaseResponse.cookies.set(name, value, options)
           );
