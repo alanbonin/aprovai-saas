@@ -42,7 +42,7 @@ export async function POST(req: Request) {
             description: plan.features?.[0] ?? "Plano de estudos para concursos",
           },
           unit_amount: Math.round(plan.price * 100),
-          recurring: { interval: "month" },
+          recurring: { interval: (plan.intervalDays ?? 30) >= 360 ? "year" : "month" },
         },
         quantity: 1,
       }],
