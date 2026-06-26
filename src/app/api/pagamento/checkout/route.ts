@@ -129,8 +129,19 @@ export async function POST(req: Request) {
     const preference = new Preference(mp);
     const response = await preference.create({
       body: {
-        items: [{ id: plan.id, title: `AprovAI360 — ${plan.name}`, quantity: 1, unit_price: plan.price, currency_id: "BRL" }],
-        payer: { email: dbUser.email },
+        items: [{
+          id: plan.id,
+          title: `AprovAI360 — ${plan.name}`,
+          description: plan.features?.[0] ?? "Plano de estudos para concursos",
+          quantity: 1,
+          unit_price: plan.price,
+          currency_id: "BRL",
+        }],
+        payer: { email: dbUser.email, name: dbUser.name },
+        payment_methods: {
+          excluded_payment_types: [{ id: "ticket" }, { id: "atm" }],
+          installments: 1,
+        },
         back_urls: {
           success: `${appUrl}/planos/sucesso?plan=${plan.slug}`,
           failure: `${appUrl}/planos?error=pagamento`,
@@ -139,6 +150,10 @@ export async function POST(req: Request) {
         auto_return: "approved",
         external_reference: `${dbUser.id}|${plan.id}`,
         notification_url: `${appUrl}/api/pagamento/webhook`,
+        statement_descriptor: "APROVAI360",
+        expires: true,
+        expiration_date_from: new Date().toISOString(),
+        expiration_date_to: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
       },
     });
     log.info(LogEvent.PAYMENT_APPROVED, { stage: "preference_ok", userId: dbUser.id });
