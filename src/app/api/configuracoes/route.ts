@@ -53,12 +53,19 @@ export async function GET() {
 
   const prefs = await getPrefs(dbUser.id);
 
+  const { data: sub } = await db
+    .from("Subscription")
+    .select("startDate, endDate, status")
+    .eq("userId", dbUser.id)
+    .maybeSingle();
+
   return NextResponse.json({
     name: dbUser.name ?? "",
     email: dbUser.email ?? "",
     phone: (dbUser as unknown as { phone?: string | null }).phone ?? "",
     avatarUrl: (dbUser as unknown as { avatarUrl?: string | null }).avatarUrl ?? null,
     prefs,
+    subscription: sub ?? null,
   });
 }
 

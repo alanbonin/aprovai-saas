@@ -19,6 +19,7 @@ interface Config {
   phone: string;
   avatarUrl?: string | null;
   prefs: Prefs;
+  subscription?: { startDate?: string | null; endDate?: string | null; status?: string } | null;
 }
 
 const NOTIF_OPTIONS: { key: keyof Prefs; label: string; desc: string }[] = [
@@ -28,21 +29,30 @@ const NOTIF_OPTIONS: { key: keyof Prefs; label: string; desc: string }[] = [
   { key: "emailReativacao",       label: "Email de reativação",    desc: "Aviso quando ficar muito tempo sem estudar" },
 ];
 
-function CancelSubscriptionButton() {
+function CancelSubscriptionButton({ startDate }: { startDate?: string | null }) {
   const [loading, setLoading] = React.useState(false);
   const [msg, setMsg] = React.useState<{ tipo: "ok" | "erro"; texto: string } | null>(null);
   const [confirm, setConfirm] = React.useState(false);
+
+  const withinCoolingOff = startDate
+    ? (Date.now() - new Date(startDate).getTime()) < 7 * 24 * 60 * 60 * 1000
+    : false;
 
   async function handleCancel() {
     setLoading(true);
     setMsg(null);
     try {
       const res = await fetch("/api/pagamento/cancelar", { method: "POST" });
+      const d = await res.json() as { ok?: boolean; refunded?: boolean; error?: string };
       if (res.ok) {
-        setMsg({ tipo: "ok", texto: "Assinatura cancelada. Seu acesso continua até o fim do período pago." });
+        setMsg({
+          tipo: "ok",
+          texto: d.refunded
+            ? "Assinatura cancelada e reembolso solicitado. O valor volta ao seu cartão em até 5 dias úteis."
+            : "Assinatura cancelada. Seu acesso continua até o fim do período pago.",
+        });
         setConfirm(false);
       } else {
-        const d = await res.json();
         setMsg({ tipo: "erro", texto: d.error ?? "Erro ao cancelar." });
       }
     } catch {
@@ -58,18 +68,22 @@ function CancelSubscriptionButton() {
           onClick={() => setConfirm(true)}
           className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-orange-500/30 text-orange-400 text-sm hover:bg-orange-500/10 transition-colors"
         >
-          Cancelar renovação automática
+          {withinCoolingOff ? "Cancelar e solicitar reembolso" : "Cancelar renovação automática"}
         </button>
       ) : (
         <div className="space-y-3">
-          <p className="text-xs text-orange-300">Tem certeza? A cobrança automática será desativada.</p>
+          <p className="text-xs text-orange-300">
+            {withinCoolingOff
+              ? "Dentro do prazo de 7 dias (CDC Art. 49). Sua assinatura será cancelada e o valor total reembolsado no cartão em até 5 dias úteis."
+              : "Tem certeza? A cobrança automática será desativada. Você mantém o acesso até o fim do período pago."}
+          </p>
           <div className="flex gap-2">
             <button
               onClick={handleCancel}
               disabled={loading}
               className="px-4 py-2 rounded-lg bg-orange-500/20 border border-orange-500/30 text-orange-300 text-sm hover:bg-orange-500/30 transition-colors disabled:opacity-50"
             >
-              {loading ? "Cancelando…" : "Sim, cancelar"}
+              {loading ? "Cancelando…" : withinCoolingOff ? "Sim, cancelar e reembolsar" : "Sim, cancelar"}
             </button>
             <button
               onClick={() => setConfirm(false)}
@@ -615,10 +629,24 @@ export default function ConfiguracoesPage() {
             <hr className="border-white/8" />
             <section className="rounded-2xl bg-orange-500/5 border border-orange-500/20 p-5">
               <h2 className="text-sm font-semibold text-orange-400 mb-1">Cancelar assinatura</h2>
-              <p className="text-xs text-gray-500 mb-4">
-                Você continua com acesso até o fim do período já pago. A renovação automática será desativada.
-              </p>
-              <CancelSubscriptionButton />
+              {(() => {
+                const startDate = config?.subscription?.startDate;
+                const endDate = config?.subscription?.endDate;
+                const withinCoolingOff = startDate
+                  ? (Date.now() - new Date(startDate).getTime()) < 7 * 24 * 60 * 60 * 1000
+                  : false;
+                const endFormatted = endDate
+                  ? new Date(endDate).toLocaleDateString("pt-BR")
+                  : null;
+                return (
+                  <p className="text-xs text-gray-500 mb-4">
+                    {withinCoolingOff
+                      ? "Você está dentro do prazo de 7 dias (CDC Art. 49). Pode cancelar agora e receber o reembolso total no cartão em até 5 dias úteis."
+                      : `Você pode cancelar a renovação automática a qualquer momento. Seu acesso continua até ${endFormatted ?? "o fim do período pago"} e não será cobrado novamente.`}
+                  </p>
+                );
+              })()}
+              <CancelSubscriptionButton startDate={config?.subscription?.startDate} />
             </section>
 
             {/* Zona de perigo — deletar conta (LGPD Art. 18) */}
