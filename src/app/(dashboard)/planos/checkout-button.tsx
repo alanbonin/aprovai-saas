@@ -19,7 +19,7 @@ export function CheckoutButton({ planId, planName, isPopular, isFree }: {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      const res = await fetch("/api/pagamento/checkout", {
+      const res = await fetch("/api/pagamento/stripe-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId }),

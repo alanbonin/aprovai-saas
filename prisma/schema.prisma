@@ -74,8 +74,9 @@ model Subscription {
   status          SubscriptionStatus @default(ACTIVE)
   startDate       DateTime           @default(now())
   endDate         DateTime
-  mpPaymentId     String?
-  mpSubscriptionId String?
+  mpPaymentId          String?
+  mpSubscriptionId     String?
+  stripeSubscriptionId String?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 
