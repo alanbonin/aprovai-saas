@@ -44,7 +44,8 @@ export async function POST() {
 
           // Busca o último payment intent para reembolsar
           const invoices = await stripe.invoices.list({ subscription: stripeSubId, limit: 1 });
-          const paymentIntentId = invoices.data[0]?.payment_intent as string | null;
+          const inv = invoices.data[0] as (typeof invoices.data[0] & { payment_intent?: string }) | undefined;
+          const paymentIntentId = inv?.payment_intent ?? null;
           if (paymentIntentId) {
             await stripe.refunds.create({ payment_intent: paymentIntentId });
           }
