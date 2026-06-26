@@ -114,7 +114,8 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
           const cfg = getSlugConfig(plan.slug);
           const Icon = cfg.icon;
           const isCurrent = plan.id === currentPlanId;
-          const monthsDuration = plan.intervalDays / 30;
+          // Planos anuais: sempre dividir por 12 meses exatos (não por dias/30)
+          const monthsDuration = isAnual(plan) ? 12 : plan.intervalDays / 30;
           const priceMonth = monthsDuration > 0 ? (plan.price / monthsDuration).toFixed(0) : plan.price.toFixed(0);
           const isFree = plan.price === 0;
 
@@ -144,6 +145,11 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
                 <div className="flex items-baseline gap-1">
                   {isFree ? (
                     <span className="text-4xl font-black">Grátis</span>
+                  ) : isAnual(plan) ? (
+                    <>
+                      <span className="text-4xl font-black">R$ {plan.price.toFixed(0)}</span>
+                      <span className="text-gray-500 text-sm">/ano</span>
+                    </>
                   ) : (
                     <>
                       <span className="text-4xl font-black">R$ {priceMonth}</span>
@@ -151,11 +157,6 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
                     </>
                   )}
                 </div>
-                {!isFree && plan.intervalDays > 30 && (
-                  <p className="text-xs text-gray-600 mt-0.5">
-                    R$ {plan.price.toFixed(0)} cobrado anualmente
-                  </p>
-                )}
               </div>
 
               {/* Destaque: mentores + msgs */}
@@ -216,7 +217,16 @@ export function PlanosClient({ plans, currentPlanId, subscriptionEndDate, trialE
                   )}
                 </div>
               ) : (
-                <CheckoutButton planId={plan.id} planName={plan.name} isPopular={cfg.popular} isFree={isFree} />
+                <>
+                  <CheckoutButton planId={plan.id} planName={plan.name} isPopular={cfg.popular} isFree={isFree} />
+                  {!isFree && (
+                    <p className="text-[10px] text-gray-600 text-center mt-1 leading-tight">
+                      {isAnual(plan)
+                        ? "Renova automaticamente todo ano. Cancele quando quiser, sem multa."
+                        : "Renova automaticamente todo mês. Cancele quando quiser, sem multa."}
+                    </p>
+                  )}
+                </>
               )}
             </div>
           );
