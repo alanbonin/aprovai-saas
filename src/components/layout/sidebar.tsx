@@ -302,6 +302,8 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                     const usageEntry = usageLimits && HREF_RESOURCE[item.href] ? usageLimits[HREF_RESOURCE[item.href]] : null;
                     const usage = usageEntry ? { used: usageEntry.used, max: usageEntry.total } : null;
                     const isLocked = !isPremium && TRIAL_LOCKED_HREFS.has(item.href);
+                    // Contador tem prioridade sobre cadeado (trial com limite finito mostra uso, não cadeado)
+                    const showCounter = usage && usage.max > 0 && usage.max < 9999;
                     return (
                       <Link
                         key={item.href}
@@ -321,12 +323,11 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
                         {(item as NavItem).comingSoon && (
                           <span className="text-[8px] font-bold px-1 py-0.5 rounded-full bg-white/10 text-gray-500 border border-white/10 leading-none mt-0.5">em breve</span>
                         )}
-                        {!isLocked && !((item as NavItem).comingSoon) && usage && (
-                          <span className="text-[8px] text-gray-600 leading-none">{usage.used}/{usage.max}</span>
-                        )}
-                        {isLocked && !((item as NavItem).comingSoon) && (
+                        {!((item as NavItem).comingSoon) && (showCounter ? (
+                          <span className="text-[8px] text-gray-600 leading-none">{usage!.used}/{usage!.max}</span>
+                        ) : isLocked ? (
                           <span className="text-[8px] text-gray-600 leading-none">🔒</span>
-                        )}
+                        ) : null)}
                       </Link>
                     );
                   })}
