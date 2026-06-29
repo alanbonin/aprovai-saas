@@ -2,10 +2,13 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+type Estado = "aguardando" | "pronto" | "invalido";
+
 export default function ResetSenhaPage() {
+  const [estado, setEstado] = useState<Estado>("aguardando");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -15,25 +18,18 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Supabase redireciona com #access_token na URL (hash fragment).
-    // getSession() pode ser chamado antes do cliente processar o hash —
-    // usamos onAuthStateChange para capturar o evento PASSWORD_RECOVERY.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        // Sessão pronta — usuário pode digitar a nova senha
-        return;
+        // Token de recuperação válido — mostra o formulário
+        setEstado("pronto");
       }
-      if (event === "SIGNED_IN" && session) {
-        // Também aceita SIGNED_IN que pode disparar junto com PASSWORD_RECOVERY
-        return;
-      }
+      // Ignora SIGNED_IN e outros eventos para não redirecionar
     });
 
-    // Fallback: após 1.5s se ainda não há sessão, redireciona para login
-    const fallback = setTimeout(async () => {
-      const { data } = await supabase.auth.getSession();
-      if (!data.session) router.push("/login");
-    }, 1500);
+    // Se após 5s não recebeu PASSWORD_RECOVERY, token inválido ou expirado
+    const fallback = setTimeout(() => {
+      setEstado(prev => prev === "aguardando" ? "invalido" : prev);
+    }, 5000);
 
     return () => {
       subscription.unsubscribe();
@@ -52,7 +48,9 @@ export default function ResetSenhaPage() {
     setLoading(false);
     if (error) { setError(error.message); return; }
     setDone(true);
-    setTimeout(() => router.push("/hoje"), 2500);
+    // Faz logout e redireciona para login — força nova autenticação com a nova senha
+    await supabase.auth.signOut();
+    setTimeout(() => router.push("/login?msg=senha-atualizada"), 2500);
   }
 
   return (
@@ -75,7 +73,23 @@ export default function ResetSenhaPage() {
             <div className="text-center py-4">
               <CheckCircle2 className="w-12 h-12 text-green-400 mx-auto mb-4" />
               <h2 className="text-white font-bold text-lg mb-2">Senha atualizada!</h2>
-              <p className="text-gray-400 text-sm">Redirecionando para o dashboard...</p>
+              <p className="text-gray-400 text-sm">Redirecionando para o login...</p>
+            </div>
+          ) : estado === "aguardando" ? (
+            <div className="text-center py-8">
+              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin mx-auto mb-4" />
+              <p className="text-gray-400 text-sm">Verificando link...</p>
+            </div>
+          ) : estado === "invalido" ? (
+            <div className="text-center py-4">
+              <p className="text-red-400 font-semibold mb-2">Link inválido ou expirado</p>
+              <p className="text-gray-500 text-sm mb-4">Solicite um novo link de redefinição de senha.</p>
+              <button
+                onClick={() => router.push("/login")}
+                className="text-indigo-400 text-sm underline"
+              >
+                Voltar ao login
+              </button>
             </div>
           ) : (
             <>
@@ -84,15 +98,28 @@ export default function ResetSenhaPage() {
               <form onSubmit={handleReset} className="space-y-4">
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Nova senha</label>
-                  <input type="password" value={password} onChange={e => setPassword(e.target.value)} required minLength={6}
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                    autoComplete="new-password"
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="mínimo 6 caracteres" />
+                    placeholder="mínimo 6 caracteres"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm text-gray-400 mb-1">Confirmar senha</label>
-                  <input type="password" value={confirm} onChange={e => setConfirm(e.target.value)} required
+                  <input
+                    type="password"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    required
+                    autoComplete="new-password"
                     className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
-                    placeholder="repita a senha" />
+                    placeholder="repita a senha"
+                  />
                 </div>
                 {error && <p className="text-red-400 text-sm">{error}</p>}
                 <Button type="submit" className="w-full" disabled={loading}>
