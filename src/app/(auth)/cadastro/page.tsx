@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
+import { trackRegistration } from "@/lib/analytics";
 
 export default function CadastroPage() {
   const searchParams = useSearchParams();
@@ -18,6 +19,9 @@ export default function CadastroPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmEmail, setConfirmEmail] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendDone, setResendDone] = useState(false);
   const supabase = createClient();
 
   // ── Validação de senha ──────────────────────────────────────────────────────
@@ -45,6 +49,25 @@ export default function CadastroPage() {
   }
 
   const senhaInfo = avaliarSenha(password);
+
+  async function handleResend() {
+    if (!pendingEmail) return;
+    setResendLoading(true);
+    setError("pending_confirmation");
+    const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
+    const { error: resendError } = await supabase.auth.resend({ type: "signup", email: pendingEmail, options: { emailRedirectTo: redirectTo } });
+    setResendLoading(false);
+    if (resendError) {
+      const msg = resendError.message ?? "";
+      if (msg.includes("rate limit") || msg.includes("email rate") || msg.includes("over_email_send_rate_limit")) {
+        setError("rate_limit_resend");
+      } else {
+        setError("resend_failed");
+      }
+    } else {
+      setResendDone(true);
+    }
+  }
 
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault();
@@ -87,10 +110,11 @@ export default function CadastroPage() {
         return;
       }
 
-      // Supabase retorna identities=[] quando e-mail já existe mas não foi confirmado
-      // Nesse caso, não devemos tentar criar um novo usuário no banco
-      if (data.user.identities?.length === 0) {
-        setError("Este e-mail já tem um cadastro pendente de confirmação. Verifique sua caixa de entrada ou aguarde 1 hora para tentar novamente.");
+      // Supabase retorna identities=[] ou identities=undefined quando e-mail já existe mas não foi confirmado
+      // Nesse caso, oferecemos reenvio do e-mail de confirmação
+      if (!data.user.identities || data.user.identities.length === 0) {
+        setPendingEmail(email);
+        setError("pending_confirmation");
         setLoading(false);
         return;
       }
@@ -134,6 +158,9 @@ export default function CadastroPage() {
       setLoading(false);
       return;
     }
+
+    // Dispara evento de conversão — cadastro concluído
+    trackRegistration({ email, name });
 
     // Se há sessão ativa (email auto-confirmado), vai para o workspace
     if (signUpData.session) {
@@ -287,7 +314,42 @@ export default function CadastroPage() {
               )}
             </div>
 
-            {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error === "pending_confirmation" ? (
+              <div className="rounded-xl border border-amber-600/50 bg-amber-950/60 p-4 space-y-2">
+                <p className="text-amber-200 text-sm font-semibold">⚠️ E-mail pendente de confirmação</p>
+                <p className="text-amber-100/70 text-xs leading-relaxed">
+                  Este e-mail já foi cadastrado mas ainda não foi confirmado. Verifique sua caixa de entrada (e o spam).
+                </p>
+                {resendDone ? (
+                  <p className="text-green-400 text-xs font-medium">✓ Novo e-mail de confirmação enviado! Verifique sua caixa.</p>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResend}
+                    disabled={resendLoading}
+                    className="text-xs font-semibold text-amber-300 underline underline-offset-2 hover:text-white disabled:opacity-50"
+                  >
+                    {resendLoading ? "Enviando..." : "Reenviar e-mail de confirmação →"}
+                  </button>
+                )}
+              </div>
+            ) : error === "rate_limit_resend" ? (
+              <div className="rounded-xl border border-amber-600/50 bg-amber-950/60 p-4 space-y-2">
+                <p className="text-amber-200 text-sm font-semibold">⚠️ Muitos e-mails enviados</p>
+                <p className="text-amber-100/70 text-xs leading-relaxed">
+                  Limite de envio atingido. Aguarde alguns minutos antes de tentar novamente, ou verifique sua caixa de spam.
+                </p>
+              </div>
+            ) : error === "resend_failed" ? (
+              <div className="rounded-xl border border-red-600/50 bg-red-950/60 p-4 space-y-2">
+                <p className="text-red-300 text-sm font-semibold">Erro ao reenviar e-mail</p>
+                <p className="text-red-100/70 text-xs leading-relaxed">
+                  Não foi possível reenviar o e-mail. Tente novamente em instantes ou entre em contato com o suporte.
+                </p>
+              </div>
+            ) : error ? (
+              <p className="text-red-400 text-sm">{error}</p>
+            ) : null}
 
             <div className="flex items-start gap-3">
               <input
