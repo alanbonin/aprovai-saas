@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 
 type Tela = "login" | "forgot" | "forgot-ok";
@@ -61,8 +62,15 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/api/auth/callback?next=/reset-senha`,
+    // Usa implicit flow (sem PKCE) para que o link funcione em qualquer
+    // contexto de browser (PWA, Mail app, webview) sem depender de cookies/localStorage
+    const implicitClient = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { flowType: "implicit" } }
+    );
+    const { error } = await implicitClient.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-senha`,
     });
     setLoading(false);
     if (error) { setError(error.message); return; }
