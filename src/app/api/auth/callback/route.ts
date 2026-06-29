@@ -16,6 +16,7 @@ import { log, LogEvent } from "@/lib/logger";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code  = searchParams.get("code");
+  const type  = searchParams.get("type");
   const next  = searchParams.get("next") ?? "/workspace";
   const error = searchParams.get("error");
   const errorDescription = searchParams.get("error_description");
@@ -41,6 +42,12 @@ export async function GET(request: Request) {
       }
 
       log.info(LogEvent.AUTH_LOGIN_OK, { userId: data.user?.id ?? "unknown", via: "email_confirmation" });
+
+      // Recuperação de senha — redireciona direto para reset-senha com marcador
+      const isRecovery = type === "recovery" || data.user?.recovery_sent_at != null;
+      if (isRecovery) {
+        return NextResponse.redirect(new URL("/reset-senha?recovery=1", origin));
+      }
 
       // Revoga todas as outras sessões — impede compartilhamento de conta
       await supabase.auth.signOut({ scope: "others" }).catch(() => {});

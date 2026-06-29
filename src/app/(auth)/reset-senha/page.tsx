@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -15,15 +15,27 @@ export default function ResetSenhaPage() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   useEffect(() => {
+    // Fluxo PKCE: callback já trocou o code por sessão e redirecionou com ?recovery=1
+    if (searchParams.get("recovery") === "1") {
+      supabase.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setEstado("pronto");
+        } else {
+          setEstado("invalido");
+        }
+      });
+      return;
+    }
+
+    // Fluxo hash (legado): aguarda evento PASSWORD_RECOVERY
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "PASSWORD_RECOVERY") {
-        // Token de recuperação válido — mostra o formulário
         setEstado("pronto");
       }
-      // Ignora SIGNED_IN e outros eventos para não redirecionar
     });
 
     // Se após 5s não recebeu PASSWORD_RECOVERY, token inválido ou expirado
