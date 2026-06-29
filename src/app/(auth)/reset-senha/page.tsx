@@ -19,20 +19,31 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Verifica sessão ativa (funciona tanto para PKCE quanto hash)
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
+    async function init() {
+      // Fluxo PKCE: Supabase envia ?code=xxx diretamente para /reset-senha
+      const params = new URLSearchParams(window.location.search);
+      const code = params.get("code");
+
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) { setEstado("invalido"); return; }
+        // Remove o code da URL sem recarregar
+        window.history.replaceState({}, "", "/reset-senha");
         setEstado("pronto");
         return;
       }
-      // Sem sessão ainda — aguarda evento PASSWORD_RECOVERY (fluxo hash legado)
+
+      // Fluxo hash (legado) ou sessão já ativa
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) { setEstado("pronto"); return; }
+
+      // Aguarda evento PASSWORD_RECOVERY do hash fragment
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
           setEstado("pronto");
         }
       });
 
-      // Timeout: se não chegou nada em 5s, link inválido
       const fallback = setTimeout(() => {
         setEstado(prev => prev === "aguardando" ? "invalido" : prev);
       }, 5000);
@@ -41,7 +52,9 @@ export default function ResetSenhaPage() {
         subscription.unsubscribe();
         clearTimeout(fallback);
       };
-    });
+    }
+
+    init();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
