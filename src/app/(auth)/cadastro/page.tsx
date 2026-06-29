@@ -18,10 +18,6 @@ export default function CadastroPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [confirmEmail, setConfirmEmail] = useState(false);
-  const [pendingEmail, setPendingEmail] = useState<string | null>(null);
-  const [resendLoading, setResendLoading] = useState(false);
-  const [resendDone, setResendDone] = useState(false);
   const supabase = createClient();
 
   // ── Validação de senha ──────────────────────────────────────────────────────
@@ -50,47 +46,22 @@ export default function CadastroPage() {
 
   const senhaInfo = avaliarSenha(password);
 
-  async function handleResend() {
-    if (!pendingEmail) return;
-    setResendLoading(true);
-    setError("pending_confirmation");
-    const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
-    const { error: resendError } = await supabase.auth.resend({ type: "signup", email: pendingEmail, options: { emailRedirectTo: redirectTo } });
-    setResendLoading(false);
-    if (resendError) {
-      const msg = resendError.message ?? "";
-      if (msg.includes("rate limit") || msg.includes("email rate") || msg.includes("over_email_send_rate_limit")) {
-        setError("rate_limit_resend");
-      } else {
-        setError("resend_failed");
-      }
-    } else {
-      setResendDone(true);
-    }
-  }
-
   async function handleCadastro(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError("");
 
-    // Valida senha antes de chamar Supabase
     if (!senhaInfo.ok) {
       setError(senhaInfo.erros[0]);
       setLoading(false);
       return;
     }
 
-    // redirectTo legado (usado se template Supabase ainda usar {{ .ConfirmationURL }})
-    const redirectTo = `${window.location.origin}/api/auth/callback?next=/workspace`;
-
-    let signUpData: Awaited<ReturnType<typeof supabase.auth.signUp>>["data"] | null = null;
-
     try {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
-        options: { emailRedirectTo: redirectTo, data: { name } },
+        options: { data: { name } },
       });
 
       if (signUpError || !data.user) {
@@ -98,11 +69,11 @@ export default function CadastroPage() {
         if (msg.includes("already registered") || msg.includes("already been registered")) {
           setError("Este e-mail já está cadastrado. Tente fazer login.");
         } else if (msg.includes("rate limit") || msg.includes("email rate")) {
-          setError("Muitos e-mails enviados. Aguarde alguns minutos e tente novamente.");
+          setError("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
         } else if (msg.includes("invalid")) {
           setError("E-mail inválido.");
         } else if (msg.includes("Password")) {
-          setError("Senha muito curta. Use no mínimo 6 caracteres.");
+          setError("Senha muito curta. Use no mínimo 8 caracteres.");
         } else {
           setError(msg || "Erro ao criar conta. Tente novamente.");
         }
@@ -110,29 +81,11 @@ export default function CadastroPage() {
         return;
       }
 
-      // Supabase retorna identities=[] ou identities=undefined quando e-mail já existe mas não foi confirmado
-      // Nesse caso, oferecemos reenvio do e-mail de confirmação
-      if (!data.user.identities || data.user.identities.length === 0) {
-        setPendingEmail(email);
-        setError("pending_confirmation");
-        setLoading(false);
-        return;
-      }
-
-      signUpData = data;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setError(`Erro de conexão com autenticação: ${msg}`);
-      setLoading(false);
-      return;
-    }
-
-    // Cria usuário no banco via API
-    try {
+      // Cria usuário no banco via API
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, supabaseId: signUpData.user!.id }),
+        body: JSON.stringify({ name, email, supabaseId: data.user.id }),
       });
 
       if (!res.ok) {
@@ -152,74 +105,14 @@ export default function CadastroPage() {
         setLoading(false);
         return;
       }
+
+      trackRegistration({ email, name });
+      window.location.href = "/workspace";
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError(`Erro de conexão ao salvar perfil: ${msg}`);
+      setError(`Erro de conexão: ${msg}`);
       setLoading(false);
-      return;
     }
-
-    // Dispara evento de conversão — cadastro concluído
-    trackRegistration({ email, name });
-
-    // Se há sessão ativa (email auto-confirmado), vai para o workspace
-    if (signUpData.session) {
-      window.location.href = "/workspace";
-      return;
-    }
-
-    // Email precisa de confirmação manual
-    setConfirmEmail(true);
-    setLoading(false);
-  }
-
-  if (confirmEmail) {
-    return (
-      <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
-        <div className="w-full max-w-sm text-center">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
-            <div className="text-left">
-              <p className="font-bold text-lg leading-tight">
-                <span className="text-white">Aprov</span>
-                <span style={{ color: "#0ab5bd" }}>AI</span>
-                <span className="text-white">360</span>
-              </p>
-              <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
-            </div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-8">
-            <div className="w-14 h-14 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-4">
-              <span className="text-3xl">✉️</span>
-            </div>
-            <h2 className="text-white font-bold text-xl mb-2">Confirme seu e-mail</h2>
-            <p className="text-gray-400 text-sm mb-4">
-              Enviamos um link de confirmação para{" "}
-              <strong className="text-white">{email}</strong>.
-            </p>
-
-            {/* Aviso sobre spam */}
-            <div style={{ backgroundColor: "#fef3c7", border: "1px solid #d97706", borderRadius: "12px", padding: "12px 16px", marginBottom: "20px", textAlign: "left" }}>
-              <p style={{ color: "#92400e", fontSize: "12px", fontWeight: 700, marginBottom: "4px" }}>⚠️ Não recebeu o e-mail?</p>
-              <p style={{ color: "#78350f", fontSize: "12px", lineHeight: "1.6" }}>
-                Verifique sua <strong>caixa de spam</strong> ou <strong>lixo eletrônico</strong> — às vezes nossos e-mails chegam por lá.
-              </p>
-              <p style={{ color: "#78350f", fontSize: "12px", lineHeight: "1.6", marginTop: "6px" }}>
-                Ao confirmar, <strong>marque o e-mail como &quot;Não é spam&quot;</strong> para que as próximas mensagens cheguem direto na caixa de entrada.
-              </p>
-            </div>
-
-            <a
-              href="/login"
-              className="block w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-sm font-medium text-white text-center transition-colors"
-            >
-              Já confirmei — ir para o login
-            </a>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
@@ -281,10 +174,8 @@ export default function CadastroPage() {
                 className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-gray-600 focus:outline-none focus:border-indigo-500 transition-colors"
                 placeholder="Mínimo 8 caracteres, com letra e número"
               />
-              {/* Indicador de força — aparece assim que o usuário começa a digitar */}
               {password.length > 0 && (
                 <div className="mt-2 space-y-1.5">
-                  {/* Barra de força */}
                   <div className="flex gap-1">
                     {[1,2,3].map(n => (
                       <div
@@ -299,7 +190,6 @@ export default function CadastroPage() {
                       />
                     ))}
                   </div>
-                  {/* Texto de status */}
                   <p className={`text-xs ${
                     senhaInfo.forca === 3 ? "text-emerald-400" :
                     senhaInfo.forca === 2 ? "text-yellow-400" :
@@ -314,42 +204,7 @@ export default function CadastroPage() {
               )}
             </div>
 
-            {error === "pending_confirmation" ? (
-              <div className="rounded-xl border border-amber-600/50 bg-amber-950/60 p-4 space-y-2">
-                <p className="text-amber-200 text-sm font-semibold">⚠️ E-mail pendente de confirmação</p>
-                <p className="text-amber-100/70 text-xs leading-relaxed">
-                  Este e-mail já foi cadastrado mas ainda não foi confirmado. Verifique sua caixa de entrada (e o spam).
-                </p>
-                {resendDone ? (
-                  <p className="text-green-400 text-xs font-medium">✓ Novo e-mail de confirmação enviado! Verifique sua caixa.</p>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleResend}
-                    disabled={resendLoading}
-                    className="text-xs font-semibold text-amber-300 underline underline-offset-2 hover:text-white disabled:opacity-50"
-                  >
-                    {resendLoading ? "Enviando..." : "Reenviar e-mail de confirmação →"}
-                  </button>
-                )}
-              </div>
-            ) : error === "rate_limit_resend" ? (
-              <div className="rounded-xl border border-amber-600/50 bg-amber-950/60 p-4 space-y-2">
-                <p className="text-amber-200 text-sm font-semibold">⚠️ Muitos e-mails enviados</p>
-                <p className="text-amber-100/70 text-xs leading-relaxed">
-                  Limite de envio atingido. Aguarde alguns minutos antes de tentar novamente, ou verifique sua caixa de spam.
-                </p>
-              </div>
-            ) : error === "resend_failed" ? (
-              <div className="rounded-xl border border-red-600/50 bg-red-950/60 p-4 space-y-2">
-                <p className="text-red-300 text-sm font-semibold">Erro ao reenviar e-mail</p>
-                <p className="text-red-100/70 text-xs leading-relaxed">
-                  Não foi possível reenviar o e-mail. Tente novamente em instantes ou entre em contato com o suporte.
-                </p>
-              </div>
-            ) : error ? (
-              <p className="text-red-400 text-sm">{error}</p>
-            ) : null}
+            {error && <p className="text-red-400 text-sm">{error}</p>}
 
             <div className="flex items-start gap-3">
               <input
