@@ -242,16 +242,18 @@ function MobileBottomNav({ pathname, sections, unreadNotifs, mobileOpen, setMobi
           transition: dragging ? "none" : "transform 0.3s ease-out, opacity 0.3s ease-out",
           opacity: mobileOpen ? Math.max(0, 1 - dragY / 300) : 0,
         }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
       >
         <div
           className="mx-2 rounded-2xl overflow-hidden border border-white/10"
           style={{ backgroundColor: "var(--bg-surface)" }}
         >
-          {/* Handle — arraste para baixo para fechar */}
-          <div className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing">
+          {/* Handle — arraste para baixo para fechar (handler só aqui, não no container todo) */}
+          <div
+            className="flex justify-center pt-3 pb-1 cursor-grab active:cursor-grabbing"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="w-10 h-1 rounded-full bg-white/30" />
           </div>
 
