@@ -43,9 +43,8 @@ export async function GET(request: Request) {
 
       log.info(LogEvent.AUTH_LOGIN_OK, { userId: data.user?.id ?? "unknown", via: "email_confirmation" });
 
-      // Recuperação de senha — redireciona direto para reset-senha com marcador
-      const isRecovery = type === "recovery" || data.user?.recovery_sent_at != null;
-      if (isRecovery) {
+      // Recuperação de senha — redireciona direto para reset-senha
+      if (next === "/reset-senha" || type === "recovery") {
         return NextResponse.redirect(new URL("/reset-senha?recovery=1", origin));
       }
 

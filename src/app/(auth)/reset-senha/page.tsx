@@ -19,42 +19,27 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    async function init() {
-      // Fluxo PKCE: Supabase envia ?code=xxx diretamente para /reset-senha
-      const params = new URLSearchParams(window.location.search);
-      const code = params.get("code");
-
-      if (code) {
-        const { error } = await supabase.auth.exchangeCodeForSession(code);
-        if (error) { setEstado("invalido"); return; }
-        // Remove o code da URL sem recarregar
-        window.history.replaceState({}, "", "/reset-senha");
+    // Callback server-side já trocou o code e criou sessão via cookie.
+    // Basta verificar se a sessão existe.
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
         setEstado("pronto");
         return;
       }
-
-      // Fluxo hash (legado) ou sessão já ativa
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) { setEstado("pronto"); return; }
-
-      // Aguarda evento PASSWORD_RECOVERY do hash fragment
+      // Fallback: fluxo hash legado (token no #fragment)
       const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
         if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
           setEstado("pronto");
         }
       });
-
       const fallback = setTimeout(() => {
         setEstado(prev => prev === "aguardando" ? "invalido" : prev);
       }, 5000);
-
       return () => {
         subscription.unsubscribe();
         clearTimeout(fallback);
       };
-    }
-
-    init();
+    });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
