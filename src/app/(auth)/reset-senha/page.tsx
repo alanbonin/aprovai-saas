@@ -19,34 +19,29 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Fluxo PKCE: callback já trocou o code por sessão e redirecionou com ?recovery=1
-    if (searchParams.get("recovery") === "1") {
-      supabase.auth.getSession().then(({ data }) => {
-        if (data.session) {
+    // Verifica sessão ativa (funciona tanto para PKCE quanto hash)
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) {
+        setEstado("pronto");
+        return;
+      }
+      // Sem sessão ainda — aguarda evento PASSWORD_RECOVERY (fluxo hash legado)
+      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
           setEstado("pronto");
-        } else {
-          setEstado("invalido");
         }
       });
-      return;
-    }
 
-    // Fluxo hash (legado): aguarda evento PASSWORD_RECOVERY
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        setEstado("pronto");
-      }
+      // Timeout: se não chegou nada em 5s, link inválido
+      const fallback = setTimeout(() => {
+        setEstado(prev => prev === "aguardando" ? "invalido" : prev);
+      }, 5000);
+
+      return () => {
+        subscription.unsubscribe();
+        clearTimeout(fallback);
+      };
     });
-
-    // Se após 5s não recebeu PASSWORD_RECOVERY, token inválido ou expirado
-    const fallback = setTimeout(() => {
-      setEstado(prev => prev === "aguardando" ? "invalido" : prev);
-    }, 5000);
-
-    return () => {
-      subscription.unsubscribe();
-      clearTimeout(fallback);
-    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
