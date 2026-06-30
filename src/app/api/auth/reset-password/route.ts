@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import nodemailer from "nodemailer";
+import { sendEmail } from "@/lib/mailer";
 
 export async function POST(req: Request) {
   try {
@@ -31,18 +31,7 @@ export async function POST(req: Request) {
 
     const actionLink = data.properties.action_link;
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: Number(process.env.SMTP_PORT ?? 587),
-      secure: false,
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-    });
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_FROM ?? "AprovAI360 <contato@aprovai360.com.br>",
+    const { error: emailError } = await sendEmail({
       to: email,
       subject: "Redefinição de senha — AprovAI360",
       html: `
@@ -62,6 +51,7 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+    if (emailError) throw emailError;
 
     return NextResponse.json({ ok: true });
   } catch (err) {

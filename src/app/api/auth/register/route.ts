@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
-import nodemailer from "nodemailer";
 import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
 import { log, LogEvent, mask } from "@/lib/logger";
+import { sendEmail } from "@/lib/mailer";
 
 const supabaseAdmin = createSupabaseAdmin(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -58,18 +58,7 @@ async function notifyAdminNewUser(name: string, email: string) {
 }
 
 async function sendConfirmacaoEmail(email: string, name: string, confirmUrl: string) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_FROM ?? "AprovAI360 <contato@aprovai360.com.br>",
+  const { error } = await sendEmail({
     to: email,
     subject: "Confirme seu e-mail — AprovAI360",
     html: `
@@ -91,6 +80,7 @@ async function sendConfirmacaoEmail(email: string, name: string, confirmUrl: str
       </div>
     `,
   });
+  if (error) throw error;
 }
 
 export async function POST(req: Request) {
