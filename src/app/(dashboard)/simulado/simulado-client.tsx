@@ -670,18 +670,6 @@ export function SimuladoClient({ history: initialHistory, userId, modalidade = "
               </div>
             )}
 
-            {/* Filtro por banca */}
-            {availableBancas.length > 0 && (
-              <div>
-                <label className="block text-sm text-gray-400 mb-2">Banca (opcional)</label>
-                <select value={filterBanca} onChange={e => setFilterBanca(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-                  <option value="">Todas as bancas</option>
-                  {availableBancas.map(b => <option key={b} value={b}>{b}</option>)}
-                </select>
-              </div>
-            )}
-
             {/* Filtro por dificuldade */}
             <div>
               <label className="block text-sm text-gray-400 mb-2">Dificuldade (opcional)</label>
