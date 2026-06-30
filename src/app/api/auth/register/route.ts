@@ -180,7 +180,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Conta criada, mas erro ao enviar e-mail de confirmação. Contate o suporte." }, { status: 500 });
   }
 
-  const confirmUrl = `${appUrl}/confirmar-email?token_hash=${linkData.properties.hashed_token}&type=signup`;
+  const confirmUrl = `${appUrl}/confirmar-email?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=signup`;
 
   try {
     await sendConfirmacaoEmail(email, name, confirmUrl);
