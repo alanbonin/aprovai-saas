@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
 import { log, LogEvent, mask } from "@/lib/logger";
+import { hasValidMxRecord } from "@/lib/email-domain";
 
 const supabaseAdmin = createSupabaseAdmin(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -71,6 +72,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
   }
   const { name, email, password } = parseResult.data;
+
+  // Bloqueia domínios sem servidor de e-mail configurado (typos, domínios inventados)
+  const mxOk = await hasValidMxRecord(email);
+  if (!mxOk) {
+    return NextResponse.json({ error: "Este domínio de e-mail não existe ou não recebe e-mails. Verifique o endereço digitado." }, { status: 400 });
+  }
 
   // Cria usuário no Supabase Auth via admin SDK — não envia nenhum email pelo Supabase
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
