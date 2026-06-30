@@ -85,7 +85,7 @@ export async function POST(req: Request) {
     if (msg.toLowerCase().includes("already registered") || msg.toLowerCase().includes("already been registered")) {
       return NextResponse.json({ error: "Este e-mail já está cadastrado. Tente fazer login." }, { status: 409 });
     }
-    log.error(LogEvent.AUTH_ERROR, { email: mask.email(email) }, authError);
+    log.error(LogEvent.AUTH_REGISTER, { email: mask.email(email) }, authError);
     return NextResponse.json({ error: "Erro ao criar conta. Tente novamente." }, { status: 500 });
   }
 
