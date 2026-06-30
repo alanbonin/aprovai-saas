@@ -4,7 +4,6 @@ import { db } from "@/lib/db";
 import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
 import { log, LogEvent, mask } from "@/lib/logger";
-import { sendEmail } from "@/lib/mailer";
 
 const supabaseAdmin = createSupabaseAdmin(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -57,31 +56,6 @@ async function notifyAdminNewUser(name: string, email: string) {
   }
 }
 
-async function sendConfirmacaoEmail(email: string, name: string, confirmUrl: string) {
-  const { error } = await sendEmail({
-    to: email,
-    subject: "Confirme seu e-mail — AprovAI360",
-    html: `
-      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 16px">
-        <h2 style="color:#1a1a2e;margin-bottom:8px">Olá, ${name}!</h2>
-        <p style="color:#555;margin-bottom:8px">
-          Bem-vindo(a) ao AprovAI360! Para ativar sua conta, confirme seu e-mail clicando no botão abaixo.
-        </p>
-        <p style="color:#888;font-size:13px;margin-bottom:24px">
-          Seu trial de 7 dias começa agora. Não perca tempo!
-        </p>
-        <a href="${confirmUrl}"
-          style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px">
-          Confirmar e-mail
-        </a>
-        <p style="color:#999;font-size:12px;margin-top:24px">
-          Este link expira em 24 horas. Se você não criou uma conta, ignore este e-mail.
-        </p>
-      </div>
-    `,
-  });
-  if (error) throw error;
-}
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
@@ -102,7 +76,7 @@ export async function POST(req: Request) {
   const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
     email,
     password,
-    email_confirm: false,
+    email_confirm: true,
     user_metadata: { name },
   });
 
@@ -164,29 +138,6 @@ export async function POST(req: Request) {
         updatedAt: now,
       });
     }
-  }
-
-  // Gera link de confirmação via admin SDK — token OTP, sem PKCE
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai360.com.br";
-  const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-    type: "signup",
-    email,
-    options: { redirectTo: `${appUrl}/workspace` },
-  });
-
-  if (linkError || !linkData?.properties?.hashed_token) {
-    // Conta criada mas não conseguimos enviar o email — retorna erro para o usuário tentar de novo
-    log.error(LogEvent.AUTH_ERROR, { email: mask.email(email), step: "generateLink" }, linkError);
-    return NextResponse.json({ error: "Conta criada, mas erro ao enviar e-mail de confirmação. Contate o suporte." }, { status: 500 });
-  }
-
-  const confirmUrl = `${appUrl}/confirmar-email?token_hash=${encodeURIComponent(linkData.properties.hashed_token)}&type=signup`;
-
-  try {
-    await sendConfirmacaoEmail(email, name, confirmUrl);
-  } catch (emailErr) {
-    log.error(LogEvent.AUTH_ERROR, { email: mask.email(email), step: "sendEmail" }, emailErr);
-    return NextResponse.json({ error: "Erro ao enviar e-mail de confirmação. Verifique o endereço e tente novamente." }, { status: 500 });
   }
 
   log.info(LogEvent.AUTH_REGISTER, { email: mask.email(email) });

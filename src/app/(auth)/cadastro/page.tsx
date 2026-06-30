@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { trackRegistration } from "@/lib/analytics";
+import { createClient } from "@/lib/supabase/client";
 
 export default function CadastroPage() {
   const searchParams = useSearchParams();
@@ -12,12 +13,12 @@ export default function CadastroPage() {
     if (searchParams.get("deleted") === "1") setDeleted(true);
   }, [searchParams]);
 
+  const supabase = createClient();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [pendente, setPendente] = useState(false);
 
   // ── Validação de senha ──────────────────────────────────────────────────────
   const SENHAS_COMUNS = new Set([
@@ -79,47 +80,19 @@ export default function CadastroPage() {
       }
 
       trackRegistration({ email, name });
-      setPendente(true);
+      // Auto-login após registro bem-sucedido
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+      if (signInError) {
+        setError("Conta criada! Faça login para acessar.");
+        setLoading(false);
+        return;
+      }
+      window.location.href = "/workspace";
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Erro de conexão: ${msg}`);
       setLoading(false);
     }
-  }
-
-  if (pendente) {
-    return (
-      <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
-          <div className="flex items-center justify-center gap-3 mb-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
-            <div className="text-left">
-              <p className="font-bold text-lg leading-tight">
-                <span className="text-white">Aprov</span>
-                <span style={{ color: "#0ab5bd" }}>AI</span>
-                <span className="text-white">360</span>
-              </p>
-              <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
-            </div>
-          </div>
-          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
-            <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-5">
-              <span className="text-3xl">✉️</span>
-            </div>
-            <h2 className="text-white text-xl font-bold mb-2">Verifique seu e-mail</h2>
-            <p className="text-gray-400 text-sm mb-1">
-              Enviamos um link de confirmação para
-            </p>
-            <p className="text-indigo-300 font-medium text-sm mb-4">{email}</p>
-            <p className="text-gray-500 text-xs">
-              Clique no link no e-mail para ativar sua conta e começar o trial de 7 dias.
-              Não esqueça de verificar a pasta de spam.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   return (
