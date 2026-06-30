@@ -19,27 +19,30 @@ export default function ResetSenhaPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    // Callback server-side já trocou o code e criou sessão via cookie.
-    // Basta verificar se a sessão existe.
+    // Listener registrado PRIMEIRO para não perder o evento PASSWORD_RECOVERY
+    // que pode disparar imediatamente ao inicializar o cliente com o hash na URL
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
+        setEstado("pronto");
+      }
+    });
+
+    // Verifica sessão já existente (ex: fluxo via server-side callback)
     supabase.auth.getSession().then(({ data }) => {
       if (data.session) {
         setEstado("pronto");
-        return;
       }
-      // Fallback: fluxo hash legado (token no #fragment)
-      const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-        if (event === "PASSWORD_RECOVERY" || event === "SIGNED_IN") {
-          setEstado("pronto");
-        }
-      });
-      const fallback = setTimeout(() => {
-        setEstado(prev => prev === "aguardando" ? "invalido" : prev);
-      }, 5000);
-      return () => {
-        subscription.unsubscribe();
-        clearTimeout(fallback);
-      };
     });
+
+    // Timeout generoso para redes lentas — 10s
+    const fallback = setTimeout(() => {
+      setEstado(prev => prev === "aguardando" ? "invalido" : prev);
+    }, 10000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallback);
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
