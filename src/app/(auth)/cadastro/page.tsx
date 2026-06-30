@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { trackRegistration } from "@/lib/analytics";
 import { createClient } from "@/lib/supabase/client";
+import { SENHAS_COMUNS } from "@/lib/password-policy";
 
 export default function CadastroPage() {
   const searchParams = useSearchParams();
@@ -20,15 +21,7 @@ export default function CadastroPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // ── Validação de senha ──────────────────────────────────────────────────────
-  const SENHAS_COMUNS = new Set([
-    "123456","123456789","12345678","12345","1234567","password","senha","qwerty",
-    "abc123","111111","000000","iloveyou","admin","letmein","monkey","dragon",
-    "master","sunshine","princess","welcome","shadow","superman","michael",
-    "football","baseball","696969","123123","654321","superman","batman",
-    "concurso","aprovai","estudar","passar","aprovado","gabarito",
-  ]);
-
+  // ── Validação de senha (lista compartilhada com o servidor) ─────────────────
   function avaliarSenha(s: string): { ok: boolean; forca: 0|1|2|3; erros: string[] } {
     const erros: string[] = [];
     if (s.length < 8)           erros.push("Mínimo 8 caracteres");

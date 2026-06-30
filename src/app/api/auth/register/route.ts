@@ -5,6 +5,7 @@ import { signupLimiter } from "@/lib/rate-limit";
 import { z } from "zod";
 import { log, LogEvent, mask } from "@/lib/logger";
 import { hasValidMxRecord } from "@/lib/email-domain";
+import { validarSenha } from "@/lib/password-policy";
 
 const supabaseAdmin = createSupabaseAdmin(
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL ?? "",
@@ -72,6 +73,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Dados inválidos", details: parseResult.error.flatten() }, { status: 400 });
   }
   const { name, email, password } = parseResult.data;
+
+  // Mesma regra de força de senha do frontend — evita bypass via chamada direta à API
+  const senhaCheck = validarSenha(password);
+  if (!senhaCheck.ok) {
+    return NextResponse.json({ error: senhaCheck.erro }, { status: 400 });
+  }
 
   // Bloqueia domínios sem servidor de e-mail configurado (typos, domínios inventados)
   const mxOk = await hasValidMxRecord(email);
