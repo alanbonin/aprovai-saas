@@ -1,31 +1,48 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 import { sendEmail } from "@/lib/mailer";
+import { resetPasswordLimiter } from "@/lib/rate-limit";
+import { log, LogEvent } from "@/lib/logger";
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  { auth: { autoRefreshToken: false, persistSession: false } }
+);
+
+const ResetSchema = z.object({
+  email: z.string().email().max(255).toLowerCase(),
+});
 
 export async function POST(req: Request) {
+  // 1. Rate limiting: máximo 3 tentativas por hora por IP
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const rl = await resetPasswordLimiter.check(`reset-pw:${ip}`);
+  if (!rl.ok) {
+    return NextResponse.json({ error: "Muitas tentativas. Aguarde antes de tentar novamente." }, { status: 429 });
+  }
+
+  // 2. Validação do email
+  const body = await req.json().catch(() => ({}));
+  const parsed = ResetSchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
+  }
+  const { email } = parsed.data;
+
   try {
-    const { email } = await req.json();
-    if (!email || typeof email !== "string") {
-      return NextResponse.json({ error: "E-mail inválido." }, { status: 400 });
-    }
-
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      { auth: { autoRefreshToken: false, persistSession: false } }
-    );
-
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://aprovai360.com.br";
 
-    // Gera link de recuperação via admin SDK — não usa PKCE, retorna token direto no hash
     const { data, error } = await supabaseAdmin.auth.admin.generateLink({
       type: "recovery",
       email,
       options: { redirectTo: `${appUrl}/reset-senha` },
     });
 
+    // Se o e-mail não existe no sistema, retornamos sucesso mesmo assim
+    // (evita que alguém descubra quais emails estão cadastrados)
     if (error || !data?.properties?.action_link) {
-      // Se o e-mail não existe, retornamos sucesso mesmo assim (segurança)
       return NextResponse.json({ ok: true });
     }
 
@@ -51,11 +68,16 @@ export async function POST(req: Request) {
         </div>
       `,
     });
-    if (emailError) throw emailError;
+
+    if (emailError) {
+      log.error(LogEvent.AUTH_RESET_PW, { step: "sendEmail" }, emailError);
+      return NextResponse.json({ error: "Erro ao enviar e-mail. Tente novamente." }, { status: 500 });
+    }
 
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    return NextResponse.json({ error: msg }, { status: 500 });
+  } catch {
+    // 3. Nunca expõe detalhes do erro interno ao browser
+    log.error(LogEvent.AUTH_RESET_PW, { step: "unexpected" }, null);
+    return NextResponse.json({ error: "Erro interno. Tente novamente." }, { status: 500 });
   }
 }
