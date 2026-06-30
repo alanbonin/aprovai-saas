@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { createBrowserClient } from "@supabase/ssr";
 import { Button } from "@/components/ui/button";
 
 type Tela = "login" | "forgot" | "forgot-ok";
@@ -62,18 +61,15 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    // Usa implicit flow (sem PKCE) para que o link funcione em qualquer
-    // contexto de browser (PWA, Mail app, webview) sem depender de cookies/localStorage
-    const implicitClient = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { flowType: "implicit" } }
-    );
-    const { error } = await implicitClient.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-senha`,
+    // Usa rota server-side com admin SDK para gerar link sem PKCE
+    // Funciona em qualquer contexto (PWA, Mail app, Outlook, webview)
+    const res = await fetch("/api/auth/reset-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
     });
     setLoading(false);
-    if (error) { setError(error.message); return; }
+    if (!res.ok) { setError("Erro ao enviar e-mail. Tente novamente."); return; }
     setTela("forgot-ok");
   }
 
