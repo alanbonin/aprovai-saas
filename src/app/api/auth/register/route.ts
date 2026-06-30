@@ -191,8 +191,7 @@ export async function POST(req: Request) {
 
   log.info(LogEvent.AUTH_REGISTER, { email: mask.email(email) });
   void notifyAdminNewUser(name, email);
-  // Boas-vindas enviadas após confirmação — aqui apenas notificamos o admin
-  // void sendBoasVindas(dbUserId, email, name); // comentado: enviar após confirmação
+  void sendBoasVindas(dbUserId, email, name);
 
   return NextResponse.json({ ok: true });
 }
