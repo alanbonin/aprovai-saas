@@ -18,23 +18,56 @@ export default function ResetSenhaPage() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
+  const [debugInfo, setDebugInfo] = useState("");
+
   useEffect(() => {
+    const hash = window.location.hash?.substring(1) ?? "";
+    const search = window.location.search ?? "";
+    const hashParams = new URLSearchParams(hash);
+    const searchParams2 = new URLSearchParams(search);
+
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+    const hashType = hashParams.get("type");
+    const code = searchParams2.get("code");
+
+    setDebugInfo(
+      `hash_type=${hashType ?? "none"} | has_token=${!!accessToken} | has_code=${!!code} | hash_len=${hash.length}`
+    );
+
     // Listener registrado PRIMEIRO para não perder o evento PASSWORD_RECOVERY
-    // que pode disparar imediatamente ao inicializar o cliente com o hash na URL
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" || (event === "SIGNED_IN" && session)) {
         setEstado("pronto");
       }
     });
 
-    // Verifica sessão já existente (ex: fluxo via server-side callback)
+    // Fluxo implicit: tokens direto no hash
+    if (accessToken && (hashType === "recovery" || hashType === "signup")) {
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken ?? "",
+      }).then(({ error }) => {
+        if (!error) setEstado("pronto");
+        else setEstado("invalido");
+      });
+      return () => subscription.unsubscribe();
+    }
+
+    // Fluxo PKCE: code na query string
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (!error) setEstado("pronto");
+        else setEstado("invalido");
+      });
+      return () => subscription.unsubscribe();
+    }
+
+    // Verifica sessão já existente (ex: server-side callback)
     supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setEstado("pronto");
-      }
+      if (data.session) setEstado("pronto");
     });
 
-    // Timeout generoso para redes lentas — 10s
     const fallback = setTimeout(() => {
       setEstado(prev => prev === "aguardando" ? "invalido" : prev);
     }, 10000);
@@ -92,6 +125,9 @@ export default function ResetSenhaPage() {
             <div className="text-center py-4">
               <p className="text-red-400 font-semibold mb-2">Link inválido ou expirado</p>
               <p className="text-gray-500 text-sm mb-4">Solicite um novo link de redefinição de senha.</p>
+              {debugInfo && (
+                <p className="text-gray-600 text-xs mb-4 font-mono break-all">{debugInfo}</p>
+              )}
               <button
                 onClick={() => router.push("/login")}
                 className="text-indigo-400 text-sm underline"
