@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { trackRegistration } from "@/lib/analytics";
 
@@ -18,7 +17,7 @@ export default function CadastroPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const supabase = createClient();
+  const [pendente, setPendente] = useState(false);
 
   // ── Validação de senha ──────────────────────────────────────────────────────
   const SENHAS_COMUNS = new Set([
@@ -58,61 +57,69 @@ export default function CadastroPage() {
     }
 
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name } },
-      });
-
-      if (signUpError || !data.user) {
-        const msg = signUpError?.message ?? "";
-        if (msg.includes("already registered") || msg.includes("already been registered")) {
-          setError("Este e-mail já está cadastrado. Tente fazer login.");
-        } else if (msg.includes("rate limit") || msg.includes("email rate")) {
-          setError("Muitas tentativas. Aguarde alguns minutos e tente novamente.");
-        } else if (msg.includes("invalid")) {
-          setError("E-mail inválido.");
-        } else if (msg.includes("Password")) {
-          setError("Senha muito curta. Use no mínimo 8 caracteres.");
-        } else {
-          setError(msg || "Erro ao criar conta. Tente novamente.");
-        }
-        setLoading(false);
-        return;
-      }
-
-      // Cria usuário no banco via API
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, supabaseId: data.user.id }),
+        body: JSON.stringify({ name, email, password }),
       });
 
+      const resData = await res.json().catch(() => ({}));
+
       if (!res.ok) {
-        let errorMsg = "Erro ao salvar perfil. Tente novamente.";
-        try {
-          const resData = await res.json();
-          const apiMsg = resData?.error ?? "";
-          if (res.status === 429 || apiMsg.includes("Muitas")) {
-            errorMsg = "Muitas tentativas. Aguarde alguns minutos.";
-          } else if (apiMsg) {
-            errorMsg = apiMsg;
-          }
-        } catch {
-          errorMsg = `Erro ${res.status} ao salvar perfil.`;
+        const apiMsg = resData?.error ?? "";
+        if (res.status === 429 || apiMsg.toLowerCase().includes("muitas")) {
+          setError("Muitas tentativas. Aguarde alguns minutos.");
+        } else if (res.status === 409 || apiMsg.toLowerCase().includes("já está cadastrado")) {
+          setError("Este e-mail já está cadastrado. Tente fazer login.");
+        } else {
+          setError(apiMsg || "Erro ao criar conta. Tente novamente.");
         }
-        setError(errorMsg);
         setLoading(false);
         return;
       }
 
       trackRegistration({ email, name });
-      window.location.href = "/workspace";
+      setPendente(true);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError(`Erro de conexão: ${msg}`);
       setLoading(false);
     }
+  }
+
+  if (pendente) {
+    return (
+      <div className="min-h-screen bg-[#080c18] flex items-center justify-center p-4">
+        <div className="w-full max-w-sm">
+          <div className="flex items-center justify-center gap-3 mb-8">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-icon.svg" alt="AprovAI360" className="w-10 h-10" />
+            <div className="text-left">
+              <p className="font-bold text-lg leading-tight">
+                <span className="text-white">Aprov</span>
+                <span style={{ color: "#0ab5bd" }}>AI</span>
+                <span className="text-white">360</span>
+              </p>
+              <p className="text-[11px] text-gray-500">Estudo inteligente. Aprovação garantida.</p>
+            </div>
+          </div>
+          <div className="bg-white/5 border border-white/10 rounded-2xl p-8 text-center">
+            <div className="w-16 h-16 rounded-full bg-indigo-500/20 flex items-center justify-center mx-auto mb-5">
+              <span className="text-3xl">✉️</span>
+            </div>
+            <h2 className="text-white text-xl font-bold mb-2">Verifique seu e-mail</h2>
+            <p className="text-gray-400 text-sm mb-1">
+              Enviamos um link de confirmação para
+            </p>
+            <p className="text-indigo-300 font-medium text-sm mb-4">{email}</p>
+            <p className="text-gray-500 text-xs">
+              Clique no link no e-mail para ativar sua conta e começar o trial de 7 dias.
+              Não esqueça de verificar a pasta de spam.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
